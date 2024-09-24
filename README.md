@@ -14,11 +14,11 @@ The goal of this project is to democratize humanoid robotics by offering open-so
 
 <div style="display: flex; justify-content: space-between;">
     <div style="width: 48%;">
-        <img src="/public/waving.png" alt="Robot Waving" style="width: 100%; height: 450px; object-fit: cover;">
+        <img src="/public/waving.png" alt="V0" style="height: 450px; object-fit: cover;">
         <p> V0 </p>
     </div>
     <div style="width: 48%;">
-        <img src="/public/CAD.png" alt="CAD Model" style="width: 100%; height: 450px; object-fit: cover;">
+        <img src="/public/CAD.png" alt="V1 Legs" style="height: 450px; object-fit: cover;">
         <p> V1 Legs </p>
     </div>
 </div>
@@ -71,7 +71,7 @@ We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for t
 
 ## Simulation
 
-<div style="display: flex; justify-content: space-between;">
+<div style="display: flex; flex-direction: row; justify-content: space-between;">
     <div style="width: 48%;">
         <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 100%; height: auto; object-fit: cover;">
         <p>Isaac Simulation</p>
