@@ -16,16 +16,10 @@ The goal of this project is to democratize humanoid robotics by offering open-so
 
 <br/>
 <div style="display: flex; justify-content: space-between;">
-    <figure style="width: 48%; margin: 0;">
-        <img src="/public/waving.png" alt="Robot Waving" style="width: 100%; height: 500px; object-fit: cover;">
-        <figcaption style="text-align: center;">Figure 1: V0</figcaption>
-    </figure>
-    <figure style="width: 48%; margin: 0;">
-        <img src="/public/CAD.png" alt="CAD Model" style="width: 100%; height: 500px; object-fit: cover;">
-        <figcaption style="text-align: center;">Figure 2: V1 Legs</figcaption>
-    </figure>
+    <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: 500px; object-fit: cover;">
+    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 500px; object-fit: cover;">
 </div>
-
+*Left: V0, Right: V1 Legs*
 
 <br/>
 
@@ -77,17 +71,15 @@ We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for t
 
 ## Simulation
 
-<figure style="display: inline-block; width: 48%; margin: 0;">
-    <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 100%; height: auto; object-fit: cover;">
-    <figcaption style="text-align: center;">Isaac Gym Training</figcaption>
-</figure>
-<figure style="display: inline-block; width: 48%; margin: 0;">
-    <img src="/public/urdf.png" alt="URDF Model" style="width: 100%; height: auto; object-fit: cover;">
-    <figcaption style="text-align: center;">URDF Model</figcaption>
-</figure>
+<div style="display: flex; justify-content: space-between;">
+        <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 48%; height: auto; object-fit: cover;">
+        <img src="/public/urdf.png" alt="URDF Model" style="width: 48%; height: auto; object-fit: cover;">
+</div>
+*Left: Isaac Simulation, Right: URDF Model*
 
-### NVIDIA Isaac Gym
-We use NVIDIA Isaac Gym to simulate, train, and test the robot for locomotion. Our simulation is based on the K-Scale simulation library.
+
+### NVIDIA IsaacSim
+We use NVIDIA IsaacSim to simulate, train, and test the robot for locomotion. Our simulation is based on the K-Scale simulation library.
 
 Link:https://github.com/jingxiangmo/sim/tree/master
 Docs: https://docs.kscale.dev/software/simulation/isaac
