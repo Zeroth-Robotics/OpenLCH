@@ -16,8 +16,8 @@ The goal of this project is to democratize humanoid robotics by offering open-so
 
 
 <div style="display: flex; justify-content: space-between;">
-    <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: auto;">
-    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: auto;">
+    <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: 300px; object-fit: cover;">
+    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 300px; object-fit: cover;">
 </div>
 
 
@@ -43,33 +43,35 @@ The goal of this project is to democratize humanoid robotics by offering open-so
 
 
 
-
-
 ## Runtime
 WIP
 
 
+
 ## Simulation
-### IsaacSim
-https://github.com/jingxiangmo/sim/tree/master
+
+
+
+### NVIDIA IsaacSim
+We use NVIDIA IsaacSim to simulate, train, and test the robot for locomotion. Our simulation is based on the K-Scale simulation library.
+
+Link:https://github.com/jingxiangmo/sim/tree/master
+Docs: https://docs.kscale.dev/software/simulation/isaac
 
 ### PyBullet
-
-
-
-Currently the model also support PyBullte
-
+Currently the URDF model also support PyBullet using K-Scale OnShape library: https://docs.kscale.dev/software/onshape
 
 ## ML
-### RL (PPO)
+### Locomotion
+#### RL (PPO)
+We use RL to train the robot to stand walk. The training is done in IsaacSim with the K-Scale simulation and training library: https://github.com/jingxiangmo/sim/tree/master.
 
-
-### E-VLA
+### Manipulation
+#### E-VLA (WIP)
 Integration of E-VLA will be in V2. For more details, please refer to the [E-VLA documentation](https://docs.kscale.dev/software/models/evla).
 
-
-### K-Lang
-https://docs.kscale.dev/software/klang/intro
+#### K-Lang (WIP)
+Integration of K-Lang will be in V2. For more details, please refer to the [K-Lang documentation](https://docs.kscale.dev/software/klang/intro).
 
 
 
