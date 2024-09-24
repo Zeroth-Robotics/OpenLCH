@@ -1,6 +1,5 @@
 # Low Cost Humanoid (WIP)
 
-
 <div align="center">
 
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/kscalelabs/onshape/blob/main/LICENSE)
@@ -8,20 +7,23 @@
 <!-- [![Wiki](https://img.shields.io/badge/wiki-humanoids-black)](https://humanoids.wiki) -->
 </div>
 
-Stompy Micro is an open-source, low-cost humanoid robot designed for dynamic movements like running and boxing. We made the V0 of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) on 2024/08/31.
-
-We're now actively working on V1, redesigning the mechanical and eletrical components, with a focus on reinforcement learning. 
+Stompy Micro is an open-source, low-cost humanoid robot designed for dynamic movements (like running and boxing) and speech to action. We made the V0 of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) on 2024/08/31. We're now actively working on V1, redesigning the mechanical and eletrical components, with a focus on reinforcement learning for locomotion. 
 
 The goal of this project is to democratize humanoid robotics by offering open-source designs and affordable components, making it accessible to researchers, hobbyists, and educators. This project is inspired by the design of [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/) and the accessibility of [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
 
 
 <div style="display: flex; justify-content: space-between;">
-    <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: 300px; object-fit: cover;">
-    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 300px; object-fit: cover;">
+    <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: 500px; object-fit: cover;">
+    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 500px; object-fit: cover;">
 </div>
 
 
-## Mechanical and Electrical Components
+## Mechatronics
+
+Specifications:
+| Height | Weight | DoF |
+|:--|:--|:--|
+| 50cm | 15lb | 16 (5 DoF per leg, 3 DoF per arm) |
 
 ### CAD
 **OnShape**: https://cad.onshape.com/documents/cacc96f8a7850b951e7aa69a/w/3a0a4ee9d8251956ba5e5e92/e/b92662619a7718ffa83530f2
@@ -46,8 +48,7 @@ The goal of this project is to democratize humanoid robotics by offering open-so
 ## Runtime
 WIP
 
-We'll be usin
-
+We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for the robot. 
 
 
 ## Simulation
@@ -75,6 +76,10 @@ Integration of E-VLA will be in V2. For more details, please refer to the [E-VLA
 #### K-Lang (WIP)
 Integration of K-Lang will be in V2. For more details, please refer to the [K-Lang documentation](https://docs.kscale.dev/software/klang/intro).
 
+
+
+## License
+This project is licensed under the MIT License.
 
 
 ## Current Contributors
