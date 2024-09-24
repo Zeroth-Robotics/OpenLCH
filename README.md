@@ -106,6 +106,7 @@ This project is licensed under the MIT License.
 - **Denys Bezmenov** - eletrical & embeddd
 - **Jingxiang Mo** - electrical, software, & ML
 - **Henri Lemoine** - ML
+- **Advait Patel** - ML
 
 
 <details>
