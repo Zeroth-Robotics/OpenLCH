@@ -46,6 +46,8 @@ The goal of this project is to democratize humanoid robotics by offering open-so
 ## Runtime
 WIP
 
+We'll be usin
+
 
 
 ## Simulation
