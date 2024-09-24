@@ -73,8 +73,8 @@ We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for t
         <img src="/public/urdf.png" alt="URDF Model" style="width: 48%; height: auto; object-fit: cover;">
 </div>
 
-### NVIDIA IsaacSim
-We use NVIDIA IsaacSim to simulate, train, and test the robot for locomotion. Our simulation is based on the K-Scale simulation library.
+### NVIDIA Isaac Gym
+We use NVIDIA Isaac Gym to simulate, train, and test the robot for locomotion. Our simulation is based on the K-Scale simulation library.
 
 Link:https://github.com/jingxiangmo/sim/tree/master
 Docs: https://docs.kscale.dev/software/simulation/isaac
