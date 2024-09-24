@@ -13,8 +13,14 @@ The goal of this project is to democratize humanoid robotics by offering open-so
 
 
 <div style="display: flex; justify-content: space-between;">
-    <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: 500px; object-fit: cover;">
-    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 500px; object-fit: cover;">
+    <div style="width: 48%;">
+        <img src="/public/waving.png" alt="Robot Waving" style="width: 100%; height: 450px; object-fit: cover;">
+        <p> V0 </p>
+    </div>
+    <div style="width: 48%;">
+        <img src="/public/CAD.png" alt="CAD Model" style="width: 100%; height: 450px; object-fit: cover;">
+        <p> V1 Legs </p>
+    </div>
 </div>
 
 
@@ -26,12 +32,16 @@ Specifications:
 | 50cm | 15lb | 16 (5 DoF per leg, 3 DoF per arm) |
 
 ### CAD
+
 **OnShape**: https://cad.onshape.com/documents/cacc96f8a7850b951e7aa69a/w/3a0a4ee9d8251956ba5e5e92/e/b92662619a7718ffa83530f2
 
 **URDF/MJCF**: https://kscale.store/file/5b9b5eecb7ffcab1
 
-## Assembly
-### BoM
+Want to try the URDF model? Try here: https://kscale.store/file/5b9b5eecb7ffcab1
+
+
+
+## BoM
 | Part         | Description                                                                   | Link                                                                                                                                             | Quantity | Total Cost (USD) | Date Decided |
 |:--           |:--                                                                            |:--                                                                                                                                              |:--       |:--               |:--           |
 | Serial BusServos       | STS3250                                 | [Link](https://www.alibaba.com/product-detail/50KG-High-Torque-HV-Robot-Servo_1601045497742.html)                | x16      | 224              | 9/10         |
@@ -44,8 +54,16 @@ Specifications:
 | Microphone   | N/A                                                                  |                                                 N/A                                                                                                  | x1       |                  |              |
 
 
+## Assembly
+WIP
 
-## Runtime
+
+## Software
+
+### Embedded
+WIP
+
+### Runtime
 WIP
 
 We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for the robot. 
@@ -53,7 +71,16 @@ We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for t
 
 ## Simulation
 
-
+<div style="display: flex; justify-content: space-between;">
+    <div style="width: 48%;">
+        <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 100%; height: auto; object-fit: cover;">
+        <p>Isaac Simulation</p>
+    </div>
+    <div style="width: 48%;">
+        <img src="/public/urdf.png" alt="URDF Model" style="width: 100%; height: auto; object-fit: cover;">
+        <p>URDF Model</p>
+    </div>
+</div>
 
 ### NVIDIA IsaacSim
 We use NVIDIA IsaacSim to simulate, train, and test the robot for locomotion. Our simulation is based on the K-Scale simulation library.
@@ -107,3 +134,5 @@ Acknowledgements:
 - **Saad Sharief** - Teleoperation help
 
 </details>
+
+Last updated: 2024/09/24
