@@ -7,16 +7,19 @@
 <!-- [![Wiki](https://img.shields.io/badge/wiki-humanoids-black)](https://humanoids.wiki) -->
 </div>
 
-Stompy Micro is an open-source, low-cost humanoid robot designed for dynamic movements (like running and boxing) and speech to action. We made the V0 of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) on 2024/08/31. We're now actively working on V1, redesigning the mechanical and eletrical components, with a focus on reinforcement learning for locomotion. 
+
+Stompy Micro is an open-source, low-cost humanoid robot designed for dynamic movements (like running and boxing) and speech to action. We made the V0 of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) on 2024/08/31. 
+
+We're now actively working on V1, redesigning the mechanical and eletrical components, with a focus on reinforcement learning for locomotion. Public roadmap: https://www.notion.so/jingxiangmo/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4
 
 The goal of this project is to democratize humanoid robotics by offering open-source designs and affordable components, making it accessible to researchers, hobbyists, and educators. This project is inspired by the design of [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/) and the accessibility of [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
 
-
+<br/>
 <div style="display: flex; justify-content: space-between;">
     <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: 500px; object-fit: cover;">
     <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 500px; object-fit: cover;">
 </div>
-
+<br/>
 
 
 ## Mechatronics
@@ -62,7 +65,6 @@ WIP
 WIP
 
 We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for the robot. 
-
 
 ## Simulation
 
