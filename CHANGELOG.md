@@ -1,4 +1,4 @@
-## 1.0.0-alpha.1 (2024/09/24)
+## 1.0.0-alpha.1 (2024/09/27)
 - complete CAD redesign:
     - 5 DoF legs 
     - 3 DoF arms
