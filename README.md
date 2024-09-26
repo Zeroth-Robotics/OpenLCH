@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/kscalelabs/onshape/blob/main/LICENSE)
-[![Discord](https://img.shields.io/discord/1280974143936004238)](https://discord.gg/kN8jXdt7Rx)
+<!-- [![Discord](https://img.shields.io/discord/1280974143936004238)](https://discord.gg/kN8jXdt7Rx)  -->
 <!-- [![Wiki](https://img.shields.io/badge/wiki-humanoids-black)](https://humanoids.wiki) -->
 </div>
 
