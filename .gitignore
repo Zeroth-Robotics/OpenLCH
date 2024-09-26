@@ -34,4 +34,15 @@
 # virtual environment
 venv/
 
+# system files
 .DS_Store
+
+# rust build files
+target/
+
+# build directory
+build/
+
+# log directory
+logs/
+
