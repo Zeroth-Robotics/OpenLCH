@@ -19,9 +19,12 @@ We made the first version of this humanoid robot at a [hackathon](https://github
 Interested in updates, contributing, or building your own mini humanoid? Let us know through our interset form [here](https://forms.gle/AvDzMEFUYeVNtFvj6): https://forms.gle/AvDzMEFUYeVNtFvj6!
 
 <br/>
-<div style="display: flex; flex-direction: column; align-items: center;">
-    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 100%; max-width: 300px; height: auto; margin-bottom: 20px;">
-    <img src="/public/CAD.png" alt="CAD Model" style="width: 100%; max-width: 300px; height: auto;">
+
+
+<br/>
+<div align="center">
+  <img src="/public/isaac_view.png" alt="Isaac Sim" style="width: 50%; height: auto; object-fit: cover;">
+  <img src="/public/CAD.png" alt="CAD Model" style="width: 50%; height: auto; object-fit: cover;">
 </div>
 
 <br/>
