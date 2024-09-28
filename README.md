@@ -23,8 +23,8 @@ Interested in updates, contributing, or building your own mini humanoid? Let us 
 
 <br/>
 <div align="center">
-  <img src="/public/isaac_view.png" alt="Isaac Sim" style="width: 50%; height: auto; object-fit: cover;">
-  <img src="/public/CAD.png" alt="CAD Model" style="width: 50%; height: auto; object-fit: cover;">
+  <img src="/public/isaac_view.png" alt="Isaac Sim" style="width: 30%; height: auto; object-fit: cover;">
+  <img src="/public/CAD.png" alt="CAD Model" style="width: 30%; height: auto; object-fit: cover;">
 </div>
 
 <br/>
