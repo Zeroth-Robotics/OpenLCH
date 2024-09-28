@@ -1,4 +1,4 @@
-# Low Cost Humanoid (WIP, Coming Soon)
+# Low Cost Humanoid Mini (WIP)
 
 <div align="center">
 
@@ -12,7 +12,7 @@
 
 Using the [K-Scale humanoid robotics development ecosystem](https://docs.kscale.dev), we designed our robot in OnShape, trained the PPO model in IsaacSim, and are now transfering it onto the physical robot. Check out our public roadmap for updates [here](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4).
 
-Our goal is to build and deploy a large amount (~20-30) of small humanoid robots to the physical world and create an affordable open-source platform for humanoid research and competitions. The robot design is inspired by [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/), while the initative is inspired by [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
+Our goal is to build and deploy a large amount (20-30) of small humanoid robots to the physical world and create an affordable open-source platform for humanoid research and competitions. The robot design is inspired by [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/), while the initative is inspired by [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
 
 We made the first version of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) in 24 hours on 2024/08/31.
 
@@ -67,7 +67,7 @@ We're currently writing our firmware for sensors and controllers.
 ### Runtime
 WIP, coming soon...
 
-We're currently working on robot runtime controller that will be written in Rust for performance and safety (and fun). :)
+We're currently working on robot control that will be written in Rust for performance and safety (and enjoyment). :)
 
 
 ## Simulation
