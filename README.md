@@ -132,5 +132,5 @@ Acknowledgement:
 - **Jacob Zietek** - AI/ML and simulation help 
 - **Saad Sharief** - Teleoperation help
 
-</details>7
+</details>
 Last updated: 2024/09/27
