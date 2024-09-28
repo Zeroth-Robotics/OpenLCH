@@ -3,25 +3,22 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/kscalelabs/onshape/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/Version%20-V0%20-blue)]()
 <!-- [![Discord](https://img.shields.io/discord/1280974143936004238)](https://discord.gg/kN8jXdt7Rx)  -->
 <!-- [![Wiki](https://img.shields.io/badge/wiki-humanoids-black)](https://humanoids.wiki) -->
 </div>
 
+**OpenLCH Mini is an open-source ultra-low-cost humanoid robot designed for experimenting with machine learning methods for robot control.** This is project is currently work-in-progress.
 
-Stompy Micro is an open-source, low-cost humanoid robot designed for dynamic movements (like running and boxing) and speech to action. We made the V0 of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) on 2024/08/31. 
+Using the [K-Scale humanoid robotics development ecosystem](https://docs.kscale.dev), we designed our robot in OnShape, trained the (PPO) model in IsaacSim, and now transfering the model onto the physical robot. Check out our public roadmap for updates [here](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4).
 
-We're now actively working on V1, redesigning the mechanical and electrical components, with a focus on reinforcement learning for locomotion. If you want to follow our progress, please see [Public Roadmap](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=74).
-
-The goal of this project is to democratize humanoid robotics by offering open-source designs and affordable components, making it accessible to researchers, hobbyists, and educators. This project is inspired by the design of [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/) and the accessibility of [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
+Our goal is to build and deploy a large amount (~20-30) small humanoid robots to the physical world and create an affordable open-source platform for humanoid research and competitions. The robot design is inspired by [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/), while the initative is inspired by [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
 
 <br/>
 <div style="display: flex; justify-content: space-between;">
-    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 48%; height: 500px; object-fit: cover;">
-    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 500px; object-fit: cover;">
+    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 48%; height: 400px; object-fit: cover;">
+    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 400px; object-fit: cover;">
 </div>
-
-*Left: V0, Right: V1 Legs*
-
 
 <br/>
 
@@ -74,8 +71,8 @@ We'll be using [Milk-V Duo](https://milkv.io/duo-s) as the main controller for t
 ## Simulation
 
 <div style="display: flex; justify-content: space-between;">
-        <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 48%; height: auto; object-fit: cover;">
         <img src="/public/urdf.png" alt="URDF Model" style="width: 48%; height: auto; object-fit: cover;">
+        <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 48%; height: auto; object-fit: cover;">
 </div>
 
 *Left: Isaac Simulation, Right: URDF Model*
