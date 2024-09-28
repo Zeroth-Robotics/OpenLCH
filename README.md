@@ -10,13 +10,13 @@
 
 Stompy Micro is an open-source, low-cost humanoid robot designed for dynamic movements (like running and boxing) and speech to action. We made the V0 of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) on 2024/08/31. 
 
-We're now actively working on V1, redesigning the mechanical and eletrical components, with a focus on reinforcement learning for locomotion. If you want to follow our progress, please see [Public Roadmap](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=74).
+We're now actively working on V1, redesigning the mechanical and electrical components, with a focus on reinforcement learning for locomotion. If you want to follow our progress, please see [Public Roadmap](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=74).
 
 The goal of this project is to democratize humanoid robotics by offering open-source designs and affordable components, making it accessible to researchers, hobbyists, and educators. This project is inspired by the design of [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/) and the accessibility of [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
 
 <br/>
 <div style="display: flex; justify-content: space-between;">
-    <img src="/public/waving.png" alt="Robot Waving" style="width: 48%; height: 500px; object-fit: cover;">
+    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 48%; height: 500px; object-fit: cover;">
     <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 500px; object-fit: cover;">
 </div>
 
@@ -93,7 +93,7 @@ Currently the URDF model also support PyBullet using K-Scale OnShape library: ht
 ## ML
 ### Locomotion
 #### RL (PPO)
-We use RL to train the robot to stand walk. The training is done in IsaacSim with the K-Scale simulation and training library: https://github.com/jingxiangmo/sim/tree/master.
+We use RL to train the robot to stand and walk. The training is done in IsaacSim with the K-Scale simulation and training library: https://github.com/jingxiangmo/sim/tree/master.
 
 ### Manipulation
 #### E-VLA (WIP)
@@ -108,10 +108,10 @@ Integration of K-Lang will be in V2. For more details, please refer to the [K-La
 This project is licensed under the MIT License.
 
 
-## Current Contributors
+## Open Source Contributors
 
 - **Kelsey Pool** - mechanical & design
-- **Denys Bezmenov** - eletrical & embeddd
+- **Denys Bezmenov** - electrical & embedded
 - **Jingxiang Mo** - electrical, software, & ML
 - **Henri Lemoine** - ML
 - **Advait Patel** - ML
@@ -120,8 +120,13 @@ This project is licensed under the MIT License.
 <details>
 <summary>Hackathon Team</summary>
 
+<div align="center">
+  <img src="/public/waving.png" alt="Robot Waving" width="400" height="auto">
+</div>
+
+
 - **Kelsey Pool** - Mechanical design
-- **Denys Bezmenov** - Eletrical and software control
+- **Denys Bezmenov** - Electrical and software control
 - **Jingxiang Mo** - Mechanical assembly, electrical, and software control
 - **Baaqer Farhat** - Mechanical assembly, software
 
@@ -129,6 +134,5 @@ Acknowledgements:
 - **Jacob Zietek** - AI/ML and simulation help 
 - **Saad Sharief** - Teleoperation help
 
-</details>
-
-Last updated: 2024/09/24
+</details>7
+Last updated: 2024/09/27
