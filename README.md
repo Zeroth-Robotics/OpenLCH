@@ -20,8 +20,8 @@ Interested in updates, contributing, or building your own mini humanoid? Let us 
 
 <br/>
 <div style="display: flex; flex-direction: column; align-items: center;">
-    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 100%; max-width: 400px; height: auto; margin-bottom: 20px;">
-    <img src="/public/CAD.png" alt="CAD Model" style="width: 100%; max-width: 400px; height: auto;">
+    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 100%; max-width: 300px; height: auto; margin-bottom: 20px;">
+    <img src="/public/CAD.png" alt="CAD Model" style="width: 100%; max-width: 300px; height: auto;">
 </div>
 
 <br/>
