@@ -19,9 +19,9 @@ We made the first version of this humanoid robot at a [hackathon](https://github
 Interested in updates, contributing, or building your own mini humanoid? Let us know through our interset form [here](https://forms.gle/AvDzMEFUYeVNtFvj6): https://forms.gle/AvDzMEFUYeVNtFvj6!
 
 <br/>
-<div style="display: flex; justify-content: space-between;">
-    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 48%; height: 400px; object-fit: cover;">
-    <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: 400px; object-fit: cover;">
+<div style="display: flex; flex-direction: column; align-items: center;">
+    <img src="/public/isaac_view.png" alt="Robot Waving" style="width: 100%; max-width: 400px; height: auto; margin-bottom: 20px;">
+    <img src="/public/CAD.png" alt="CAD Model" style="width: 100%; max-width: 400px; height: auto;">
 </div>
 
 <br/>
@@ -72,9 +72,9 @@ We're currently working on robot control that will be written in Rust for perfor
 
 ## Simulation
 
-<div style="display: flex; justify-content: space-between;">
-        <img src="/public/urdf.png" alt="URDF Model" style="width: 48%; height: auto; object-fit: cover;">
-        <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 48%; height: auto; object-fit: cover;">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
+    <img src="/public/urdf.png" alt="URDF Model" style="width: 100%; max-width: 48%; height: auto; object-fit: cover; margin-bottom: 10px;">
+    <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 100%; max-width: 48%; height: auto; object-fit: cover; margin-bottom: 10px;">
 </div>
 
 *Left: URDF Model, Right: IsaacSim Training*
