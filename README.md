@@ -75,9 +75,10 @@ We're currently working on robot control that will be written in Rust for perfor
 
 ## Simulation
 
-<div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
-    <img src="/public/urdf.png" alt="URDF Model" style="width: 100%; max-width: 48%; height: auto; object-fit: cover; margin-bottom: 10px;">
-    <img src="/public/isaac.png" alt="Isaac Simulation" style="width: 100%; max-width: 48%; height: auto; object-fit: cover; margin-bottom: 10px;">
+
+<div align="center">
+  <img src="/public/urdf.png" alt="Isaac Sim" style="width: 48%; height: auto; object-fit: cover;">
+  <img src="/public/isaac.png" alt="CAD Model" style="width: 48%; height: auto; object-fit: cover;">
 </div>
 
 *Left: URDF Model, Right: IsaacSim Training*
