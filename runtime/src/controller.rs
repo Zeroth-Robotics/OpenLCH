@@ -1,14 +1,25 @@
 
 
+struct StandingControllerPID {
+    robot: Robot,
+    config: Config,
+}
 
-struct WalkController {
+struct StandingControllerPPO {
     model: OnnxInfer,
     robot: Robot,
     config: Config,
 }
 
 
-impl WalkController {
+
+
+impl StandingControllerPID {
+
+
+}
+
+impl StandingControllerPPO {
     pub fn new(model: OnnxInfer, robot: Robot, config: Config) -> Self {
         Self {
             model,
