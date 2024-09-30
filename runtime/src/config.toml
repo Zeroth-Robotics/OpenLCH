@@ -1,4 +1,34 @@
 [robot]
-num_motors = 16
+name = "stompy micro"
 
-[controller]
+[robot.left_leg]
+servos = [
+    { id = 1, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 2, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 9, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 10, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 11, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } }
+]
+
+[robot.right_leg]
+servos = [
+    { id = 3, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 4, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 12, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 13, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 14, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } }
+]
+
+[robot.left_arm]
+servos = [
+    { id = 5, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 6, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 15, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } }
+]
+
+[robot.right_arm]
+servos = [
+    { id = 7, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 8, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } },
+    { id = 16, pid = { p = 1.0, i = 0.1, d = 0.01 }, limit = { min = -90, max = 90 } }
+]
