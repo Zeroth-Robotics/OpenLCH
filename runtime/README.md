@@ -5,6 +5,8 @@
 Define the hardware abstraction layer for the servos controls from firmware.
 
 Rust binding for C++ struct (WIP):
+
+```
 //     uint8_t torque_switch;         // 0x28 (1 byte)
 //     uint8_t acceleration;          // 0x29 (1 byte)
 //     int16_t target_location;       // 0x2A (2 bytes)
@@ -23,8 +25,7 @@ Rust binding for C++ struct (WIP):
 //     uint8_t mobile_sign;           // 0x42 (1 byte)
 //     uint8_t reserved2[2];          // 0x43-0x44 (2 bytes, reserved)
 //     uint16_t current_current;      // 0x45 (2 bytes)
-
-
+```
 
 ## `config.toml`
 Define joint limits, motor IDs, PID gains, etc.
