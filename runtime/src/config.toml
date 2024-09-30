@@ -1,0 +1,4 @@
+[robot]
+num_motors = 16
+
+[controller]
