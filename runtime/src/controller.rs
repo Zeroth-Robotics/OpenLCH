@@ -1,19 +1,22 @@
 use crate::model::Model;
 use crate::robot::Robot;
 use anyhow::Result;
+use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Instant;
 
-pub trait Controller {
-    fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>>;
+#[async_trait]
+pub trait Controller: Send + Sync {
+    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>>;
 }
 
 pub struct PIDController {
     // PID parameters
 }
 
+#[async_trait]
 impl Controller for PIDController {
-    fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
+    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
         // PID control logic
         println!("Computing action with PID controller");
         Ok(vec![0.0; state.len()])
@@ -30,8 +33,9 @@ impl MLController {
     }
 }
 
+#[async_trait]
 impl Controller for MLController {
-    fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
+    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
         // ML control logic
         println!("Computing action with ML controller");
         self.model.infer(state)
@@ -40,11 +44,11 @@ impl Controller for MLController {
 
 pub struct StandingController {
     robot: Robot,
-    controller: Arc<dyn Controller + Send + Sync>,
+    controller: Arc<dyn Controller>,
 }
 
 impl StandingController {
-    pub fn new(robot: Robot, controller: Arc<dyn Controller + Send + Sync>) -> Self {
+    pub fn new(robot: Robot, controller: Arc<dyn Controller>) -> Self {
         Self { robot, controller }
     }
 
@@ -81,17 +85,27 @@ impl StandingController {
         Ok(())
     }
 
-    pub async fn run(&mut self) -> Result<()> {
+    pub async fn run(&mut self, iterations: Option<u32>) -> Result<()> {
         println!("Starting StandingController");
-        for i in 0..5 {
-            // Run for 5 iterations only
+
+        let mut i = 0;
+        loop {
+            // Check if a limit is set and if the iteration count has reached it
+            if let Some(max_iterations) = iterations {
+                if i >= max_iterations {
+                    break;
+                }
+            }
+
             println!("Controller iteration {}", i);
             let state = self.get_state().await?;
-            let command = self.controller.compute_action(&state)?;
+            let command = self.controller.compute_action(&state).await?;
             self.send_command(&command).await?;
 
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            i += 1;
         }
+
         println!("StandingController finished");
         Ok(())
     }

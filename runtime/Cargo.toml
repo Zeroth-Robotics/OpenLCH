@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
+async-trait = "0.1.83"
 candle-core = "0.7.2"
 candle-nn = "0.7.2"
 candle-onnx = "0.7.2"

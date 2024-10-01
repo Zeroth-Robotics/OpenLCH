@@ -25,22 +25,21 @@ async fn main() -> Result<()> {
     println!("Initializing controller"); // Onnx or PID
 
     // Onnx
-    let model_path = PathBuf::from("path/to/model.onnx");
-    let device = Device::Cpu; // or Device::Cuda(0) for GPU
-    let model = model::Model::new(model_path, &device)?;
-    let controller: Arc<dyn controller::Controller + Send + Sync> =
-        Arc::new(controller::MLController::new(model));
+    // let model_path = PathBuf::from("path/to/model.onnx");
+    // let device = Device::Cpu; // or Device::Cuda(0) for GPU
+    // let model = model::Model::new(model_path, &device)?;
+    // let controller: Arc<dyn controller::Controller> =
+    //     Arc::new(controller::MLController::new(model));
 
     // PID
-    // let controller: Arc<dyn controller::Controller + Send + Sync> =
-    //     Arc::new(controller::PIDController {});
-
+    let controller: Arc<dyn controller::Controller + Send + Sync> =
+        Arc::new(controller::PIDController {});
     println!("Creating StandingController");
     let mut standing_controller = controller::StandingController::new(robot, controller);
 
     println!("Starting controller");
     standing_controller
-        .run()
+        .run(10) // Run for 10 iterations, None for infinite
         .await
         .context("Controller run failed")?;
 
