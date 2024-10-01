@@ -1,35 +1,36 @@
 # Runtime Documentation
+
 ## Setup
 
-```
+```bash
 cargo run
 ```
 
-
 ## Architecture
+
 <img src="public/runtime.png" alt="Runtime Architecture">
 
 The goal of the runtime is to provide a unified interface for:
+
 - robot configuration and declaration
 - control loop execution
 - state management
 - model inference
 - error handling and safety
 
+## `config/[robot-name].toml`
 
-
-## `config.toml`
 Define the robot: joints, servos, parameters, etc.
 
-Based on robot from kscalelabs/firmware config.
+Based on robot from `kscalelabs/firmware` config.
 
 ## `robot.rs`
+
 Create the robot struct based on the config.toml file with all the servos and joints.
 
 Provides the states for the robot.
 
-Based on robot from kscalelabs/firmware Robot struct.
-
+Based on robot from `kscalelabs/firmware` Robot struct.
 
 ## `HAL.rs`
 
@@ -37,7 +38,7 @@ Define the hardware abstraction layer for the servos controls from firmware.
 
 Rust binding for C++ struct (WIP):
 
-```
+```bash
 //     uint8_t torque_switch;         // 0x28 (1 byte)
 //     uint8_t acceleration;          // 0x29 (1 byte)
 //     int16_t target_location;       // 0x2A (2 bytes)
@@ -58,29 +59,16 @@ Rust binding for C++ struct (WIP):
 //     uint16_t current_current;      // 0x45 (2 bytes)
 ```
 
-
 ## `controller.rs`
+
 `StandingControllerPID` -> controller for standing using pre-set positions and PID controller
 
-`StandingControllerPPO` -> controller for standing using PPO model 
+`StandingControllerPPO` -> controller for standing using PPO model
 
 ## `model.rs`
+
 onnx inference session and initalization.
 
 ## `main.rs`
+
 initialize config, robot, controller and start standing using controller.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
