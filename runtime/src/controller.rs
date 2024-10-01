@@ -1,23 +1,26 @@
+use crate::model::Controller;
 use crate::robot::Robot;
 use anyhow::Result;
+use onnxruntime::ndarray::Array1;
 use std::time::Instant;
 use tokio::time::{sleep, Duration};
 
 pub struct StandingControllerPID {
     robot: Robot,
+    controller: Controller,
 }
 
 impl StandingControllerPID {
-    pub fn new(robot: Robot) -> Self {
-        Self { robot }
+    pub fn new(robot: Robot, controller: Controller) -> Self {
+        Self { robot, controller }
     }
 
-    pub async fn get_state(&self) -> Result<()> {
+    pub async fn get_state(&self) -> Result<Array1<f32>> {
         // ### === TODO: DENYS === ###
         // let state = self.robot.joint_states().await;
         // let imu = self.robot.imu_state().await;
         // let action = self.model.infer(state, imu).await?;
-        Ok(())
+        Ok(Array1::zeros(10)) // Placeholder
     }
 
     // ### === TODO: DENYS === ###

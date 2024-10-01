@@ -4,10 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.28.0", features = ["full"] }
-rand = "0.8.5"
-toml = "0.8.19"
-serde = { version = "1.0", features = ["derive"] }
 anyhow = "1.0"
-onnxruntime = "0.0.14"
 ndarray = "0.16.1"
+onnxruntime = "0.0.14"
+rand = "0.8.5"
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.28.0", features = ["full"] }
+toml = "0.8.19"
+
+# [build-dependencies]
+# pkg-config = "0.3.31"
+
+# [target.'cfg(target_os = "macos")'.dependencies]
+# onnxruntime-sys = { version = "0.0.14", features = ["disable-sys-build"] }

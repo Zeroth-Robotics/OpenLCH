@@ -1,49 +1,68 @@
-use anyhow::{Context, Result};
-use ndarray::{Array1, Array2};
-use onnxruntime::{environment::Environment, session::Session, tensor::OrtOwnedTensor};
+use anyhow::Result;
 use std::path::Path;
 
 pub struct Model {
-    session: Session,
+    // Placeholder for now
 }
 
 impl Model {
-    pub fn new<P: AsRef<Path>>(model_path: P) -> Result<Self> {
-        println!("Loading model from: {:?}", model_path.as_ref());
-        let environment = Environment::builder()
-            .with_name("robot_control_env")
-            .build()?;
-
-        let session = environment
-            .new_session_builder()?
-            .with_model_from_file(model_path)
-            .context("Failed to load the ONNX model")?;
-
-        println!("Model loaded successfully");
-        println!("Input count: {}", session.inputs.len());
-        for (i, input) in session.inputs.iter().enumerate() {
-            println!("Input {}: {:?}", i, input);
-        }
-        println!("Output count: {}", session.outputs.len());
-        for (i, output) in session.outputs.iter().enumerate() {
-            println!("Output {}: {:?}", i, output);
-        }
-
-        Ok(Model { session })
+    pub fn new<P: AsRef<Path>>(_model_path: P) -> Result<Self> {
+        println!("Loading model from: {:?}", _model_path.as_ref());
+        // Placeholder implementation
+        Ok(Model {})
     }
 
-    pub fn infer(&self, input: Array1<f32>) -> Result<Array1<f32>> {
-        println!("Running inference with input shape: {:?}", input.shape());
-        let input_shape = vec![1, input.len()];
-        let input_tensor = input.into_shape(input_shape)?;
+    // Commented out for now to simplify
+    // pub fn infer(&self, _input: ndarray::Array1<f32>) -> Result<ndarray::Array1<f32>> {
+    //     // Placeholder implementation
+    //     Ok(ndarray::Array1::zeros(1))
+    // }
+}
 
-        let outputs: Vec<OrtOwnedTensor<f32, _>> = self
-            .session
-            .run(vec![input_tensor.view()])
-            .context("Failed to run inference")?;
+pub struct HandwrittenController {
+    // Add fields as needed
+}
 
-        let output = outputs[0].view().to_owned().into_shape(outputs[0].len())?;
-        println!("Inference completed. Output shape: {:?}", output.shape());
-        Ok(output)
+impl HandwrittenController {
+    pub fn new() -> Self {
+        println!("Initializing HandwrittenController");
+        HandwrittenController {}
+    }
+
+    pub fn compute_action(&self, _state: &[f32]) -> Vec<f32> {
+        println!("Computing action with HandwrittenController");
+        // placeholder action
+        vec![0.0; _state.len()]
+    }
+}
+
+pub enum Controller {
+    PPO(Model),
+    Handwritten(HandwrittenController),
+}
+
+impl Controller {
+    pub fn new_ppo<P: AsRef<Path>>(model_path: P) -> Result<Self> {
+        println!("Creating PPO Controller");
+        Ok(Controller::PPO(Model::new(model_path)?))
+    }
+
+    pub fn new_handwritten() -> Self {
+        println!("Creating Handwritten Controller");
+        Controller::Handwritten(HandwrittenController::new())
+    }
+
+    pub fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
+        match self {
+            Controller::PPO(_model) => {
+                println!("Computing action with PPO model");
+                // Placeholder implementation
+                Ok(vec![0.0; state.len()])
+            }
+            Controller::Handwritten(controller) => {
+                println!("Computing action with Handwritten controller");
+                Ok(controller.compute_action(state))
+            }
+        }
     }
 }
