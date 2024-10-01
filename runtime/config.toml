@@ -11,7 +11,7 @@ knee_pitch = { id = 4, pid = { p = 10.0, i = 0.0, d = 0.3 }, limits = { lower = 
 ankle_pitch = { id = 5, pid = { p = 10.0, i = 0.0, d = 0.3 }, limits = { lower = -0.3, upper = 0.3 } }
 
 [robot.legs.right]
-hip_roll = { id = 6, pid = { p = 10.0, i = f0.0, d = 0.3 }, limits = { lower = 2.25, upper = 4.49 } }
+hip_roll = { id = 6, pid = { p = 10.0, i = 0.0, d = 0.3 }, limits = { lower = 2.25, upper = 4.49 } }
 hip_yaw = { id = 7, pid = { p = 10.0, i = 0.0, d = 0.3 }, limits = { lower = 1.74, upper = 4.74 } }
 hip_pitch = { id = 8, pid = { p = 10.0, i = 0.0, d = 0.3 }, limits = { lower = 0.05, upper = 4.05 } }
 knee_pitch = { id = 9, pid = { p = 10.0, i = 0.0, d = 0.3 }, limits = { lower = -0.5, upper = 2.5 } }
