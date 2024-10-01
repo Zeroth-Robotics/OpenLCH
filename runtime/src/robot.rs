@@ -127,6 +127,17 @@ impl Robot {
         &self.config.default_standing_positions
     }
 
+    pub fn find_joint_config(&self, joint_name: &str) -> Option<&JointConfig> {
+        for limb in [&self.config.legs, &self.config.arms] {
+            for side_joints in limb.values() {
+                if let Some(joint_config) = side_joints.get(joint_name) {
+                    return Some(joint_config);
+                }
+            }
+        }
+        None
+    }
+
     pub fn print_config(&self) {
         println!("Robot Configuration:");
         println!("Name: {}", self.config.name);
