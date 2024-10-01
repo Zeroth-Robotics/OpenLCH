@@ -1,24 +1,21 @@
 use crate::robot::Robot;
-use crate::config::Config;
 use anyhow::Result;
 
 pub struct StandingControllerPID {
     robot: Robot,
-    config: Config,
 }
 
-pub struct StandingControllerPPO {
-    model: OnnxInfer,
-    robot: Robot,
-    config: Config,
-}
+// pub struct StandingControllerPPO {
+//     model: OnnxInfer,
+//     robot: Robot,
+//     config: Config,
+// }
 
 
 impl StandingControllerPID {
-    pub fn new(robot: Robot, config: Config) -> Self {
+    pub fn new(robot: Robot) -> Self {
         Self {
             robot,
-            config,
         }
     }
 
@@ -75,6 +72,16 @@ impl StandingControllerPID {
             // (15, 0.0), // shoulder_pitch
             // (16, 0.0), // elbow_pitch
         ]
+    }
+
+    pub async fn run(&self) -> Result<()> {
+        // get joint states
+        // get imu state
+        // send command
+
+        println!("Hello, world!");
+
+        Ok(())
     }
 }
 
