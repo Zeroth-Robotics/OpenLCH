@@ -1,4 +1,6 @@
+mod HAL;
 mod controller;
+mod model;
 mod robot;
 
 use crate::controller::*;

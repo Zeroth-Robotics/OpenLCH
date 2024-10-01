@@ -23,3 +23,23 @@
 //     uint8_t reserved2[2];          // 0x43-0x44 (2 bytes, reserved)
 //     uint16_t current_current;      // 0x45 (2 bytes)
 // } ServoInfo;
+
+// Something like this?
+pub struct ServoInfo {
+    pub torque_switch: u8,
+    pub acceleration: u8,
+    pub target_location: i16,
+    pub running_time: u16,
+    pub running_speed: u16,
+    pub torque_limit: u16,
+    pub lock_mark: u8,
+    pub current_location: i16,
+    pub current_speed: i16,
+    pub current_load: i16,
+    pub current_voltage: u8,
+    pub current_temperature: u8,
+    pub async_write_flag: u8,
+    pub servo_status: u8,
+    pub mobile_sign: u8,
+    pub current_current: u16,
+}
