@@ -1,6 +1,8 @@
-use serde::Deserialize; // deserialize from toml
+use anyhow::{Context, Result};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
+use std::path::Path;
 
 #[derive(Deserialize, Clone)]
 struct PID {
@@ -69,8 +71,8 @@ pub struct Robot {
 }
 
 impl Robot {
-    pub fn new() -> Self {
-        let config = Self::load_config("config.toml");
+    pub fn new<P: AsRef<Path>>(config_path: P) -> Result<Self> {
+        let config = Self::load_config(config_path)?;
 
         let left_leg = Leg {
             servos: config
@@ -136,17 +138,19 @@ impl Robot {
                 .collect(),
         };
 
-        Robot {
+        Ok(Robot {
             left_leg,
             right_leg,
             left_arm,
             right_arm,
-        }
+        })
     }
 
-    fn load_config(filename: &str) -> Config {
-        let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
-        toml::from_str(&contents).expect("Failed to parse the config file")
+    fn load_config<P: AsRef<Path>>(filename: P) -> Result<Config> {
+        let contents = fs::read_to_string(&filename)
+            .with_context(|| format!("Failed to read config file: {:?}", filename.as_ref()))?;
+        toml::from_str(&contents)
+            .with_context(|| format!("Failed to parse config file: {:?}", filename.as_ref()))
     }
 
     // ### === TODO: DENYS === ###
