@@ -2,6 +2,7 @@ use crate::model::Model;
 use crate::robot::Robot;
 use anyhow::Result;
 use async_trait::async_trait;
+use rand::Rng;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -19,7 +20,21 @@ impl Controller for PIDController {
     async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
         // PID control logic
         println!("Computing action with PID controller");
-        Ok(vec![0.0; state.len()])
+
+        // Define a small factor for tiny changes (e.g., 1%)
+        let small_change_factor = 0.01;
+
+        // Create a random vector with tiny changes relative to the state
+        let mut rng = rand::thread_rng();
+        let random_vec: Vec<f32> = state
+            .iter()
+            .map(|&value| {
+                let random_change = rng.gen_range(-small_change_factor..small_change_factor);
+                value + random_change
+            })
+            .collect();
+
+        Ok(random_vec)
     }
 }
 
