@@ -193,4 +193,36 @@ impl Robot {
             .chain(self.right_arm.servos.iter_mut())
             .collect()
     }
+
+    pub fn print_config(&self) {
+        println!("Robot Configuration:");
+        println!("Left Leg:");
+        for servo in &self.left_leg.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
+        println!("Right Leg:");
+        for servo in &self.right_leg.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
+        println!("Left Arm:");
+        for servo in &self.left_arm.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
+        println!("Right Arm:");
+        for servo in &self.right_arm.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
+    }
 }
