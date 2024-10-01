@@ -38,8 +38,9 @@ async fn main() -> Result<()> {
     let mut standing_controller = controller::StandingController::new(robot, controller);
 
     println!("Starting controller");
+    let iterations = Some(10); // Run for 10 iterations, None for infinite
     standing_controller
-        .run(10) // Run for 10 iterations, None for infinite
+        .run(iterations)
         .await
         .context("Controller run failed")?;
 
