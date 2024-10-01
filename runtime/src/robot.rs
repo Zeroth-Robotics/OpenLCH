@@ -5,144 +5,108 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Deserialize, Clone)]
-struct PID {
+pub struct PID {
     p: f32,
     i: f32,
     d: f32,
 }
 
 #[derive(Deserialize, Clone)]
-struct Limits {
+pub struct Limits {
     lower: f32,
     upper: f32,
 }
 
 #[derive(Deserialize, Clone)]
-struct MotorConfig {
+pub struct ServoConfig {
     id: usize,
     pid: PID,
     limits: Limits,
 }
 
 #[derive(Deserialize)]
-struct Config {
+pub struct Config {
     robot: RobotConfig,
 }
 
 #[derive(Deserialize)]
-struct RobotConfig {
+pub struct RobotConfig {
+    name: String,
+    height: f32,
+    weight: i32,
     legs: LegsConfig,
     arms: ArmsConfig,
+    parameters: ParametersConfig,
 }
 
 #[derive(Deserialize)]
-struct LegsConfig {
-    left: HashMap<String, MotorConfig>,
-    right: HashMap<String, MotorConfig>,
+pub struct LegsConfig {
+    left: HashMap<String, ServoConfig>,
+    right: HashMap<String, ServoConfig>,
 }
 
 #[derive(Deserialize)]
-struct ArmsConfig {
-    left: HashMap<String, MotorConfig>,
-    right: HashMap<String, MotorConfig>,
+pub struct ArmsConfig {
+    left: HashMap<String, ServoConfig>,
+    right: HashMap<String, ServoConfig>,
+}
+
+#[derive(Deserialize)]
+pub struct ParametersConfig {
+    stiffness: HashMap<String, f32>,
+    damping: HashMap<String, f32>,
+    effort: HashMap<String, f32>,
+    velocity: HashMap<String, f32>,
+    friction: HashMap<String, f32>,
 }
 
 pub struct Servo {
-    id: usize,
-    pid: PID,
-    limits: Limits,
+    config: ServoConfig,
     current_position: f32,
     current_velocity: f32,
 }
 
-pub struct Leg {
-    servos: Vec<Servo>,
-}
-
-pub struct Arm {
-    servos: Vec<Servo>,
-}
-
 pub struct Robot {
-    left_leg: Leg,
-    right_leg: Leg,
-    left_arm: Arm,
-    right_arm: Arm,
+    config: RobotConfig,
+    legs: HashMap<String, HashMap<String, Servo>>,
+    arms: HashMap<String, HashMap<String, Servo>>,
 }
 
 impl Robot {
     pub fn new<P: AsRef<Path>>(config_path: P) -> Result<Self> {
         let config = Self::load_config(config_path)?;
 
-        let left_leg = Leg {
-            servos: config
-                .robot
-                .legs
-                .left
-                .values()
-                .map(|m| Servo {
-                    id: m.id,
-                    pid: m.pid.clone(),
-                    limits: m.limits.clone(),
-                    current_position: 0.0,
-                    current_velocity: 0.0,
-                })
-                .collect(),
-        };
+        let create_servos =
+            |servo_configs: &HashMap<String, ServoConfig>| -> HashMap<String, Servo> {
+                servo_configs
+                    .iter()
+                    .map(|(name, config)| {
+                        (
+                            name.clone(),
+                            Servo {
+                                config: config.clone(),
+                                current_position: 0.0,
+                                current_velocity: 0.0,
+                            },
+                        )
+                    })
+                    .collect()
+            };
 
-        let right_leg = Leg {
-            servos: config
-                .robot
-                .legs
-                .right
-                .values()
-                .map(|m| Servo {
-                    id: m.id,
-                    pid: m.pid.clone(),
-                    limits: m.limits.clone(),
-                    current_position: 0.0,
-                    current_velocity: 0.0,
-                })
-                .collect(),
-        };
+        let legs = HashMap::from([
+            ("left".to_string(), create_servos(&config.robot.legs.left)),
+            ("right".to_string(), create_servos(&config.robot.legs.right)),
+        ]);
 
-        let left_arm = Arm {
-            servos: config
-                .robot
-                .arms
-                .left
-                .values()
-                .map(|m| Servo {
-                    id: m.id,
-                    pid: m.pid.clone(),
-                    limits: m.limits.clone(),
-                    current_position: 0.0,
-                    current_velocity: 0.0,
-                })
-                .collect(),
-        };
-
-        let right_arm = Arm {
-            servos: config
-                .robot
-                .arms
-                .right
-                .values()
-                .map(|m| Servo {
-                    id: m.id,
-                    pid: m.pid.clone(),
-                    limits: m.limits.clone(),
-                    current_position: 0.0,
-                    current_velocity: 0.0,
-                })
-                .collect(),
-        };
+        let arms = HashMap::from([
+            ("left".to_string(), create_servos(&config.robot.arms.left)),
+            ("right".to_string(), create_servos(&config.robot.arms.right)),
+        ]);
 
         Ok(Robot {
-            left_leg,
-            right_leg,
-            left_arm,
-            right_arm,
+            config: config.robot,
+            legs,
+            arms,
         })
     }
 
@@ -175,54 +139,60 @@ impl Robot {
     }
 
     fn all_servos(&self) -> Vec<&Servo> {
-        self.left_leg
-            .servos
-            .iter()
-            .chain(self.right_leg.servos.iter())
-            .chain(self.left_arm.servos.iter())
-            .chain(self.right_arm.servos.iter())
+        self.legs
+            .values()
+            .chain(self.arms.values())
+            .flat_map(|limb| limb.values())
             .collect()
     }
 
     fn all_servos_mut(&mut self) -> Vec<&mut Servo> {
-        self.left_leg
-            .servos
-            .iter_mut()
-            .chain(self.right_leg.servos.iter_mut())
-            .chain(self.left_arm.servos.iter_mut())
-            .chain(self.right_arm.servos.iter_mut())
+        self.legs
+            .values_mut()
+            .chain(self.arms.values_mut())
+            .flat_map(|limb| limb.values_mut())
             .collect()
     }
 
     pub fn print_config(&self) {
         println!("Robot Configuration:");
-        println!("Left Leg:");
-        for servo in &self.left_leg.servos {
-            println!(
-                "  Servo ID: {}, Position: {}, Velocity: {}",
-                servo.id, servo.current_position, servo.current_velocity
-            );
+        println!("Name: {}", self.config.name);
+        println!("Height: {} m", self.config.height);
+        println!("Weight: {} kg", self.config.weight);
+
+        let print_servos = |servos: &HashMap<String, Servo>, limb_type: &str, side: &str| {
+            println!("{} {} Configuration:", side, limb_type);
+            let mut sorted_servos: Vec<_> = servos.iter().collect();
+            sorted_servos.sort_by_key(|(_, servo)| servo.config.id);
+            for (name, servo) in sorted_servos {
+                println!("  Servo: {}", name);
+                println!("    ID: {}", servo.config.id);
+                println!("    Current Position: {}", servo.current_position);
+                println!("    Current Velocity: {}", servo.current_velocity);
+                println!(
+                    "    PID: p={}, i={}, d={}",
+                    servo.config.pid.p, servo.config.pid.i, servo.config.pid.d
+                );
+                println!(
+                    "    Limits: lower={}, upper={}",
+                    servo.config.limits.lower, servo.config.limits.upper
+                );
+            }
+        };
+
+        for (side, servos) in &self.legs {
+            print_servos(servos, "Leg", side);
         }
-        println!("Right Leg:");
-        for servo in &self.right_leg.servos {
-            println!(
-                "  Servo ID: {}, Position: {}, Velocity: {}",
-                servo.id, servo.current_position, servo.current_velocity
-            );
+
+        for (side, servos) in &self.arms {
+            print_servos(servos, "Arm", side);
         }
-        println!("Left Arm:");
-        for servo in &self.left_arm.servos {
-            println!(
-                "  Servo ID: {}, Position: {}, Velocity: {}",
-                servo.id, servo.current_position, servo.current_velocity
-            );
-        }
-        println!("Right Arm:");
-        for servo in &self.right_arm.servos {
-            println!(
-                "  Servo ID: {}, Position: {}, Velocity: {}",
-                servo.id, servo.current_position, servo.current_velocity
-            );
-        }
+
+        println!("Parameters:");
+        println!("  Stiffness: {:?}", self.config.parameters.stiffness);
+        println!("  Damping: {:?}", self.config.parameters.damping);
+        println!("  Effort: {:?}", self.config.parameters.effort);
+        println!("  Velocity: {:?}", self.config.parameters.velocity);
+        println!("  Friction: {:?}", self.config.parameters.friction);
     }
 }
