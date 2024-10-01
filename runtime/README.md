@@ -1,4 +1,28 @@
-## Documentation
+## Runtime Documentation
+
+![Runtime Architecture](public/runtime.png)
+
+The goal of the runtime is to provide a unified interface for:
+- robot configuration and declaration
+- control loop execution
+- state management
+- model inference
+- error handling and safety
+
+
+
+## `config.toml`
+Define the robot: joints, servos, parameters, etc.
+
+Based on robot from kscalelabs/firmware config.
+
+## `robot.rs`
+Create the robot struct based on the config.toml file with all the servos and joints.
+
+Provides the states for the robot.
+
+Based on robot from kscalelabs/firmware Robot struct.
+
 
 ## `HAL.rs`
 
@@ -26,17 +50,6 @@ Rust binding for C++ struct (WIP):
 //     uint8_t reserved2[2];          // 0x43-0x44 (2 bytes, reserved)
 //     uint16_t current_current;      // 0x45 (2 bytes)
 ```
-
-## `config.toml`
-Define joint limits, motor IDs, PID gains, etc.
-
-Based on robot from kscalelabs/firmware config.
-
-
-## `robot.rs`
-Defines robot struct and methods to get joint states and imu states.
-
-Based on robot from kscalelabs/firmware Robot struct
 
 
 ## `controller.rs`
