@@ -1,68 +1,36 @@
 use anyhow::Result;
+use candle_core::{Device, Tensor};
+use candle_onnx::onnx::ModelProto;
+use std::collections::HashMap;
 use std::path::Path;
 
 pub struct Model {
-    // Placeholder for now
+    proto: ModelProto,
+    device: Device,
 }
 
 impl Model {
-    pub fn new<P: AsRef<Path>>(_model_path: P) -> Result<Self> {
-        println!("Loading model from: {:?}", _model_path.as_ref());
-        // Placeholder implementation
-        Ok(Model {})
+    pub fn new<P: AsRef<Path>>(model_path: P, device: &Device) -> Result<Self> {
+        println!("Loading model from: {:?}", model_path.as_ref());
+        let proto = candle_onnx::read_file(model_path)?;
+        Ok(Model {
+            proto,
+            device: device.clone(),
+        })
     }
 
-    // Commented out for now to simplify
-    // pub fn infer(&self, _input: ndarray::Array1<f32>) -> Result<ndarray::Array1<f32>> {
-    //     // Placeholder implementation
-    //     Ok(ndarray::Array1::zeros(1))
-    // }
-}
+    pub fn infer(&self, input: &[f32]) -> Result<Vec<f32>> {
+        let input_tensor = Tensor::from_vec(input.to_vec(), (1, input.len()), &self.device)?;
 
-pub struct HandwrittenController {
-    // Add fields as needed
-}
+        let mut inputs = HashMap::new();
+        inputs.insert("input".to_string(), input_tensor);
 
-impl HandwrittenController {
-    pub fn new() -> Self {
-        println!("Initializing HandwrittenController");
-        HandwrittenController {}
-    }
+        let outputs = candle_onnx::simple_eval(&self.proto, inputs)?;
 
-    pub fn compute_action(&self, _state: &[f32]) -> Vec<f32> {
-        println!("Computing action with HandwrittenController");
-        // placeholder action
-        vec![0.0; _state.len()]
-    }
-}
+        // Assuming the output tensor is named "output"
+        let output = outputs.get("output").expect("Output 'output' not found");
+        let output_vec = output.to_vec1::<f32>()?;
 
-pub enum Controller {
-    PPO(Model),
-    Handwritten(HandwrittenController),
-}
-
-impl Controller {
-    pub fn new_ppo<P: AsRef<Path>>(model_path: P) -> Result<Self> {
-        println!("Creating PPO Controller");
-        Ok(Controller::PPO(Model::new(model_path)?))
-    }
-
-    pub fn new_handwritten() -> Self {
-        println!("Creating Handwritten Controller");
-        Controller::Handwritten(HandwrittenController::new())
-    }
-
-    pub fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
-        match self {
-            Controller::PPO(_model) => {
-                println!("Computing action with PPO model");
-                // Placeholder implementation
-                Ok(vec![0.0; state.len()])
-            }
-            Controller::Handwritten(controller) => {
-                println!("Computing action with Handwritten controller");
-                Ok(controller.compute_action(state))
-            }
-        }
+        Ok(output_vec)
     }
 }
