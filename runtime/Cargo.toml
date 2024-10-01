@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
+candle-core = "0.7.2"
+candle-nn = "0.7.2"
+candle-onnx = "0.7.2"
 ndarray = "0.16.1"
 onnxruntime = "0.0.14"
 rand = "0.8.5"
