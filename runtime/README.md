@@ -1,6 +1,13 @@
-## Runtime Documentation
+# Runtime Documentation
+## Setup
 
-![Runtime Architecture](public/runtime.png)
+```
+cargo run
+```
+
+
+## Architecture
+<img src="public/runtime.png" alt="Runtime Architecture">
 
 The goal of the runtime is to provide a unified interface for:
 - robot configuration and declaration
