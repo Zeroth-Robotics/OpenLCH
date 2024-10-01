@@ -1,5 +1,5 @@
-use std::fs;
 use serde::Deserialize; // deserialize from toml
+use std::fs;
 use toml;
 
 #[derive(Deserialize, Clone)]
@@ -73,43 +73,67 @@ impl Robot {
         let config = Self::load_config("config.toml");
 
         let left_leg = Leg {
-            servos: config.robot.legs.left.iter().map(|m| Servo {
-                id: m.id,
-                pid: m.pid.clone(),
-                limits: m.limits.clone(),
-                current_position: 0.0,
-                current_velocity: 0.0,
-            }).collect(),
+            servos: config
+                .robot
+                .legs
+                .left
+                .iter()
+                .map(|m| Servo {
+                    id: m.id,
+                    pid: m.pid.clone(),
+                    limits: m.limits.clone(),
+                    current_position: 0.0,
+                    current_velocity: 0.0,
+                })
+                .collect(),
         };
 
         let right_leg = Leg {
-            servos: config.robot.legs.right.iter().map(|m| Servo {
-                id: m.id,
-                pid: m.pid.clone(),
-                limits: m.limits.clone(),
-                current_position: 0.0,
-                current_velocity: 0.0,
-            }).collect(),
+            servos: config
+                .robot
+                .legs
+                .right
+                .iter()
+                .map(|m| Servo {
+                    id: m.id,
+                    pid: m.pid.clone(),
+                    limits: m.limits.clone(),
+                    current_position: 0.0,
+                    current_velocity: 0.0,
+                })
+                .collect(),
         };
 
         let left_arm = Arm {
-            servos: config.robot.arms.left.iter().map(|m| Servo {
-                id: m.id,
-                pid: m.pid.clone(),
-                limits: m.limits.clone(),
-                current_position: 0.0,
-                current_velocity: 0.0,
-            }).collect(),
+            servos: config
+                .robot
+                .arms
+                .left
+                .iter()
+                .map(|m| Servo {
+                    id: m.id,
+                    pid: m.pid.clone(),
+                    limits: m.limits.clone(),
+                    current_position: 0.0,
+                    current_velocity: 0.0,
+                })
+                .collect(),
         };
 
         let right_arm = Arm {
-            servos: config.robot.arms.right.iter().map(|m| Servo {
-                id: m.id,
-                pid: m.pid.clone(),
-                limits: m.limits.clone(),
-                current_position: 0.0,
-                current_velocity: 0.0,
-            }).collect(),
+            servos: config
+                .robot
+                .arms
+                .right
+                .iter()
+                .map(|m| Servo {
+                    id: m.id,
+                    pid: m.pid.clone(),
+                    limits: m.limits.clone(),
+                    current_position: 0.0,
+                    current_velocity: 0.0,
+                })
+                .collect(),
         };
 
         Robot {
@@ -121,15 +145,13 @@ impl Robot {
     }
 
     fn load_config(filename: &str) -> Config {
-        let contents = fs::read_to_string(filename)
-            .expect("Something went wrong reading the file");
-        toml::from_str(&contents)
-            .expect("Failed to parse the config file")
+        let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+        toml::from_str(&contents).expect("Failed to parse the config file")
     }
 
     // ### === TODO: DENYS === ###
     pub fn get_joint_state(&self, joint_id: usize) -> Option<(f32, f32)> {
-        // ### === TODO: DENYS === ### 
+        // ### === TODO: DENYS === ###
         // for servo in self.all_servos() {
         //     if servo.id == joint_id {
         //         return Some((servo.current_position, servo.current_velocity));
@@ -149,7 +171,9 @@ impl Robot {
     }
 
     fn all_servos(&self) -> Vec<&Servo> {
-        self.left_leg.servos.iter()
+        self.left_leg
+            .servos
+            .iter()
             .chain(self.right_leg.servos.iter())
             .chain(self.left_arm.servos.iter())
             .chain(self.right_arm.servos.iter())
@@ -157,7 +181,9 @@ impl Robot {
     }
 
     fn all_servos_mut(&mut self) -> Vec<&mut Servo> {
-        self.left_leg.servos.iter_mut()
+        self.left_leg
+            .servos
+            .iter_mut()
             .chain(self.right_leg.servos.iter_mut())
             .chain(self.left_arm.servos.iter_mut())
             .chain(self.right_arm.servos.iter_mut())

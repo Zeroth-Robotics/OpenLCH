@@ -11,12 +11,9 @@ pub struct StandingControllerPID {
 //     config: Config,
 // }
 
-
 impl StandingControllerPID {
     pub fn new(robot: Robot) -> Self {
-        Self {
-            robot,
-        }
+        Self { robot }
     }
 
     pub async fn get_state(&self) -> Result<()> {
@@ -63,14 +60,14 @@ impl StandingControllerPID {
             (9, 0.0), // knee_pitch
             (10, 0.0), // ankle_pitch
 
-            // Left arm (if needed)
-            // (11, 0.0), // shoulder_yaw
-            // (12, 0.0), // shoulder_pitch
-            // (13, 0.0), // elbow_pitch
-            // Right arm (if needed)
-            // (14, 0.0), // shoulder_yaw
-            // (15, 0.0), // shoulder_pitch
-            // (16, 0.0), // elbow_pitch
+                      // Left arm (if needed)
+                      // (11, 0.0), // shoulder_yaw
+                      // (12, 0.0), // shoulder_pitch
+                      // (13, 0.0), // elbow_pitch
+                      // Right arm (if needed)
+                      // (14, 0.0), // shoulder_yaw
+                      // (15, 0.0), // shoulder_pitch
+                      // (16, 0.0), // elbow_pitch
         ]
     }
 
@@ -84,7 +81,6 @@ impl StandingControllerPID {
         Ok(())
     }
 }
-
 
 // impl StandingControllerPPO {
 //     pub fn new(model: OnnxInfer, robot: Robot, config: Config) -> Self {
@@ -110,6 +106,4 @@ impl StandingControllerPID {
 //         Ok(())
 //     }
 
-    
 // }
-

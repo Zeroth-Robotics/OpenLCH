@@ -1,4 +1,4 @@
-// TODO: hardware abstraction layer 
+// TODO: hardware abstraction layer
 // hardware interface for servos go here
 // @Denys
 
