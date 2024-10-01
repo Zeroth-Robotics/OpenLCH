@@ -10,6 +10,10 @@ use std::path::PathBuf;
 async fn main() -> Result<()> {
     let config_path = PathBuf::from("config.toml");
     let robot = Robot::new(config_path)?;
-    let controller = StandingControllerPID::new(robot);
+
+    println!("Robot initialized. Printing configuration:");
+    robot.print_config();
+
+    let mut controller = StandingControllerPID::new(robot);
     controller.run().await
 }
