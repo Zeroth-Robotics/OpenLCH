@@ -1,6 +1,7 @@
 use crate::robot::Robot;
 use anyhow::Result;
 use tokio::time::{sleep, Duration};
+use std::time::Instant;
 
 pub struct StandingControllerPID {
     robot: Robot,
@@ -21,13 +22,17 @@ impl StandingControllerPID {
 
     // ### === TODO: DENYS === ###
     pub async fn get_feedback(&self) -> Result<()> {
+        let time = Instant::now();
         println!("feedback");
+        println!("Start time: {:?}", time);
         Ok(())
     }
 
     // ### === TODO: DENYS === ###
     pub async fn send_command(&self) -> Result<()> {
+        let time = Instant::now();
         println!("command");
+        println!("Start time: {:?}", time);
         Ok(())
     }
 
@@ -66,8 +71,11 @@ impl StandingControllerPID {
 
         println!("Starting StandingControllerPID");
         loop {
-            self.get_feedback().await?;
-            self.send_command().await?;
+            let feedback_future = self.get_feedback();
+            let command_future = self.send_command();
+
+            tokio::try_join!(feedback_future, command_future)?;
+
             sleep(Duration::from_millis(100)).await;
         }
     }
