@@ -1,4 +1,5 @@
 use serde::Deserialize; // deserialize from toml
+use std::collections::HashMap;
 use std::fs;
 
 #[derive(Deserialize, Clone)]
@@ -34,14 +35,14 @@ struct RobotConfig {
 
 #[derive(Deserialize)]
 struct LegsConfig {
-    left: Vec<MotorConfig>,
-    right: Vec<MotorConfig>,
+    left: HashMap<String, MotorConfig>,
+    right: HashMap<String, MotorConfig>,
 }
 
 #[derive(Deserialize)]
 struct ArmsConfig {
-    left: Vec<MotorConfig>,
-    right: Vec<MotorConfig>,
+    left: HashMap<String, MotorConfig>,
+    right: HashMap<String, MotorConfig>,
 }
 
 pub struct Servo {
@@ -76,7 +77,7 @@ impl Robot {
                 .robot
                 .legs
                 .left
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
@@ -92,7 +93,7 @@ impl Robot {
                 .robot
                 .legs
                 .right
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
@@ -108,7 +109,7 @@ impl Robot {
                 .robot
                 .arms
                 .left
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
@@ -124,7 +125,7 @@ impl Robot {
                 .robot
                 .arms
                 .right
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
