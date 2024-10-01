@@ -33,3 +33,14 @@ damping = { hip_pitch = 0.3, hip_yaw = 0.3, hip_roll = 0.3, knee_pitch = 0.3, an
 effort = { hip_pitch = 2.0, hip_yaw = 2.0, hip_roll = 2.0, knee_pitch = 2.0, ankle_pitch = 2.0, shoulder_pitch = 2.0, shoulder_yaw = 2.0, shoulder_roll = 2.0, elbow_pitch = 2.0, elbow_yaw = 2.0 }
 velocity = { hip_pitch = 20.0, hip_yaw = 20.0, hip_roll = 20.0, knee_pitch = 20.0, ankle_pitch = 20.0, shoulder_pitch = 20.0, shoulder_yaw = 20.0, shoulder_roll = 20.0, elbow_pitch = 20.0, elbow_yaw = 20.0 }
 friction = { hip_pitch = 0.0, hip_yaw = 0.0, hip_roll = 0.0, knee_pitch = 0.0, ankle_pitch = 0.0, elbow_pitch = 0.0, elbow_yaw = 0.0 }
+
+[robot.default_standing_positions]
+hip_roll = 0.0
+hip_yaw = 0.0
+hip_pitch = 0.0
+knee_pitch = 0.0
+ankle_pitch = 0.0
+shoulder_yaw = 0.0
+shoulder_pitch = 0.0
+elbow_pitch = 0.0
+elbow_yaw = 0.0
