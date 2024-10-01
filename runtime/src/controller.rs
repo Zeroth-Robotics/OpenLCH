@@ -1,7 +1,7 @@
 use crate::robot::Robot;
 use anyhow::Result;
-use tokio::time::{sleep, Duration};
 use std::time::Instant;
+use tokio::time::{sleep, Duration};
 
 pub struct StandingControllerPID {
     robot: Robot,
