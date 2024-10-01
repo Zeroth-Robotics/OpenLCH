@@ -6,12 +6,6 @@ pub struct StandingControllerPID {
     robot: Robot,
 }
 
-// pub struct StandingControllerPPO {
-//     model: OnnxInfer,
-//     robot: Robot,
-//     config: Config,
-// }
-
 impl StandingControllerPID {
     pub fn new(robot: Robot) -> Self {
         Self { robot }
@@ -38,40 +32,31 @@ impl StandingControllerPID {
     }
 
     pub async fn stand(&mut self) -> Result<()> {
-        let desired_positions = self.default_standing_positions();
+        let desired_positions = self.robot.get_default_standing_positions();
+        let mut commands = Vec::new();
 
-        for (joint_id, position) in desired_positions {
+        for (joint_name, &position) in desired_positions {
+            if let Some(joint_config) = self.find_joint_config(joint_name) {
+                commands.push((joint_config.id, position));
+            }
+        }
+
+        for (joint_id, position) in commands {
             self.robot.set_joint_command(joint_id, position, 0.0);
         }
 
         Ok(())
     }
 
-    // EXAMPLE VALUES
-    fn default_standing_positions(&self) -> Vec<(usize, f32)> {
-        vec![
-            // Left leg
-            (1, 0.0), // hip_roll
-            (2, 0.0), // hip_yaw
-            (3, 0.0), // hip_pitch
-            (4, 0.0), // knee_pitch
-            (5, 0.0), // ankle_pitch
-            // Right leg
-            (6, 0.0), // hip_roll
-            (7, 0.0), // hip_yaw
-            (8, 0.0), // hip_pitch
-            (9, 0.0), // knee_pitch
-            (10, 0.0), // ankle_pitch
-
-                      // Left arm (if needed)
-                      // (11, 0.0), // shoulder_yaw
-                      // (12, 0.0), // shoulder_pitch
-                      // (13, 0.0), // elbow_pitch
-                      // Right arm (if needed)
-                      // (14, 0.0), // shoulder_yaw
-                      // (15, 0.0), // shoulder_pitch
-                      // (16, 0.0), // elbow_pitch
-        ]
+    fn find_joint_config(&self, joint_name: &str) -> Option<&crate::robot::JointConfig> {
+        for limb in [&self.robot.config.legs, &self.robot.config.arms] {
+            for side_joints in limb.values() {
+                if let Some(joint_config) = side_joints.get(joint_name) {
+                    return Some(joint_config);
+                }
+            }
+        }
+        None
     }
 
     pub async fn run(&mut self) -> Result<()> {
@@ -87,6 +72,12 @@ impl StandingControllerPID {
         }
     }
 }
+
+// pub struct StandingControllerPPO {
+//     model: OnnxInfer,
+//     robot: Robot,
+//     config: Config,
+// }
 
 // impl StandingControllerPPO {
 //     pub fn new(model: OnnxInfer, robot: Robot, config: Config) -> Self {

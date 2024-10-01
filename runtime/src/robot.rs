@@ -4,109 +4,70 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct PID {
-    p: f32,
-    i: f32,
-    d: f32,
+    pub p: f32,
+    pub i: f32,
+    pub d: f32,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Limits {
-    lower: f32,
-    upper: f32,
+    pub lower: f32,
+    pub upper: f32,
 }
 
-#[derive(Deserialize, Clone)]
-pub struct ServoConfig {
-    id: usize,
-    pid: PID,
-    limits: Limits,
+#[derive(Deserialize, Debug, Clone)]
+pub struct JointConfig {
+    pub id: usize,
+    pub pid: PID,
+    pub limits: Limits,
 }
 
-#[derive(Deserialize)]
-pub struct Config {
-    robot: RobotConfig,
-}
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct RobotConfig {
-    name: String,
-    height: f32,
-    weight: i32,
-    legs: LegsConfig,
-    arms: ArmsConfig,
-    parameters: ParametersConfig,
+    pub name: String,
+    pub height: f32,
+    pub weight: i32,
+    pub legs: HashMap<String, HashMap<String, JointConfig>>,
+    pub arms: HashMap<String, HashMap<String, JointConfig>>,
+    pub parameters: ParametersConfig,
+    pub default_standing_positions: HashMap<String, f32>,
 }
 
-#[derive(Deserialize)]
-pub struct LegsConfig {
-    left: HashMap<String, ServoConfig>,
-    right: HashMap<String, ServoConfig>,
-}
-
-#[derive(Deserialize)]
-pub struct ArmsConfig {
-    left: HashMap<String, ServoConfig>,
-    right: HashMap<String, ServoConfig>,
-}
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ParametersConfig {
-    stiffness: HashMap<String, f32>,
-    damping: HashMap<String, f32>,
-    effort: HashMap<String, f32>,
-    velocity: HashMap<String, f32>,
-    friction: HashMap<String, f32>,
+    pub stiffness: HashMap<String, f32>,
+    pub damping: HashMap<String, f32>,
+    pub effort: HashMap<String, f32>,
+    pub velocity: HashMap<String, f32>,
+    pub friction: HashMap<String, f32>,
 }
 
-pub struct Servo {
-    config: ServoConfig,
-    current_position: f32,
-    current_velocity: f32,
+#[derive(Deserialize, Debug)]
+pub struct Config {
+    pub robot: RobotConfig,
+}
+
+pub struct Joint {
+    pub config: JointConfig,
+    pub current_position: f32,
+    pub current_velocity: f32,
 }
 
 pub struct Robot {
-    config: RobotConfig,
-    legs: HashMap<String, HashMap<String, Servo>>,
-    arms: HashMap<String, HashMap<String, Servo>>,
+    pub config: RobotConfig,
+    pub joints: HashMap<usize, Joint>,
 }
 
 impl Robot {
     pub fn new<P: AsRef<Path>>(config_path: P) -> Result<Self> {
         let config = Self::load_config(config_path)?;
-
-        let create_servos =
-            |servo_configs: &HashMap<String, ServoConfig>| -> HashMap<String, Servo> {
-                servo_configs
-                    .iter()
-                    .map(|(name, config)| {
-                        (
-                            name.clone(),
-                            Servo {
-                                config: config.clone(),
-                                current_position: 0.0,
-                                current_velocity: 0.0,
-                            },
-                        )
-                    })
-                    .collect()
-            };
-
-        let legs = HashMap::from([
-            ("left".to_string(), create_servos(&config.robot.legs.left)),
-            ("right".to_string(), create_servos(&config.robot.legs.right)),
-        ]);
-
-        let arms = HashMap::from([
-            ("left".to_string(), create_servos(&config.robot.arms.left)),
-            ("right".to_string(), create_servos(&config.robot.arms.right)),
-        ]);
+        let joints = Self::create_joints(&config.robot);
 
         Ok(Robot {
             config: config.robot,
-            legs,
-            arms,
+            joints,
         })
     }
 
@@ -117,41 +78,53 @@ impl Robot {
             .with_context(|| format!("Failed to parse config file: {:?}", filename.as_ref()))
     }
 
-    // ### === TODO: DENYS === ###
+    fn create_joints(config: &RobotConfig) -> HashMap<usize, Joint> {
+        let mut joints = HashMap::new();
+
+        for leg_joints in config.legs.values() {
+            for joint_config in leg_joints.values() {
+                joints.insert(
+                    joint_config.id,
+                    Joint {
+                        config: joint_config.clone(),
+                        current_position: 0.0,
+                        current_velocity: 0.0,
+                    },
+                );
+            }
+        }
+
+        for arm_joints in config.arms.values() {
+            for joint_config in arm_joints.values() {
+                joints.insert(
+                    joint_config.id,
+                    Joint {
+                        config: joint_config.clone(),
+                        current_position: 0.0,
+                        current_velocity: 0.0,
+                    },
+                );
+            }
+        }
+
+        joints
+    }
+
     pub fn get_joint_state(&self, joint_id: usize) -> Option<(f32, f32)> {
-        // ### === TODO: DENYS === ###
-        // for servo in self.all_servos() {
-        //     if servo.id == joint_id {
-        //         return Some((servo.current_position, servo.current_velocity));
-        //     }
-        // }
-        None
+        self.joints
+            .get(&joint_id)
+            .map(|joint| (joint.current_position, joint.current_velocity))
     }
 
-    // ### === TODO: DENYS === ###
     pub fn set_joint_command(&mut self, joint_id: usize, position: f32, velocity: f32) {
-        // for servo in self.all_servos_mut() {
-        //     if servo.id == joint_id {
-        //         servo.current_position = position;
-        //         servo.current_velocity = velocity;
-        //     }
-        // }
+        if let Some(joint) = self.joints.get_mut(&joint_id) {
+            joint.current_position = position;
+            joint.current_velocity = velocity;
+        }
     }
 
-    fn all_servos(&self) -> Vec<&Servo> {
-        self.legs
-            .values()
-            .chain(self.arms.values())
-            .flat_map(|limb| limb.values())
-            .collect()
-    }
-
-    fn all_servos_mut(&mut self) -> Vec<&mut Servo> {
-        self.legs
-            .values_mut()
-            .chain(self.arms.values_mut())
-            .flat_map(|limb| limb.values_mut())
-            .collect()
+    pub fn get_default_standing_positions(&self) -> &HashMap<String, f32> {
+        &self.config.default_standing_positions
     }
 
     pub fn print_config(&self) {
@@ -160,32 +133,22 @@ impl Robot {
         println!("Height: {} m", self.config.height);
         println!("Weight: {} kg", self.config.weight);
 
-        let print_servos = |servos: &HashMap<String, Servo>, limb_type: &str, side: &str| {
-            println!("{} {} Configuration:", side, limb_type);
-            let mut sorted_servos: Vec<_> = servos.iter().collect();
-            sorted_servos.sort_by_key(|(_, servo)| servo.config.id);
-            for (name, servo) in sorted_servos {
-                println!("  Servo: {}", name);
-                println!("    ID: {}", servo.config.id);
-                println!("    Current Position: {}", servo.current_position);
-                println!("    Current Velocity: {}", servo.current_velocity);
-                println!(
-                    "    PID: p={}, i={}, d={}",
-                    servo.config.pid.p, servo.config.pid.i, servo.config.pid.d
-                );
-                println!(
-                    "    Limits: lower={}, upper={}",
-                    servo.config.limits.lower, servo.config.limits.upper
-                );
+        for (limb_type, joints) in [("Leg", &self.config.legs), ("Arm", &self.config.arms)] {
+            for (side, side_joints) in joints {
+                println!("{} {} Configuration:", side, limb_type);
+                for (joint_name, joint_config) in side_joints {
+                    println!("  Joint: {}", joint_name);
+                    println!("    ID: {}", joint_config.id);
+                    println!(
+                        "    PID: p={}, i={}, d={}",
+                        joint_config.pid.p, joint_config.pid.i, joint_config.pid.d
+                    );
+                    println!(
+                        "    Limits: lower={}, upper={}",
+                        joint_config.limits.lower, joint_config.limits.upper
+                    );
+                }
             }
-        };
-
-        for (side, servos) in &self.legs {
-            print_servos(servos, "Leg", side);
-        }
-
-        for (side, servos) in &self.arms {
-            print_servos(servos, "Arm", side);
         }
 
         println!("Parameters:");
@@ -194,5 +157,10 @@ impl Robot {
         println!("  Effort: {:?}", self.config.parameters.effort);
         println!("  Velocity: {:?}", self.config.parameters.velocity);
         println!("  Friction: {:?}", self.config.parameters.friction);
+
+        println!("Default Standing Positions:");
+        for (joint, position) in &self.config.default_standing_positions {
+            println!("  {}: {}", joint, position);
+        }
     }
 }
