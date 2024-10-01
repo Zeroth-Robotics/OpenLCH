@@ -4,10 +4,16 @@ mod robot;
 use crate::controller::*;
 use anyhow::Result;
 use robot::Robot;
+use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let robot = Robot::new();
-    let controller = StandingControllerPID::new(robot);
+    let config_path = PathBuf::from("config.toml");
+    let robot = Robot::new(config_path)?;
+
+    println!("Robot initialized. Printing configuration:");
+    robot.print_config();
+
+    let mut controller = StandingControllerPID::new(robot);
     controller.run().await
 }

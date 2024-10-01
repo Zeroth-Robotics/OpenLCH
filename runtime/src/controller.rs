@@ -1,5 +1,6 @@
 use crate::robot::Robot;
 use anyhow::Result;
+use tokio::time::{sleep, Duration};
 
 pub struct StandingControllerPID {
     robot: Robot,
@@ -26,11 +27,13 @@ impl StandingControllerPID {
 
     // ### === TODO: DENYS === ###
     pub async fn get_feedback(&self) -> Result<()> {
+        println!("feedback");
         Ok(())
     }
 
     // ### === TODO: DENYS === ###
     pub async fn send_command(&self) -> Result<()> {
+        println!("command");
         Ok(())
     }
 
@@ -71,14 +74,17 @@ impl StandingControllerPID {
         ]
     }
 
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&mut self) -> Result<()> {
         // get joint states
         // get imu state
         // send command
 
-        println!("Hello, world!");
-
-        Ok(())
+        println!("Starting StandingControllerPID");
+        loop {
+            self.get_feedback().await?;
+            self.send_command().await?;
+            sleep(Duration::from_millis(100)).await;
+        }
     }
 }
 

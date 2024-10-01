@@ -1,5 +1,8 @@
-use serde::Deserialize; // deserialize from toml
+use anyhow::{Context, Result};
+use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
+use std::path::Path;
 
 #[derive(Deserialize, Clone)]
 struct PID {
@@ -34,14 +37,14 @@ struct RobotConfig {
 
 #[derive(Deserialize)]
 struct LegsConfig {
-    left: Vec<MotorConfig>,
-    right: Vec<MotorConfig>,
+    left: HashMap<String, MotorConfig>,
+    right: HashMap<String, MotorConfig>,
 }
 
 #[derive(Deserialize)]
 struct ArmsConfig {
-    left: Vec<MotorConfig>,
-    right: Vec<MotorConfig>,
+    left: HashMap<String, MotorConfig>,
+    right: HashMap<String, MotorConfig>,
 }
 
 pub struct Servo {
@@ -68,15 +71,15 @@ pub struct Robot {
 }
 
 impl Robot {
-    pub fn new() -> Self {
-        let config = Self::load_config("config.toml");
+    pub fn new<P: AsRef<Path>>(config_path: P) -> Result<Self> {
+        let config = Self::load_config(config_path)?;
 
         let left_leg = Leg {
             servos: config
                 .robot
                 .legs
                 .left
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
@@ -92,7 +95,7 @@ impl Robot {
                 .robot
                 .legs
                 .right
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
@@ -108,7 +111,7 @@ impl Robot {
                 .robot
                 .arms
                 .left
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
@@ -124,7 +127,7 @@ impl Robot {
                 .robot
                 .arms
                 .right
-                .iter()
+                .values()
                 .map(|m| Servo {
                     id: m.id,
                     pid: m.pid.clone(),
@@ -135,17 +138,19 @@ impl Robot {
                 .collect(),
         };
 
-        Robot {
+        Ok(Robot {
             left_leg,
             right_leg,
             left_arm,
             right_arm,
-        }
+        })
     }
 
-    fn load_config(filename: &str) -> Config {
-        let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
-        toml::from_str(&contents).expect("Failed to parse the config file")
+    fn load_config<P: AsRef<Path>>(filename: P) -> Result<Config> {
+        let contents = fs::read_to_string(&filename)
+            .with_context(|| format!("Failed to read config file: {:?}", filename.as_ref()))?;
+        toml::from_str(&contents)
+            .with_context(|| format!("Failed to parse config file: {:?}", filename.as_ref()))
     }
 
     // ### === TODO: DENYS === ###
@@ -187,5 +192,37 @@ impl Robot {
             .chain(self.left_arm.servos.iter_mut())
             .chain(self.right_arm.servos.iter_mut())
             .collect()
+    }
+
+    pub fn print_config(&self) {
+        println!("Robot Configuration:");
+        println!("Left Leg:");
+        for servo in &self.left_leg.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
+        println!("Right Leg:");
+        for servo in &self.right_leg.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
+        println!("Left Arm:");
+        for servo in &self.left_arm.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
+        println!("Right Arm:");
+        for servo in &self.right_arm.servos {
+            println!(
+                "  Servo ID: {}, Position: {}, Velocity: {}",
+                servo.id, servo.current_position, servo.current_velocity
+            );
+        }
     }
 }
