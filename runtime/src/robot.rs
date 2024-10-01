@@ -1,6 +1,5 @@
 use serde::Deserialize; // deserialize from toml
 use std::fs;
-use toml;
 
 #[derive(Deserialize, Clone)]
 struct PID {
