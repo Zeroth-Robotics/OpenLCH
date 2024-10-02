@@ -2,6 +2,12 @@
 rustflags = [
     "-C", "target-feature=-crt-static",
     "-Clink-args=--sysroot=/sdk/host/riscv64-buildroot-linux-musl/sysroot",
+    "-L", "./tpu-libs",
+    "-L", "./sysroot/lib",
+    "-L", "./sysroot/usr/lib",
+    "-Clink-arg=-Wl,-rpath,./tpu-libs",
+    "-Clink-arg=-Wl,-rpath,./sysroot/lib",
+    "-Clink-arg=-Wl,-rpath,./sysroot/usr/lib",
 ]
 linker = "/sdk/host/bin/riscv64-buildroot-linux-musl-gcc.br_real"
 

@@ -2,19 +2,17 @@
 name = "runtime"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.83"
-candle-core = "0.7.2"
-candle-nn = "0.7.2"
-candle-onnx = "0.7.2"
 ndarray = "0.16.1"
-onnxruntime = "0.0.14"
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.28.0", features = ["full"] }
 toml = "0.8.19"
+half = "2.4.1"
 
 # [build-dependencies]
 # pkg-config = "0.3.31"
