@@ -85,11 +85,18 @@ We're using the K-Scale simulation library (based on Isaac Gym) to simulate and 
 *Left: URDF Model, Right: Isaac Gym Training*
 
 
-### NVIDIA Isaac Gym
+### NVIDIA Isaac (Humanoid) Gym
 We use NVIDIA Isaac Gym to simulate, train, and test the robot for locomotion based on the K-Scale simulation library.
 
 Link: https://github.com/jingxiangmo/sim/tree/master
 Docs: https://docs.kscale.dev/software/simulation/isaac
+
+To test policy in MuJoCo, you can use the following command:
+```bash
+export MODEL_DIR=sim/resources
+
+python sim/sim2sim.py --load_model examples/standing.pt --embodiment stompymicro
+```
 
 ### PyBullet
 Currently the URDF model also support PyBullet using K-Scale OnShape library: https://docs.kscale.dev/software/onshape
