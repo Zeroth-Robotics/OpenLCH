@@ -6,44 +6,35 @@ mod model;
 mod robot;
 
 use anyhow::{Context, Result};
-use candle_core::Device;
 use std::path::PathBuf;
 use std::sync::Arc;
+use rand::Rng;
+use half::f16;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    println!("Starting robot initialization");
+fn main() -> Result<()> {
+    println!("Starting model test");
 
-    let config_path = PathBuf::from("config/stompymicro.toml");
-    println!("Loading config from: {:?}", config_path);
+    // Initialize the model
+    let model_path = PathBuf::from("/root/standing.cvimodel");
+    println!("Loading model from: {:?}", model_path);
 
-    let robot = robot::Robot::new(config_path).context("Failed to initialize robot")?;
+    let model = model::Model::new(model_path).context("Failed to initialize model")?;
 
-    println!("Robot initialized. Printing configuration:");
-    robot.print_config();
+    // Generate 615 random float32 values with reduced precision
+    let mut rng = rand::thread_rng();
+    let input: Vec<f32> = (0..615).map(|_| {
+        let f32_value: f32 = rng.gen();
+        // Convert to f16 and back to f32 to simulate float16 precision
+        f16::from_f32(f32_value).to_f32()
+    }).collect();
 
-    println!("Initializing controller"); // Onnx or PID
+    println!("Running inference with random input");
 
-    // Onnx
-    // let model_path = PathBuf::from("path/to/model.onnx");
-    // let device = Device::Cpu; // or Device::Cuda(0) for GPU
-    // let model = model::Model::new(model_path, &device)?;
-    // let controller: Arc<dyn controller::Controller> =
-    //     Arc::new(controller::MLController::new(model));
+    // Run inference
+    let output = model.infer(&input).context("Failed to run inference")?;
 
-    // PID
-    let controller: Arc<dyn controller::Controller + Send + Sync> =
-        Arc::new(controller::PIDController {});
-    println!("Creating StandingController");
-    let mut standing_controller = controller::StandingController::new(robot, controller);
+    println!("Inference completed. Output size: {}", output.len());
+    println!("First 5 output values: {:?}", &output[..5.min(output.len())]);
 
-    println!("Starting controller");
-    let iterations = Some(10); // Run for 10 iterations, None for infinite
-    standing_controller
-        .run(iterations)
-        .await
-        .context("Controller run failed")?;
-
-    println!("Controller finished running");
     Ok(())
 }
