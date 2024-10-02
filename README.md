@@ -1,4 +1,4 @@
-# Low Cost Humanoid Mini (WIP)
+# Open Low Cost Humanoid (WIP)
 
 <div align="center">
 
@@ -8,7 +8,7 @@
 <!-- [![Wiki](https://img.shields.io/badge/wiki-humanoids-black)](https://humanoids.wiki) -->
 </div>
 
-**OpenLCH Mini is an open-source ultra-low-cost humanoid robot designed for experimenting with machine learning methods for robot control.** This is project is currently work-in-progress.
+**OpenLCH is an open-source ultra-low-cost humanoid robot designed for experimenting with machine learning methods for robot control.** This is project is currently work-in-progress.
 
 Using the [K-Scale humanoid robotics development ecosystem](https://docs.kscale.dev), we designed our robot in OnShape, trained the PPO model in Isaac Gym, and are now transfering it onto the physical robot. Check out our public roadmap for updates [here](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4).
 
