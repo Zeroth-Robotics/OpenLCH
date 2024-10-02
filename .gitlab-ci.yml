@@ -2,7 +2,7 @@ stages:
   - build-toolchain
 
 variables:
-  TOOLCHAIN_IMAGE: $CI_REGISTRY/zeroth-robotics/openlch/openlch-runtime-sdk:latest
+  TOOLCHAIN_IMAGE: $CI_REGISTRY/zeroth-robotics/openlch/openlch-runtime-sdk
 
 .runner: &runner
   tags: 
