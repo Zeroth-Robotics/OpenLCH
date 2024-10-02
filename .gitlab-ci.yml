@@ -17,9 +17,9 @@ build-toolchain:
   
   script:
       - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-      - docker pull $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA || true
-      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA -t $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA -f runtime-sdk/Dockerfile .
-      - docker push $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA
+      - docker pull $TOOLCHAIN_IMAGE:latest || true
+      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime-sdk/Dockerfile .
+      - docker push $TOOLCHAIN_IMAGE:latest
   rules:
     - changes:
         - runtime-sdk/**/*
