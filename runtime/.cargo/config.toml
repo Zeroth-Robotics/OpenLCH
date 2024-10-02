@@ -1,0 +1,8 @@
+[target.riscv64gc-unknown-linux-musl]
+rustflags = [
+    "-C", "target-feature=-crt-static",
+    "-Clink-args=--sysroot=/sdk/host/riscv64-buildroot-linux-musl/sysroot",
+]
+linker = "/sdk/host/bin/riscv64-buildroot-linux-musl-gcc.br_real"
+
+[build]
