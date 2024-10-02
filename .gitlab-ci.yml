@@ -2,7 +2,7 @@ stages:
   - build-toolchain
 
 variables:
-  TOOLCHAIN_IMAGE: gitlab.kscale.ai:5050/zeroth-robotics/OpenLCH/openlch-runtime-sdk
+  TOOLCHAIN_IMAGE: $CI_REGISTRY/zeroth-robotics/OpenLCH/openlch-runtime-sdk:latest
 
 .runner: &runner
   tags: 
@@ -16,10 +16,11 @@ build-toolchain:
   image: docker:latest
   
   script:
-      - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+      - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
       - docker pull $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA || true
       - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA -t $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA -f runtime-sdk/Dockerfile .
       - docker push $TOOLCHAIN_IMAGE:$CI_COMMIT_SHA
   only:
-    changes:
-      - runtime-sdk/**/*
+    - changes:
+        - runtime-sdk/**/*
+    - if: '$CI_COMMIT_BRANCH == "main"'
