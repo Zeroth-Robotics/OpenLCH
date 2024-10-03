@@ -19,7 +19,8 @@
 
 
 enum SYS_CMD_ID {
-    SYS_CMD_SERVO_WRITE = 0x22,
+    SYS_CMD_GET_SERVO_VALUES = 0x21,
+    SYS_CMD_SERVO_WRITE,
     SYS_CMD_SERVO_READ,
     SYS_CMD_SERVO_READOUT_ENABLE,
     SYS_CMD_SERVO_READOUT_DISABLE,
@@ -39,7 +40,7 @@ typedef struct {
     unsigned int param_ptr;
 } __attribute__((packed)) __attribute__((aligned(0x8))) cmdqu_t;
 
-static int fd = -1;
+static int mailbox_fd = -1;
 static int ion_fd = -1;
 static int mem_fd = -1;
 static void *shared_mem = NULL;
@@ -64,7 +65,7 @@ static int perform_mailbox_operation(enum SYS_CMD_ID cmd_id, size_t data_size) {
     cmdqu.resv.mstime = 100;
     cmdqu.param_ptr = CVIMMAP_SHMEM_ADDR;
 
-    if (ioctl(fd, RTOS_CMDQU_SEND_WAIT, &cmdqu) < 0) {
+    if (ioctl(mailbox_fd, RTOS_CMDQU_SEND_WAIT, &cmdqu) < 0) {
         return -1;
     }
 
@@ -77,21 +78,21 @@ static int perform_mailbox_operation(enum SYS_CMD_ID cmd_id, size_t data_size) {
 }
 
 int servo_init() {
-    fd = open(RTOS_CMDQU_DEV_NAME, O_RDWR);
-    if (fd <= 0) {
+    mailbox_fd = open(RTOS_CMDQU_DEV_NAME, O_RDWR);
+    if (mailbox_fd <= 0) {
         return -1;
     }
 
     mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (mem_fd < 0) {
-        close(fd);
+        close(mailbox_fd);
         return -1;
     }
 
     shared_mem = mmap(NULL, CVIMMAP_SHMEM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, mem_fd, CVIMMAP_SHMEM_ADDR);
     if (shared_mem == MAP_FAILED) {
         close(mem_fd);
-        close(fd);
+        close(mailbox_fd);
         return -1;
     }
 
@@ -99,7 +100,7 @@ int servo_init() {
     if (ion_fd < 0) {
         munmap(shared_mem, CVIMMAP_SHMEM_SIZE);
         close(mem_fd);
-        close(fd);
+        close(mailbox_fd);
         return -1;
     }
 
@@ -116,8 +117,8 @@ void servo_deinit() {
     if (mem_fd >= 0) {
         close(mem_fd);
     }
-    if (fd >= 0) {
-        close(fd);
+    if (mailbox_fd >= 0) {
+        close(mailbox_fd);
     }
 }
 

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::os::raw::{c_int, c_uchar, c_ushort, c_short};
+use std::os::raw::{c_int, c_short, c_uchar, c_ushort};
 
 #[repr(C)]
 pub struct ServoInfo {
@@ -49,9 +49,7 @@ impl Servo {
     }
 
     pub fn write(&self, id: u8, address: u8, data: &[u8]) -> Result<()> {
-        let result = unsafe {
-            servo_write(id, address, data.as_ptr(), data.len() as c_uchar)
-        };
+        let result = unsafe { servo_write(id, address, data.as_ptr(), data.len() as c_uchar) };
         if result != 0 {
             anyhow::bail!("Failed to write to servo");
         }
@@ -60,9 +58,7 @@ impl Servo {
 
     pub fn read(&self, id: u8, address: u8, length: u8) -> Result<Vec<u8>> {
         let mut data = vec![0u8; length as usize];
-        let result = unsafe {
-            servo_read(id, address, length, data.as_mut_ptr())
-        };
+        let result = unsafe { servo_read(id, address, length, data.as_mut_ptr()) };
         if result != 0 {
             anyhow::bail!("Failed to read from servo");
         }
@@ -70,9 +66,7 @@ impl Servo {
     }
 
     pub fn move_servo(&self, id: u8, position: i16, time: u16, speed: u16) -> Result<()> {
-        let result = unsafe {
-            servo_move(id, position, time, speed)
-        };
+        let result = unsafe { servo_move(id, position, time, speed) };
         if result != 0 {
             anyhow::bail!("Failed to move servo");
         }

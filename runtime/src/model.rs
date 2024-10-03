@@ -37,12 +37,7 @@ impl Model {
 
         let mut output = vec![0.0f32; output_size / std::mem::size_of::<f32>()];
 
-        let result = unsafe {
-            forward(
-                input.as_ptr(),
-                output.as_mut_ptr(),
-            )
-        };
+        let result = unsafe { forward(input.as_ptr(), output.as_mut_ptr()) };
 
         if result != 0 {
             anyhow::bail!("Forward pass failed");
