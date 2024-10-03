@@ -5,7 +5,7 @@ stages:
 variables:
   TOOLCHAIN_IMAGE: $CI_REGISTRY/zeroth-robotics/openlch/openlch-runtime-sdk
   GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_PATHS: runtime/firmware/tpu-sdk-sg200x
+  GIT_SUBMODULE_PATHS: runtime/firmware/tpu-sdk-sg200x runtime/firmware/duo-sdk
 
 .runner: &runner
   tags: 
@@ -48,3 +48,4 @@ build-cviwrapper:
   rules:
     - changes:
       - runtime/firmware/cviwrapper/**/*
+      - runtime/firmware/tpu-sdk-sg200x/**/*
