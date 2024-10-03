@@ -90,6 +90,7 @@ build-runtime:
   artifacts:
     paths:
       - runtime/target/riscv64gc-unknown-linux-musl/release/runtime
+      - runtime/target/riscv64gc-unknown-linux-musl/release/calibration
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
