@@ -1,7 +1,10 @@
 use anyhow::Result;
-use std::os::raw::{c_int, c_short, c_uchar, c_ushort};
+use std::os::raw::{c_int, c_short, c_uchar, c_ushort, c_uint};
+
+pub const MAX_SERVOS: usize = 16;
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct ServoInfo {
     pub torque_switch: c_uchar,
     pub acceleration: c_uchar,
@@ -9,6 +12,7 @@ pub struct ServoInfo {
     pub running_time: c_ushort,
     pub running_speed: c_ushort,
     pub torque_limit: c_ushort,
+    pub reserved1: [c_uchar; 6],
     pub lock_mark: c_uchar,
     pub current_location: c_short,
     pub current_speed: c_short,
@@ -18,6 +22,7 @@ pub struct ServoInfo {
     pub async_write_flag: c_uchar,
     pub servo_status: c_uchar,
     pub mobile_sign: c_uchar,
+    pub reserved2: [c_uchar; 2],
     pub current_current: c_ushort,
 }
 
@@ -74,6 +79,13 @@ pub enum ServoRegister {
     CurrentCurrent = 0x45,
 }
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct ServoData {
+    pub servo: [ServoInfo; MAX_SERVOS],
+    pub task_run_count: c_uint,
+}
+
 #[link(name = "sts3215")]
 extern "C" {
     fn servo_init() -> c_int;
@@ -86,6 +98,7 @@ extern "C" {
     fn set_servo_mode(id: c_uchar, mode: c_uchar) -> c_int;
     fn set_servo_speed(id: c_uchar, speed: c_ushort, direction: c_int) -> c_int;
     fn servo_read_info(id: c_uchar, info: *mut ServoInfo) -> c_int;
+    fn read_servo_positions(servo_data: *mut ServoData) -> c_int;
 }
 
 pub struct Servo {
@@ -166,6 +179,7 @@ impl Servo {
             running_time: 0,
             running_speed: 0,
             torque_limit: 0,
+            reserved1: [0; 6],
             lock_mark: 0,
             current_location: 0,
             current_speed: 0,
@@ -175,6 +189,7 @@ impl Servo {
             async_write_flag: 0,
             servo_status: 0,
             mobile_sign: 0,
+            reserved2: [0; 2],
             current_current: 0,
         };
         let result = unsafe { servo_read_info(id, &mut info) };
@@ -182,6 +197,37 @@ impl Servo {
             anyhow::bail!("Failed to read servo info");
         }
         Ok(info)
+    }
+
+    pub fn read_continuous(&self) -> Result<ServoData> {
+        let mut data = ServoData {
+            servo: [ServoInfo {
+                torque_switch: 0,
+                acceleration: 0,
+                target_location: 0,
+                running_time: 0,
+                running_speed: 0,
+                torque_limit: 0,
+                reserved1: [0; 6],
+                lock_mark: 0,
+                current_location: 0,
+                current_speed: 0,
+                current_load: 0,
+                current_voltage: 0,
+                current_temperature: 0,
+                async_write_flag: 0,
+                servo_status: 0,
+                mobile_sign: 0,
+                reserved2: [0; 2],
+                current_current: 0,
+            }; MAX_SERVOS],
+            task_run_count: 0,
+        };
+        let result = unsafe { read_servo_positions(&mut data) };
+        if result != 0 {
+            anyhow::bail!("Failed to read continuous servo data");
+        }
+        Ok(data)
     }
 }
 

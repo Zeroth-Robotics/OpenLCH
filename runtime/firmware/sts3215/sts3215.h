@@ -13,6 +13,7 @@ typedef struct {
     uint16_t running_time;
     uint16_t running_speed;
     uint16_t torque_limit;
+    uint8_t reserved1[6];
     uint8_t lock_mark;
     int16_t current_location;
     int16_t current_speed;
@@ -22,6 +23,7 @@ typedef struct {
     uint8_t async_write_flag;
     uint8_t servo_status;
     uint8_t mobile_sign;
+    uint8_t reserved2[2];
     uint16_t current_current;
 } ServoInfo;
 
@@ -59,5 +61,7 @@ int set_servo_speed(uint8_t id, uint16_t speed, int direction);
 
 // Read servo info
 int servo_read_info(uint8_t id, ServoInfo *info);
+
+int read_servo_positions(ServoData *servo_data);
 
 #endif // SERVO_LIB_H

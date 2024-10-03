@@ -14,9 +14,7 @@
 #define CVIMMAP_SHMEM_SIZE 256
 #define ION_DEVICE "/dev/ion"
 #define RTOS_CMDQU_DEV_NAME "/dev/cvi-rtos-cmdqu"
-
 #define RTOS_CMDQU_SEND_WAIT _IOW('r', 2, unsigned long)
-
 
 enum SYS_CMD_ID {
     SYS_CMD_GET_SERVO_VALUES = 0x21,
@@ -218,6 +216,31 @@ int servo_read_info(uint8_t id, ServoInfo *info) {
     info->servo_status = data[25];
     info->mobile_sign = data[26];
     info->current_current = (uint16_t)((data[29] << 8) | data[28]);
+
+    return 0;
+}
+
+int read_servo_positions(ServoData *servo_data) {
+    if (perform_mailbox_operation(SYS_CMD_GET_SERVO_VALUES, 0) < 0) {
+        return -1;
+    }
+
+    // Invalidate the cache
+    struct ion_custom_data custom_data;
+    struct cvitek_cache_range range;
+
+    range.paddr = CVIMMAP_SHMEM_ADDR;
+    range.size = sizeof(ServoData);
+
+    custom_data.cmd = ION_IOC_CVITEK_INVALIDATE_PHY_RANGE;
+    custom_data.arg = (unsigned long)&range;
+
+    if (ioctl(ion_fd, ION_IOC_CUSTOM, &custom_data) < 0) {
+        return -1;
+    }
+
+    // Read ServoData from shared memory
+    memcpy(servo_data, shared_mem, sizeof(ServoData));
 
     return 0;
 }
