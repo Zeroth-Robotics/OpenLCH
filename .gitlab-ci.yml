@@ -79,7 +79,7 @@ build-runtime:
   <<: *runner
   stage: build-runtime
   image: $TOOLCHAIN_IMAGE:latest
-  dependencies:
+  needs:
     - build-cviwrapper
     - build-servo
   script:
