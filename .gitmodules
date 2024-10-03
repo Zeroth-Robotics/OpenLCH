@@ -7,3 +7,6 @@
 [submodule "runtime/firmware/duo-sdk"]
 	path = runtime/firmware/duo-sdk
 	url = https://github.com/milkv-duo/duo-sdk.git
+[submodule "sim"]
+	path = sim
+	url = https://github.com/Zeroth-Robotics/sim.git
