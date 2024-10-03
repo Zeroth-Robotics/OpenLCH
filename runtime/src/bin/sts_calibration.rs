@@ -1,5 +1,5 @@
 use ctrlc;
-use runtime::hal::{Servo, ServoRegister};
+use runtime::hal::{Servo, ServoRegister, ServoMode, ServoDirection};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::sleep;
@@ -15,17 +15,17 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
     println!("Starting servo calibration for ID: {}", servo_id);
 
     servo.disable_readout()?;
-    servo.set_mode(servo_id, 1)?; // Set to continuous mode
+    servo.set_mode(servo_id, ServoMode::ConstantSpeed)?; // Set to continuous mode
 
     let mut max_forward = 0;
     let mut max_backward = 0;
 
     for pass in 0..2 {
-        let direction = if pass == 0 { 1 } else { -1 };
+        let direction = if pass == 0 { ServoDirection::Clockwise } else { ServoDirection::Counterclockwise };
         println!(
-            "Starting calibration pass {}, direction: {}",
+            "Starting calibration pass {}, direction: {:?}",
             pass + 1,
-            if direction == 1 { "forward" } else { "backward" }
+            direction
         );
 
         servo.set_speed(servo_id, CALIBRATION_SPEED, direction)?;
@@ -33,7 +33,7 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
         loop {
             if !running.load(Ordering::SeqCst) {
                 println!("Calibration interrupted. Stopping servo...");
-                servo.set_speed(servo_id, 0, 1)?;
+                servo.set_speed(servo_id, 0, ServoDirection::Clockwise)?;
                 return Ok(());
             }
 
@@ -50,11 +50,11 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
 
                 println!("Backing off");
                 // Back off
-                servo.set_speed(servo_id, CALIBRATION_SPEED, -direction)?;
+                servo.set_speed(servo_id, CALIBRATION_SPEED, opposite_direction(direction))?;
                 sleep(Duration::from_millis(100));
 
                 // Stop after backoff
-                servo.set_speed(servo_id, 0, -direction)?;
+                servo.set_speed(servo_id, 0, opposite_direction(direction))?;
                 sleep(Duration::from_millis(100));
                 println!("Backing off complete");
                 // Move slowly to find exact position
@@ -62,7 +62,7 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
                 while current <= CURRENT_THRESHOLD * 2.0 {
                     if !running.load(Ordering::SeqCst) {
                         println!("Calibration interrupted. Stopping servo...");
-                        servo.set_speed(servo_id, 0, 1)?;
+                        servo.set_speed(servo_id, 0, ServoDirection::Clockwise)?;
                         return Ok(());
                     }
 
@@ -79,11 +79,11 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
                 println!("Exact threshold position found: {}", info.current_location);
 
                 // Back off again
-                servo.set_speed(servo_id, CALIBRATION_SPEED, -direction)?;
+                servo.set_speed(servo_id, CALIBRATION_SPEED, opposite_direction(direction))?;
                 sleep(Duration::from_millis(100));
 
                 // Stop after final backoff
-                servo.set_speed(servo_id, 0, -direction)?;
+                servo.set_speed(servo_id, 0, opposite_direction(direction))?;
                 sleep(Duration::from_millis(100));
 
                 let info = servo.read_info(servo_id)?;
@@ -92,7 +92,7 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
                     info.current_location
                 );
 
-                if direction == 1 {
+                if direction == ServoDirection::Clockwise {
                     max_forward = info.current_location;
                     println!(
                         "Forward calibration complete. Max position: {}",
@@ -118,9 +118,9 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
         }
     }
 
-    servo.set_speed(servo_id, CALIBRATION_SPEED, 1)?;
+    servo.set_speed(servo_id, CALIBRATION_SPEED, ServoDirection::Clockwise)?;
     sleep(Duration::from_millis(100));
-    servo.set_speed(servo_id, 0, 1)?;
+    servo.set_speed(servo_id, 0, ServoDirection::Clockwise)?;
 
     // Ensure max_angle > min_angle
     let min_angle = max_backward;
@@ -202,6 +202,13 @@ fn write_servo_memory(servo: &Servo, id: u8, register: ServoRegister, value: u16
     servo.write(id, register, &data)
 }
 
+fn opposite_direction(direction: ServoDirection) -> ServoDirection {
+    match direction {
+        ServoDirection::Clockwise => ServoDirection::Counterclockwise,
+        ServoDirection::Counterclockwise => ServoDirection::Clockwise,
+    }
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let servo_id = match args.get(1) {
@@ -226,7 +233,7 @@ fn main() -> Result<()> {
     if !running.load(Ordering::SeqCst) {
         println!("Calibration was interrupted. Cleaning up...");
         // Perform any necessary cleanup
-        servo.set_speed(servo_id, 0, 1)?; // Stop the servo
+        servo.set_speed(servo_id, 0, ServoDirection::Clockwise)?; // Stop the servo
         servo.enable_readout()?;
     }
 

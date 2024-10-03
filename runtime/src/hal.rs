@@ -79,6 +79,12 @@ pub enum ServoRegister {
     CurrentCurrent = 0x45,
 }
 
+#[repr(u8)]
+pub enum MemoryLockState {
+    Unlocked = 0,
+    Locked = 1,
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ServoData {
@@ -110,6 +116,26 @@ extern "C" {
     fn servo_read_info(id: c_uchar, info: *mut ServoInfo) -> c_int;
     fn read_servo_positions(servo_data: *mut ServoData) -> c_int;
     fn servo_write_multiple(cmd: *const ServoMultipleWriteCommand) -> c_int;
+}
+
+pub enum ServoMode {
+    Position = 0,
+    ConstantSpeed = 1,
+    PWMOpenLoop = 2,
+    StepServo = 3,
+}
+
+#[repr(i32)]
+#[derive(Debug, Copy, Clone)]
+pub enum ServoDirection {
+    Clockwise = 0,
+    Counterclockwise = 1,
+}
+
+impl PartialEq for ServoDirection {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
 }
 
 pub struct Servo {
@@ -166,16 +192,16 @@ impl Servo {
         Ok(())
     }
 
-    pub fn set_mode(&self, id: u8, mode: u8) -> Result<()> {
-        let result = unsafe { set_servo_mode(id, mode) };
+    pub fn set_mode(&self, id: u8, mode: ServoMode) -> Result<()> {
+        let result = unsafe { set_servo_mode(id, mode as u8) };
         if result != 0 {
             anyhow::bail!("Failed to set servo mode");
         }
         Ok(())
     }
 
-    pub fn set_speed(&self, id: u8, speed: u16, direction: i32) -> Result<()> {
-        let result = unsafe { set_servo_speed(id, speed, direction) };
+    pub fn set_speed(&self, id: u8, speed: u16, direction: ServoDirection) -> Result<()> {
+        let result = unsafe { set_servo_speed(id, speed, direction as i32) };
         if result != 0 {
             anyhow::bail!("Failed to set servo speed");
         }
@@ -247,6 +273,32 @@ impl Servo {
             anyhow::bail!("Failed to write multiple servo positions");
         }
         Ok(())
+    }
+
+    pub fn read_pid(&self, id: u8) -> Result<(u8, u8, u8)> {
+        let p = self.read(id, ServoRegister::PProportionalCoeff, 1)?[0];
+        let i = self.read(id, ServoRegister::IIntegralCoeff, 1)?[0];
+        let d = self.read(id, ServoRegister::DDifferentialCoeff, 1)?[0];
+        Ok((p, i, d))
+    }
+
+    pub fn set_pid(&self, id: u8, p: u8, i: u8, d: u8) -> Result<()> {
+        // Unlock flash
+        self.write(id, ServoRegister::LockMark, &[MemoryLockState::Unlocked as u8])?;
+
+        // Set PID parameters
+        self.write(id, ServoRegister::PProportionalCoeff, &[p])?;
+        self.write(id, ServoRegister::IIntegralCoeff, &[i])?;
+        self.write(id, ServoRegister::DDifferentialCoeff, &[d])?;
+
+        // Lock flash
+        self.write(id, ServoRegister::LockMark, &[MemoryLockState::Locked as u8])?;
+
+        Ok(())
+    }
+
+    pub fn set_memory_lock(&self, id: u8, state: MemoryLockState) -> Result<()> {
+        self.write(id, ServoRegister::LockMark, &[state as u8])
     }
 }
 
