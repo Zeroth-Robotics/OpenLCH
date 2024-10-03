@@ -6,7 +6,6 @@ mod model;
 mod robot;
 
 use anyhow::{Context, Result};
-use candle_core::Device;
 use std::path::PathBuf;
 use std::sync::Arc;
 

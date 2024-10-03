@@ -1,3 +1,6 @@
 [submodule "sim"]
 	path = sim
 	url = https://github.com/jingxiangmo/sim
+[submodule "runtime/firmware/tpu-sdk-sg200x"]
+	path = runtime/firmware/tpu-sdk-sg200x
+	url = https://github.com/milkv-duo/tpu-sdk-sg200x.git

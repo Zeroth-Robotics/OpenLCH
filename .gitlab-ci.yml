@@ -1,5 +1,6 @@
 stages:
   - build-toolchain
+  - build-cviwrapper
 
 variables:
   TOOLCHAIN_IMAGE: $CI_REGISTRY/zeroth-robotics/openlch/openlch-runtime-sdk
@@ -24,3 +25,24 @@ build-toolchain:
     - changes:
         - runtime-sdk/**/*
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+
+build-cviwrapper:
+  <<: *runner
+  stage: build-cviwrapper
+  image: $TOOLCHAIN_IMAGE:latest
+  variables:
+    TOOLCHAIN_PREFIX: /sdk/host/bin/riscv64-buildroot-linux-musl-
+    SYSROOT: /sdk/host/riscv64-buildroot-linux-musl/sysroot
+    CFLAGS: -mcmodel=medany -mabi=lp64d
+    LDFLAGS: -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+    TPU_SDK_DIR: ../tpu-sdk-sg200x
+  script:
+    - cd runtime/firmware/cviwrapper
+    - make
+  artifacts:
+    paths:
+      - runtime/firmware/cviwrapper/libcviwrapper.so
+    expire_in: 1 week
+  rules:
+    - changes:
+      - runtime/firmware/cviwrapper/**/*
