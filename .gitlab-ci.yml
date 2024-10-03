@@ -1,6 +1,7 @@
 stages:
   - build-toolchain
   - build-cviwrapper
+  - build-runtime
 
 variables:
   TOOLCHAIN_IMAGE: $CI_REGISTRY/zeroth-robotics/openlch/openlch-runtime-sdk
