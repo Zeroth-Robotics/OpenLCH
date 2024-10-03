@@ -57,6 +57,7 @@ build-runtime:
   image: $TOOLCHAIN_IMAGE:latest
   script:
     - cd runtime
+    - source /root/.cargo/env
     - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release
   artifacts:
     paths:
