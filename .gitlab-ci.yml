@@ -61,7 +61,7 @@ build-runtime:
     - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release
   artifacts:
     paths:
-      - runtime/target/riscv64gc-unknown-linux-musl/release/stompymicro
+      - runtime/target/riscv64gc-unknown-linux-musl/release/runtime
     expire_in: 1 week
   rules:
     - changes:
