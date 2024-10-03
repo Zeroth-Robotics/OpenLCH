@@ -99,7 +99,7 @@ build-runtime:
       - runtime/target/riscv64gc-unknown-linux-musl/release/deps/**/*
       - runtime/target/riscv64gc-unknown-linux-musl/release/.fingerprint
       - runtime/target/riscv64gc-unknown-linux-musl/release/.fingerprint/**/*
-      - runtime/target/riscv64gc-unknown-linux-musl/release/.cargo_lock
+      - runtime/target/riscv64gc-unknown-linux-musl/release/.cargo-lock
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
