@@ -1,7 +1,6 @@
 stages:
   - build-toolchain
-  - build-cviwrapper
-  - build-servo
+  - build-components
   - build-runtime
 
 variables:
@@ -42,7 +41,7 @@ build-toolchain:
 build-cviwrapper:
   <<: *runner
   <<: *c-build
-  stage: build-cviwrapper
+  stage: build-components
   image: $TOOLCHAIN_IMAGE:latest
   script:
     - cd runtime/firmware/cviwrapper
@@ -61,7 +60,7 @@ build-cviwrapper:
 build-servo:
   <<: *runner
   <<: *c-build
-  stage: build-servo
+  stage: build-components
   image: $TOOLCHAIN_IMAGE:latest
   script:
     - cd runtime/firmware/sts3215
