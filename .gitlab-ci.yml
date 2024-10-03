@@ -12,6 +12,14 @@ variables:
 .runner: &runner
   tags: 
     - linux-x64
+  
+.c-build: &c-build
+  variables:
+    TOOLCHAIN_PREFIX: /sdk/host/bin/riscv64-buildroot-linux-musl-
+    SYSROOT: /sdk/host/riscv64-buildroot-linux-musl/sysroot
+    CFLAGS: -mcmodel=medany -mabi=lp64d
+    LDFLAGS: -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+    TPU_SDK_DIR: ../tpu-sdk-sg200x
 
 build-toolchain:
   <<: *runner
@@ -33,14 +41,9 @@ build-toolchain:
 
 build-cviwrapper:
   <<: *runner
+  <<: *c-build
   stage: build-cviwrapper
   image: $TOOLCHAIN_IMAGE:latest
-  variables:
-    TOOLCHAIN_PREFIX: /sdk/host/bin/riscv64-buildroot-linux-musl-
-    SYSROOT: /sdk/host/riscv64-buildroot-linux-musl/sysroot
-    CFLAGS: -mcmodel=medany -mabi=lp64d
-    LDFLAGS: -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-    TPU_SDK_DIR: ../tpu-sdk-sg200x
   script:
     - cd runtime/firmware/cviwrapper
     - make
@@ -57,7 +60,9 @@ build-cviwrapper:
 
 build-servo:
   <<: *runner
+  <<: *c-build
   stage: build-servo
+  image: $TOOLCHAIN_IMAGE:latest
   script:
     - cd runtime/firmware/sts3215
     - make
