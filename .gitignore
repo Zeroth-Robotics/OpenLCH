@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# vscode
+.vscode/
+
 # virtual environment
 venv/
 

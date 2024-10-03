@@ -10,7 +10,7 @@
 
 **OpenLCH is an open-source ultra-low-cost humanoid robot designed for experimenting with machine learning methods for robot control.** This is project is currently work-in-progress.
 
-Using the [K-Scale humanoid robotics development ecosystem](https://docs.kscale.dev), we designed our robot in OnShape, trained the PPO model in IsaacSim, and are now transfering it onto the physical robot. Check out our public roadmap for updates [here](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4).
+Using the [K-Scale humanoid robotics development ecosystem](https://docs.kscale.dev), we designed our robot in OnShape, trained the PPO model in Isaac Gym, and are now transfering it onto the physical robot. Check out our public roadmap for updates [here](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4).
 
 Our goal is to build and deploy a large amount (20-30) of small humanoid robots to the physical world and create an affordable open-source platform for humanoid research and competitions. The robot design is inspired by [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/), while the initative is inspired by [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
 
@@ -23,7 +23,7 @@ Interested in updates, contributing, or building your own mini humanoid? Let us 
 
 <br/>
 <div align="center">
-  <img src="/public/isaac_view.png" alt="Isaac Sim" style="width: 48%; height: auto; object-fit: cover;">
+  <img src="/public/isaac_view.png" alt="Isaac Gym" style="width: 48%; height: auto; object-fit: cover;">
   <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: auto; object-fit: cover;">
 </div>
 
@@ -75,20 +75,28 @@ We're currently working on robot control that will be written in Rust for perfor
 
 ## Simulation
 
+We're using the K-Scale simulation library (based on Isaac Gym) to simulate and training our robot.
 
 <div align="center">
-  <img src="/public/urdf.png" alt="Isaac Sim" style="width: 48%; height: auto; object-fit: cover;">
+  <img src="/public/urdf.png" alt="Isaac Gym" style="width: 48%; height: auto; object-fit: cover;">
   <img src="/public/isaac.png" alt="CAD Model" style="width: 48%; height: auto; object-fit: cover;">
 </div>
 
-*Left: URDF Model, Right: IsaacSim Training*
+*Left: URDF Model, Right: Isaac Gym Training*
 
 
-### NVIDIA IsaacSim
-We use NVIDIA IsaacSim to simulate, train, and test the robot for locomotion based on the K-Scale simulation library.
+### NVIDIA Isaac (Humanoid) Gym
+We use NVIDIA Isaac Gym to simulate, train, and test the robot for locomotion based on the K-Scale simulation library.
 
 Link: https://github.com/jingxiangmo/sim/tree/master
 Docs: https://docs.kscale.dev/software/simulation/isaac
+
+To test policy in MuJoCo, you can use the following command:
+```bash
+export MODEL_DIR=sim/resources
+
+python sim/sim2sim.py --load_model examples/standing.pt --embodiment stompymicro
+```
 
 ### PyBullet
 Currently the URDF model also support PyBullet using K-Scale OnShape library: https://docs.kscale.dev/software/onshape
@@ -96,7 +104,7 @@ Currently the URDF model also support PyBullet using K-Scale OnShape library: ht
 ## ML
 ### Locomotion
 #### RL (PPO)
-We use PPO to train the robot to stand and walk. The training is done in IsaacSim with the K-Scale simulation and training library: https://github.com/jingxiangmo/sim/tree/master.
+We use PPO to train the robot to stand and walk. The training is done in Isaac Gym with the K-Scale simulation and training library: https://github.com/jingxiangmo/sim/tree/master.
 
 ### Manipulation
 #### E-VLA (WIP)

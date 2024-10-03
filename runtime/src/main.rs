@@ -1,66 +1,48 @@
-use tokio;
-use std::time::Duration;
-use rand::Rng;
+// src/main.rs
 
-// tests
-fn generate_random_joint_positions() -> Vec<f32> {
-    let mut rng = rand::thread_rng();
-    (0..16).map(|_| rng.gen_range(0.0..std::f32::consts::TAU)).collect()
-}
+mod HAL;
+mod controller;
+mod model;
+mod robot;
 
-async fn stream_test_joint_positions() -> Vec<f32> {
-    let interval = Duration::from_millis(10); // 100 Hz
-    let mut interval = tokio::time::interval(interval);
-    loop {
-        interval.tick().await;
-        let positions = generate_random_joint_positions();
-        println!("Joint positions: {:?}", positions);
+use anyhow::{Context, Result};
+use std::path::PathBuf;
+use std::sync::Arc;
 
-    }
-}
-
-
-// joint_states -> getting joint position feedback (feedback position)
-async fn joint_states() {
-    let interval = Duration::from_micros(10000); // 100 Hz
-    let mut interval = tokio::time::interval(interval);
-    loop {
-        interval.tick().await;
-        println!("Running feedback...");
-    }
-}
-
-
-// joint_commands -> sending joint position commands (desired position)
-async fn joint_commands() {
-    let interval = Duration::from_micros(20000); // 50 Hz 
-    let mut interval = tokio::time::interval(interval);
-    loop {
-        interval.tick().await;
-        println!("Running set...");
-    }
-}
-
-
-// control loop
-async fn controller() {
-
-    // stream out fake test data
-    let test = tokio::spawn(stream_test_joint_positions());
-
-
-    // joint states
-    let joint_states = tokio::spawn(joint_states());
-    let joint_commands = tokio::spawn(joint_commands());
-
-    tokio::join!(test, joint_states, joint_commands);
-}
-
-// main control loop
 #[tokio::main]
-async fn main() {
-    println!("Runtime loop experiments");
+async fn main() -> Result<()> {
+    println!("Starting robot initialization");
 
-    controller().await;
+    let config_path = PathBuf::from("config/stompymicro.toml");
+    println!("Loading config from: {:?}", config_path);
+
+    let robot = robot::Robot::new(config_path).context("Failed to initialize robot")?;
+
+    println!("Robot initialized. Printing configuration:");
+    robot.print_config();
+
+    println!("Initializing controller"); // Onnx or PID
+
+    // Onnx
+    // let model_path = PathBuf::from("path/to/model.onnx");
+    // let device = Device::Cpu; // or Device::Cuda(0) for GPU
+    // let model = model::Model::new(model_path, &device)?;
+    // let controller: Arc<dyn controller::Controller> =
+    //     Arc::new(controller::MLController::new(model));
+
+    // PID
+    let controller: Arc<dyn controller::Controller + Send + Sync> =
+        Arc::new(controller::PIDController {});
+    println!("Creating StandingController");
+    let mut standing_controller = controller::StandingController::new(robot, controller);
+
+    println!("Starting controller");
+    let iterations = Some(10); // Run for 10 iterations, None for infinite
+    standing_controller
+        .run(iterations)
+        .await
+        .context("Controller run failed")?;
+
+    println!("Controller finished running");
+    Ok(())
 }
-
