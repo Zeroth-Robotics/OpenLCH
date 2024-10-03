@@ -1,6 +1,3 @@
-[submodule "sim"]
-	path = sim
-	url = https://github.com/jingxiangmo/sim
 [submodule "third-party/sim"]
 	path = third-party/sim
 	url = https://github.com/jingxiangmo/sim
