@@ -93,8 +93,10 @@ build-runtime:
     exclude:
       - runtime/target/riscv64gc-unknown-linux-musl/release/**/*.d
       - runtime/target/riscv64gc-unknown-linux-musl/release/**/*.rlib
-      - runtime/target/riscv64gc-unknown-linux-musl/release/build
-      - runtime/target/riscv64gc-unknown-linux-musl/release/deps
+      - runtime/target/riscv64gc-unknown-linux-musl/release/build/**/*
+      - runtime/target/riscv64gc-unknown-linux-musl/release/deps/**/*
+      - runtime/target/riscv64gc-unknown-linux-musl/release/.fingerprint/**/*
+      - runtime/target/riscv64gc-unknown-linux-musl/release/.cargo_lock
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
