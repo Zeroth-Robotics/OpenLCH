@@ -28,6 +28,7 @@ build-toolchain:
     - changes:
         - runtime-sdk/**/*
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "push"
 
 build-cviwrapper:
   <<: *runner
@@ -50,6 +51,7 @@ build-cviwrapper:
     - changes:
       - runtime/firmware/cviwrapper/**/*
       - runtime/firmware/tpu-sdk-sg200x/**/*
+    - if: $CI_PIPELINE_SOURCE == "push"
 
 build-runtime:
   <<: *runner
@@ -66,3 +68,4 @@ build-runtime:
   rules:
     - changes:
       - runtime/**/*
+    - if: $CI_PIPELINE_SOURCE == "push"
