@@ -90,6 +90,7 @@ build-runtime:
     - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release --bin scan
     - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release --bin move_manual
     - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release --bin read
+    - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release --bin change_id
 
   artifacts:
     paths:
@@ -98,6 +99,7 @@ build-runtime:
       - runtime/target/riscv64gc-unknown-linux-musl/release/scan
       - runtime/target/riscv64gc-unknown-linux-musl/release/move_manual
       - runtime/target/riscv64gc-unknown-linux-musl/release/read
+      - runtime/target/riscv64gc-unknown-linux-musl/release/change_id
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
