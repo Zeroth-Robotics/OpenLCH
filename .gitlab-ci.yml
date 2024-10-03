@@ -4,6 +4,7 @@ stages:
 
 variables:
   TOOLCHAIN_IMAGE: $CI_REGISTRY/zeroth-robotics/openlch/openlch-runtime-sdk
+  GIT_SUBMODULE_STRATEGY: recursive
 
 .runner: &runner
   tags: 
