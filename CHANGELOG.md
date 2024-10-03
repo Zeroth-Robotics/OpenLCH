@@ -1,12 +1,11 @@
 ## 0.0.2 (2024/10/02)
+- migradted to new organization repo
 - Runtime for robot control
     - Robot configuration and declaration
     - Control loop execution
     - Model inference
     - Error handling and safety
     - PID controller, PPO controller   
-- Firmware for servo control
-- Milk-V image
 - CI/CD with GitLab with packages
 
 
