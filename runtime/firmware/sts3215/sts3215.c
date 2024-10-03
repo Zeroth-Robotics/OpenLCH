@@ -22,6 +22,7 @@ enum SYS_CMD_ID {
     SYS_CMD_SERVO_READ,
     SYS_CMD_SERVO_READOUT_ENABLE,
     SYS_CMD_SERVO_READOUT_DISABLE,
+    SYS_CMD_SERVO_WRITE_MULTIPLE
 };
 
 typedef struct {
@@ -241,6 +242,20 @@ int read_servo_positions(ServoData *servo_data) {
 
     // Read ServoData from shared memory
     memcpy(servo_data, shared_mem, sizeof(ServoData));
+
+    return 0;
+}
+
+int servo_write_multiple(ServoMultipleWriteCommand *cmd) {
+    // Copy the command to shared memory
+    memcpy(shared_mem, cmd, sizeof(ServoMultipleWriteCommand));
+
+    // Perform the mailbox operation
+    int ret = perform_mailbox_operation(SYS_CMD_SERVO_WRITE_MULTIPLE, sizeof(ServoMultipleWriteCommand));
+    if (ret < 0) {
+        printf("c: Error performing mailbox operation, ret: %d\n", ret);
+        return ret;
+    }
 
     return 0;
 }

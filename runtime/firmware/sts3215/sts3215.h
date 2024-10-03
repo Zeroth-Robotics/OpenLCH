@@ -32,6 +32,14 @@ typedef struct {
     uint32_t task_run_count;
 } ServoData;
 
+typedef struct {
+    uint8_t only_write_positions;
+    uint8_t ids[MAX_SERVOS];
+    int16_t positions[MAX_SERVOS];
+    uint16_t times[MAX_SERVOS];
+    uint16_t speeds[MAX_SERVOS];
+} ServoMultipleWriteCommand;
+
 // Initialize the servo library
 int servo_init();
 
@@ -63,5 +71,8 @@ int set_servo_speed(uint8_t id, uint16_t speed, int direction);
 int servo_read_info(uint8_t id, ServoInfo *info);
 
 int read_servo_positions(ServoData *servo_data);
+
+// Add this new function declaration
+int servo_write_multiple(ServoMultipleWriteCommand *cmd);
 
 #endif // SERVO_LIB_H

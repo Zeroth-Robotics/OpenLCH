@@ -86,6 +86,16 @@ pub struct ServoData {
     pub task_run_count: c_uint,
 }
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct ServoMultipleWriteCommand {
+    pub only_write_positions: c_uchar,
+    pub ids: [c_uchar; MAX_SERVOS],
+    pub positions: [c_short; MAX_SERVOS],
+    pub times: [c_ushort; MAX_SERVOS],
+    pub speeds: [c_ushort; MAX_SERVOS],
+}
+
 #[link(name = "sts3215")]
 extern "C" {
     fn servo_init() -> c_int;
@@ -99,6 +109,7 @@ extern "C" {
     fn set_servo_speed(id: c_uchar, speed: c_ushort, direction: c_int) -> c_int;
     fn servo_read_info(id: c_uchar, info: *mut ServoInfo) -> c_int;
     fn read_servo_positions(servo_data: *mut ServoData) -> c_int;
+    fn servo_write_multiple(cmd: *const ServoMultipleWriteCommand) -> c_int;
 }
 
 pub struct Servo {
@@ -228,6 +239,14 @@ impl Servo {
             anyhow::bail!("Failed to read continuous servo data");
         }
         Ok(data)
+    }
+
+    pub fn write_multiple(&self, cmd: &ServoMultipleWriteCommand) -> Result<()> {
+        let result = unsafe { servo_write_multiple(cmd) };
+        if result != 0 {
+            anyhow::bail!("Failed to write multiple servo positions");
+        }
+        Ok(())
     }
 }
 
