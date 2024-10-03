@@ -1,5 +1,5 @@
 use ctrlc;
-use runtime::hal::Servo;
+use runtime::hal::{Servo, ServoRegister};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::sleep;
@@ -10,13 +10,6 @@ use anyhow::{Result, bail};
 const CURRENT_THRESHOLD: f32 = 500.0; // mA
 const CALIBRATION_SPEED: u16 = 250;
 const MIN_SPEED: u16 = 10;
-
-const SERVO_ADDR_EEPROM_WRITE: u8 = 0x37;
-const SERVO_ADDR_POSITION_CORRECTION: u8 = 0x1F;
-const SERVO_ADDR_MIN_ANGLE: u8 = 0x09;
-const SERVO_ADDR_MAX_ANGLE: u8 = 0x0B;
-const SERVO_ADDR_OPERATION_MODE: u8 = 0x21;
-const SERVO_ADDR_TARGET_POSITION: u8 = 0x2A;
 
 pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -> Result<()> {
     println!("Starting servo calibration for ID: {}", servo_id);
@@ -32,11 +25,7 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
         println!(
             "Starting calibration pass {}, direction: {}",
             pass + 1,
-            if direction == 1 {
-                "forward"
-            } else {
-                "backward"
-            }
+            if direction == 1 { "forward" } else { "backward" }
         );
 
         servo.set_speed(servo_id, CALIBRATION_SPEED, direction)?;
@@ -133,10 +122,6 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
     sleep(Duration::from_millis(100));
     servo.set_speed(servo_id, 0, 1)?;
 
-    // // Switch to servo mode (3)
-    // servo.write(servo_id, SERVO_ADDR_OPERATION_MODE, &[3])?;
-    // println!("Switched servo to mode 3.");
-
     // Ensure max_angle > min_angle
     let min_angle = max_backward;
     let mut max_angle = max_forward;
@@ -155,30 +140,29 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
         (offset & 0x7FF) as u16
     };
 
-
     // unlock EEPROM
-    servo.write(servo_id, SERVO_ADDR_EEPROM_WRITE, &[0])?;
+    servo.write(servo_id, ServoRegister::LockMark, &[0])?;
     sleep(Duration::from_millis(10));
 
-    servo.write(servo_id, SERVO_ADDR_OPERATION_MODE, &[0])?;
+    servo.write(servo_id, ServoRegister::OperationMode, &[0])?;
     sleep(Duration::from_millis(10));
     println!("Switched servo to mode 0.");
 
     write_servo_memory(
         &servo,
         servo_id,
-        SERVO_ADDR_POSITION_CORRECTION,
+        ServoRegister::PositionCorrection,
         offset_value,
     )?;
 
     sleep(Duration::from_millis(10));
     // Write servo limits to memory
-    write_servo_memory(&servo, servo_id, SERVO_ADDR_MIN_ANGLE, min_angle as u16)?;
+    write_servo_memory(&servo, servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
     sleep(Duration::from_millis(10));
-    write_servo_memory(&servo, servo_id, SERVO_ADDR_MAX_ANGLE, max_angle as u16)?;
+    write_servo_memory(&servo, servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
     sleep(Duration::from_millis(10));
     // lock EEPROM
-    servo.write(servo_id, SERVO_ADDR_EEPROM_WRITE, &[1])?;
+    servo.write(servo_id, ServoRegister::LockMark, &[1])?;
 
     println!("Successfully wrote calibration data to EEPROM.");
 
@@ -190,7 +174,7 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
     sleep(Duration::from_millis(100));
 
     let position_data = [(2048 & 0xFF) as u8, ((2048 >> 8) & 0xFF) as u8];
-    servo.write(servo_id, SERVO_ADDR_TARGET_POSITION, &position_data)?;
+    servo.write(servo_id, ServoRegister::TargetLocation, &position_data)?;
 
     println!("Wrote servo limits to memory:");
     println!("Min Angle: {}", min_angle);
@@ -206,16 +190,16 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>) -
 
     // Disable torque
     let torque_data = 0u8;
-    match servo.write(servo_id, 0x28, &[torque_data]) {
+    match servo.write(servo_id, ServoRegister::TorqueSwitch, &[torque_data]) {
         Ok(_) => println!("Torque disabled successfully."),
         Err(e) => println!("Failed to disable torque. Error: {}", e),
     }
     Ok(())
 }
 
-fn write_servo_memory(servo: &Servo, id: u8, address: u8, value: u16) -> Result<()> {
+fn write_servo_memory(servo: &Servo, id: u8, register: ServoRegister, value: u16) -> Result<()> {
     let data = [(value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8];
-    servo.write(id, address, &data)
+    servo.write(id, register, &data)
 }
 
 fn main() -> Result<()> {

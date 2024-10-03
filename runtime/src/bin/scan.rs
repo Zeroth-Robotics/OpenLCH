@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::sync::Arc;
-use runtime::hal::Servo;
+use runtime::hal::{Servo, ServoRegister};
 
 fn main() -> Result<()> {
     let servo = Arc::new(Servo::new()?);
@@ -21,8 +21,8 @@ fn main() -> Result<()> {
 }
 
 fn scan_servo(servo: &Arc<Servo>, id: u8) -> Result<bool> {
-    // Try to read the servo ID from memory address 0x5
-    match servo.read(id, 0x5, 1) {
+    // Try to read the servo ID from memory address 0x5 (ServoRegister::ID)
+    match servo.read(id, ServoRegister::ID, 1) {
         Ok(data) if data.len() == 1 && data[0] == id => Ok(true),
         Ok(_) => Ok(false), // Received data, but it doesn't match the ID
         Err(_) => Ok(false), // No response, assume no servo at this ID

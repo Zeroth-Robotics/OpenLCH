@@ -2,11 +2,8 @@ use anyhow::{Result, bail};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
-use runtime::hal::Servo;
+use runtime::hal::{Servo, ServoRegister};
 use std::env;
-
-const SERVO_ADDR_ID: u8 = 0x05;
-const SERVO_ADDR_EEPROM_WRITE: u8 = 0x37;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -43,15 +40,15 @@ fn change_servo_id(servo: &Arc<Servo>, current_id: u8, new_id: u8) -> Result<()>
     servo.disable_readout()?;
 
     // Unlock EEPROM
-    servo.write(current_id, SERVO_ADDR_EEPROM_WRITE, &[0])?;
+    servo.write(current_id, ServoRegister::LockMark, &[0])?;
     sleep(Duration::from_millis(10));
 
     // Write new ID
-    servo.write(current_id, SERVO_ADDR_ID, &[new_id])?;
+    servo.write(current_id, ServoRegister::ID, &[new_id])?;
     sleep(Duration::from_millis(10));
 
     // Lock EEPROM
-    servo.write(new_id, SERVO_ADDR_EEPROM_WRITE, &[1])?;
+    servo.write(new_id, ServoRegister::LockMark, &[1])?;
     sleep(Duration::from_millis(10));
 
     // Enable readout
@@ -61,7 +58,7 @@ fn change_servo_id(servo: &Arc<Servo>, current_id: u8, new_id: u8) -> Result<()>
 }
 
 fn verify_servo_id(servo: &Arc<Servo>, id: u8) -> Result<bool> {
-    match servo.read(id, SERVO_ADDR_ID, 1) {
+    match servo.read(id, ServoRegister::ID, 1) {
         Ok(data) if data.len() == 1 && data[0] == id => Ok(true),
         _ => Ok(false),
     }

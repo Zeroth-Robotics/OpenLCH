@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 use ctrlc;
-use runtime::hal::Servo;
+use runtime::hal::{Servo, ServoRegister};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -36,14 +36,14 @@ fn main() -> Result<()> {
     while running.load(Ordering::SeqCst) {
         let start = Instant::now();
 
-        match servo.read_info(servo_id) {
+        match read_servo_info(&servo, servo_id) {
             Ok(info) => {
                 println!(
                     "Position: {}, Speed: {}, Load: {}, Current: {} mA",
-                    info.current_location,
-                    info.current_speed,
-                    info.current_load,
-                    info.current_current as f32 * 6.5 / 100.0
+                    info.position,
+                    info.speed,
+                    info.load,
+                    info.current
                 );
             }
             Err(e) => {
@@ -61,4 +61,25 @@ fn main() -> Result<()> {
 
     println!("Exiting...");
     Ok(())
+}
+
+struct ServoInfo {
+    position: u16,
+    speed: i16,
+    load: i16,
+    current: f32,
+}
+
+fn read_servo_info(servo: &Servo, id: u8) -> Result<ServoInfo> {
+    let position = servo.read(id, ServoRegister::CurrentLocation, 2)?;
+    let speed = servo.read(id, ServoRegister::CurrentSpeed, 2)?;
+    let load = servo.read(id, ServoRegister::CurrentLoad, 2)?;
+    let current = servo.read(id, ServoRegister::CurrentCurrent, 2)?;
+
+    Ok(ServoInfo {
+        position: u16::from_le_bytes([position[0], position[1]]),
+        speed: i16::from_le_bytes([speed[0], speed[1]]),
+        load: i16::from_le_bytes([load[0], load[1]]),
+        current: u16::from_le_bytes([current[0], current[1]]) as f32 * 6.5 / 100.0,
+    })
 }
