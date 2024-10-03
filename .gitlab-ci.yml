@@ -25,10 +25,10 @@ build-toolchain:
       - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime-sdk/Dockerfile .
       - docker push $TOOLCHAIN_IMAGE:latest
   rules:
-    - changes:
-        - runtime-sdk/**/*
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - runtime-sdk/**/*
+        - .gitlab-ci.yml
 
 build-cviwrapper:
   <<: *runner
@@ -48,10 +48,11 @@ build-cviwrapper:
       - runtime/firmware/cviwrapper/libcviwrapper.so
     expire_in: 1 week
   rules:
-    - changes:
-      - runtime/firmware/cviwrapper/**/*
-      - runtime/firmware/tpu-sdk-sg200x/**/*
     - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - runtime/firmware/cviwrapper/**/*
+        - runtime/firmware/tpu-sdk-sg200x/**/*
+        - .gitlab-ci.yml
 
 build-runtime:
   <<: *runner
@@ -66,6 +67,7 @@ build-runtime:
       - runtime/target/riscv64gc-unknown-linux-musl/release/runtime
     expire_in: 1 week
   rules:
-    - changes:
-      - runtime/**/*
     - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - runtime/**/*
+        - .gitlab-ci.yml
