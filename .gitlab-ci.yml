@@ -1,6 +1,7 @@
 stages:
   - build-toolchain
   - build-cviwrapper
+  - build-servo
   - build-runtime
 
 variables:
@@ -54,14 +55,34 @@ build-cviwrapper:
         - runtime/firmware/tpu-sdk-sg200x/**/*
         - .gitlab-ci.yml
 
+build-servo:
+  <<: *runner
+  stage: build-servo
+  script:
+    - cd runtime/firmware/sts3215
+    - make
+  artifacts:
+    paths:
+      - runtime/firmware/sts3215/libsts3215.so
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - runtime/firmware/sts3215/**/*
+        - .gitlab-ci.yml
+
 build-runtime:
   <<: *runner
   stage: build-runtime
   image: $TOOLCHAIN_IMAGE:latest
+  dependencies:
+    - build-cviwrapper
+    - build-servo
   script:
     - cd runtime
     - source /root/.cargo/env
     - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release
+    - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release --bin calibration
   artifacts:
     paths:
       - runtime/target/riscv64gc-unknown-linux-musl/release/runtime

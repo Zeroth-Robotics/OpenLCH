@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 build = "build.rs"
 
+[lib]
+name = "runtime"
+path = "src/lib.rs"
+
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.83"
@@ -13,6 +17,11 @@ serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.28.0", features = ["full"] }
 toml = "0.8.19"
 half = "2.4.1"
+ctrlc = "3.2"
+
+[[bin]]
+name = "calibration"
+path = "src/bin/calibration.rs"
 
 # [build-dependencies]
 # pkg-config = "0.3.31"
