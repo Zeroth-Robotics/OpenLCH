@@ -126,16 +126,10 @@ pub enum ServoMode {
 }
 
 #[repr(i32)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ServoDirection {
     Clockwise = 0,
     Counterclockwise = 1,
-}
-
-impl PartialEq for ServoDirection {
-    fn eq(&self, other: &Self) -> bool {
-        self == other
-    }
 }
 
 pub struct Servo {
@@ -201,6 +195,7 @@ impl Servo {
     }
 
     pub fn set_speed(&self, id: u8, speed: u16, direction: ServoDirection) -> Result<()> {
+        let direction = if direction == ServoDirection::Clockwise { 1 } else { -1 };
         let result = unsafe { set_servo_speed(id, speed, direction as i32) };
         if result != 0 {
             anyhow::bail!("Failed to set servo speed");
@@ -306,10 +301,29 @@ impl Servo {
         let max_limit = i16::from_le_bytes(self.read(id, ServoRegister::MaxAngleLimit, 2)?.try_into().unwrap());
         Ok((min_limit, max_limit))
     }
+
+    pub fn set_torque_mode(&self, id: u8, mode: TorqueMode) -> Result<()> {
+        self.write(id, ServoRegister::TorqueSwitch, &[mode as u8])
+    }
 }
 
 impl Drop for Servo {
     fn drop(&mut self) {
         unsafe { servo_deinit() };
+    }
+}
+
+// Add this enum after the ServoMode enum
+#[repr(u8)]
+#[derive(Debug, Copy, Clone)]
+pub enum TorqueMode {
+    Disabled = 0,
+    Enabled = 1,
+    Stiff = 2,
+}
+
+impl PartialEq for TorqueMode {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
     }
 }

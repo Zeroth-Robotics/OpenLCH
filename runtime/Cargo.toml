@@ -20,6 +20,7 @@ half = "2.4.1"
 ctrlc = "3.2"
 cursive = "0.21"
 cursive_table_view = "0.14"
+clap = { version = "4.5.19", features = ["derive"] }
 
 # [build-dependencies]
 # pkg-config = "0.3.31"
