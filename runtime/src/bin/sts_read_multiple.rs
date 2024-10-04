@@ -1,8 +1,9 @@
 use anyhow::Result;
 use runtime::hal::{Servo, MAX_SERVOS, TorqueMode};
-use cursive::views::{TextView, LinearLayout, DummyView, Panel, Dialog, EditView, SelectView};
+use cursive::views::{TextView, LinearLayout, DummyView, Panel, Dialog, EditView, SelectView, NamedView};
 use cursive::traits::*;
 use std::sync::{Arc, Mutex};
+use std::time::{Instant, Duration};
 
 fn main() -> Result<()> {
     let servo = Arc::new(Servo::new()?);
@@ -63,14 +64,19 @@ fn main() -> Result<()> {
 
     // Add task run count at the bottom
     layout.add_child(
-        Panel::new(TextView::new("Task Run Count: 0").with_name("Task Count"))
-            .title("Statistics")
-            .full_width()
+        Panel::new(
+            LinearLayout::vertical()
+                .child(TextView::new("Task Run Count: 0").with_name("Task Count"))
+                .child(TextView::new("Last Update: N/A").with_name("Last Update"))
+                .child(TextView::new("Servo polling rate: N/A").with_name("Servo polling rate"))
+        )
+        .title("Statistics")
+        .full_width()
     );
 
     // Add instructions
     layout.add_child(
-        TextView::new("Use Up/Down to select servo, Enter to toggle torque, Q to quit")
+        TextView::new("Use Up/Down to select servo, Enter - servo settings, T - toggle torque, Q - quit")
             .center()
             .full_width()
     );
@@ -85,6 +91,9 @@ fn main() -> Result<()> {
 
     // Add a variable to keep track of the selected servo
     let selected_servo = Arc::new(Mutex::new(0));
+
+    // Add variables for last update time and task count
+    let last_update_time = Arc::new(Mutex::new(Instant::now()));
 
     siv.add_global_callback('q', |s| s.quit());
 
@@ -103,16 +112,19 @@ fn main() -> Result<()> {
         update_selected_row(s, *selected);
     });
 
-    // Modify Enter callback to open settings subwindow
     let servo_clone_enter = Arc::clone(&servo);
     let selected_servo_enter = Arc::clone(&selected_servo);
     siv.add_global_callback(cursive::event::Event::Key(cursive::event::Key::Enter), move |s| {
+        // Check if a settings dialog is already open
+        if s.find_name::<Dialog>("servo_settings").is_some() {
+            return; // Do nothing if a dialog is already open
+        }
+
         let selected = *selected_servo_enter.lock().unwrap();
         let servo_id = selected as u8 + 1;
         open_servo_settings(s, servo_id, Arc::clone(&servo_clone_enter));
     });
 
-    // Add a new global callback for 't' key
     let servo_clone_toggle = Arc::clone(&servo);
     let selected_servo_toggle = Arc::clone(&selected_servo);
     siv.add_global_callback('t', move |s| {
@@ -172,9 +184,27 @@ fn main() -> Result<()> {
                         view.set_content(format!("{:4}", servo_info.lock_mark));
                     });
                 }
+                let mut last_update = last_update_time.lock().unwrap();
+                let now = Instant::now();
+                let time_delta = now.duration_since(*last_update);
+
+                let update_rate = if data.task_run_count > 0 {
+                    1000.0 / (time_delta.as_millis() as f64 / data.task_run_count as f64)
+                } else {
+                    0.0
+                };
+
                 s.call_on_name("Task Count", |view: &mut TextView| {
                     view.set_content(format!("Task Run Count: {}", data.task_run_count));
                 });
+                s.call_on_name("Last Update", |view: &mut TextView| {
+                    view.set_content(format!("Last Update: {:?} ago", time_delta));
+                });
+                s.call_on_name("Servo polling rate", |view: &mut TextView| {
+                    view.set_content(format!("Servo polling rate: {:.2} Hz", update_rate));
+                });
+
+                *last_update = now;
             }
             Err(e) => {
                 s.add_layer(Dialog::info(format!("Error reading servo data: {}", e)));
@@ -241,7 +271,8 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
         })
         .button("Cancel", |s| {
             s.pop_layer();
-        });
+        })
+        .with_name("servo_settings"); // Add this line to name the dialog
 
     s.add_layer(dialog);
 }
