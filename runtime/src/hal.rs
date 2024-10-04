@@ -300,6 +300,12 @@ impl Servo {
     pub fn set_memory_lock(&self, id: u8, state: MemoryLockState) -> Result<()> {
         self.write(id, ServoRegister::LockMark, &[state as u8])
     }
+
+    pub fn read_angle_limits(&self, id: u8) -> Result<(i16, i16)> {
+        let min_limit = i16::from_le_bytes(self.read(id, ServoRegister::MinAngleLimit, 2)?.try_into().unwrap());
+        let max_limit = i16::from_le_bytes(self.read(id, ServoRegister::MaxAngleLimit, 2)?.try_into().unwrap());
+        Ok((min_limit, max_limit))
+    }
 }
 
 impl Drop for Servo {
