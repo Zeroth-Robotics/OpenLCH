@@ -41,7 +41,7 @@ build-toolchain:
 build-cviwrapper:
   <<: *runner
   <<: *c-build
-  stage: build-components
+  stage: build-runtime
   image: $TOOLCHAIN_IMAGE:latest
   script:
     - cd runtime/firmware/cviwrapper
@@ -60,7 +60,7 @@ build-cviwrapper:
 build-servo:
   <<: *runner
   <<: *c-build
-  stage: build-components
+  stage: build-runtime
   image: $TOOLCHAIN_IMAGE:latest
   script:
     - cd runtime/firmware/sts3215
@@ -79,7 +79,7 @@ build-runtime:
   <<: *runner
   stage: build-runtime
   image: $TOOLCHAIN_IMAGE:latest
-  dependencies:
+  needs:
     - build-cviwrapper
     - build-servo
   script:
