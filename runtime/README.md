@@ -1,6 +1,21 @@
 # Runtime Documentation
 
-## Setup
+## Local builds
+
+### Prerequisites
+- docker installed
+- brew installed
+
+```bash
+brew install gitlab-ci-local
+gitlab-ci-local --stage build-toolchain
+```
+
+### Build locally
+
+```bash
+gitlab-ci-local --stage build-runtime
+```
 
 ```bash
 cargo run

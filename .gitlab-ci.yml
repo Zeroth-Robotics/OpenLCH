@@ -28,10 +28,14 @@ build-toolchain:
   image: docker:latest
   
   script:
-      - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-      - docker pull $TOOLCHAIN_IMAGE:latest || true
-      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime/toolchain-docker-img/Dockerfile .
-      - docker push $TOOLCHAIN_IMAGE:latest
+    - if [ -n "$LOCAL_BUILD" ]; then
+        docker build --cache-from $TOOLCHAIN_IMAGE:latest --progress=plain -t $TOOLCHAIN_IMAGE:latest -f runtime/toolchain-docker-img/Dockerfile .;
+      else
+        echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin;
+        docker pull $TOOLCHAIN_IMAGE:latest || true;
+        docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime/toolchain-docker-img/Dockerfile .;
+        docker push $TOOLCHAIN_IMAGE:latest;
+      fi
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
       changes:

@@ -9,7 +9,7 @@ RUN . "$HOME/.cargo/env" && \
     rustup toolchain install nightly && \
     rustup component add rust-src --toolchain nightly
 
-RUN git clone https://github.com/kinsamanka/milkv-buildroot
+RUN git clone https://github.com/kinsamanka/milkv-buildroot --depth 1
 
 RUN make O=$(pwd)/sdk -C milkv-buildroot milkv_duo_toolchain_defconfig && \
     cd sdk && \
