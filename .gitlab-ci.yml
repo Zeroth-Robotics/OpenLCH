@@ -53,8 +53,7 @@ build-cviwrapper:
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
       changes:
-        - runtime/firmware/cviwrapper/**/*
-        - runtime/firmware/tpu-sdk-sg200x/**/*
+        - runtime/**/*
         - .gitlab-ci.yml
 
 build-servo:
@@ -72,7 +71,7 @@ build-servo:
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
       changes:
-        - runtime/firmware/sts3215/**/*
+        - runtime/**/*
         - .gitlab-ci.yml
 
 build-runtime:
