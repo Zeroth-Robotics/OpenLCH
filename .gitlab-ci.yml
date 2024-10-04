@@ -30,12 +30,12 @@ build-toolchain:
   script:
       - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
       - docker pull $TOOLCHAIN_IMAGE:latest || true
-      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime-sdk/Dockerfile .
+      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime/toolchain-docker-img/Dockerfile .
       - docker push $TOOLCHAIN_IMAGE:latest
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
       changes:
-        - runtime-sdk/**/*
+        - runtime/toolchain-docker-img/**/*
         - .gitlab-ci.yml
 
 build-cviwrapper:
