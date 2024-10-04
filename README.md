@@ -23,8 +23,7 @@ Interested in updates, contributing, or building your own mini humanoid? Let us 
 
 <br/>
 <div align="center">
-  <img src="/public/isaac_view.png" alt="Isaac Gym" style="width: 48%; height: auto; object-fit: cover;">
-  <img src="/public/CAD.png" alt="CAD Model" style="width: 48%; height: auto; object-fit: cover;">
+  <img src="/public/based.png" alt="Based">
 </div>
 
 <br/>
