@@ -1,6 +1,6 @@
 // src/main.rs
 
-mod HAL;
+mod hal;
 mod controller;
 mod model;
 mod robot;

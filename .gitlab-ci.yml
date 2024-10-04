@@ -1,6 +1,6 @@
 stages:
   - build-toolchain
-  - build-cviwrapper
+  - build-components
   - build-runtime
 
 variables:
@@ -11,6 +11,14 @@ variables:
 .runner: &runner
   tags: 
     - linux-x64
+  
+.c-build: &c-build
+  variables:
+    TOOLCHAIN_PREFIX: /sdk/host/bin/riscv64-buildroot-linux-musl-
+    SYSROOT: /sdk/host/riscv64-buildroot-linux-musl/sysroot
+    CFLAGS: -mcmodel=medany -mabi=lp64d
+    LDFLAGS: -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+    TPU_SDK_DIR: ../tpu-sdk-sg200x
 
 build-toolchain:
   <<: *runner
@@ -22,24 +30,19 @@ build-toolchain:
   script:
       - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
       - docker pull $TOOLCHAIN_IMAGE:latest || true
-      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime-sdk/Dockerfile .
+      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime/toolchain-docker-img/Dockerfile .
       - docker push $TOOLCHAIN_IMAGE:latest
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
       changes:
-        - runtime-sdk/**/*
+        - runtime/toolchain-docker-img/**/*
         - .gitlab-ci.yml
 
 build-cviwrapper:
   <<: *runner
-  stage: build-cviwrapper
+  <<: *c-build
+  stage: build-runtime
   image: $TOOLCHAIN_IMAGE:latest
-  variables:
-    TOOLCHAIN_PREFIX: /sdk/host/bin/riscv64-buildroot-linux-musl-
-    SYSROOT: /sdk/host/riscv64-buildroot-linux-musl/sysroot
-    CFLAGS: -mcmodel=medany -mabi=lp64d
-    LDFLAGS: -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
-    TPU_SDK_DIR: ../tpu-sdk-sg200x
   script:
     - cd runtime/firmware/cviwrapper
     - make
@@ -50,21 +53,52 @@ build-cviwrapper:
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
       changes:
-        - runtime/firmware/cviwrapper/**/*
-        - runtime/firmware/tpu-sdk-sg200x/**/*
+        - runtime/**/*
+        - .gitlab-ci.yml
+
+build-servo:
+  <<: *runner
+  <<: *c-build
+  stage: build-runtime
+  image: $TOOLCHAIN_IMAGE:latest
+  script:
+    - cd runtime/firmware/sts3215
+    - make
+  artifacts:
+    paths:
+      - runtime/firmware/sts3215/libsts3215.so
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - runtime/**/*
         - .gitlab-ci.yml
 
 build-runtime:
   <<: *runner
   stage: build-runtime
   image: $TOOLCHAIN_IMAGE:latest
+  needs:
+    - build-cviwrapper
+    - build-servo
   script:
     - cd runtime
     - source /root/.cargo/env
     - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release
+
   artifacts:
     paths:
-      - runtime/target/riscv64gc-unknown-linux-musl/release/runtime
+      - runtime/target/riscv64gc-unknown-linux-musl/release/
+    exclude:
+      - runtime/target/riscv64gc-unknown-linux-musl/release/**/*.d
+      - runtime/target/riscv64gc-unknown-linux-musl/release/**/*.rlib
+      - runtime/target/riscv64gc-unknown-linux-musl/release/build
+      - runtime/target/riscv64gc-unknown-linux-musl/release/build/**/*
+      - runtime/target/riscv64gc-unknown-linux-musl/release/deps
+      - runtime/target/riscv64gc-unknown-linux-musl/release/deps/**/*
+      - runtime/target/riscv64gc-unknown-linux-musl/release/.fingerprint
+      - runtime/target/riscv64gc-unknown-linux-musl/release/.fingerprint/**/*
+      - runtime/target/riscv64gc-unknown-linux-musl/release/.cargo-lock
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
