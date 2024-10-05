@@ -305,6 +305,11 @@ impl Servo {
     pub fn set_torque_mode(&self, id: u8, mode: TorqueMode) -> Result<()> {
         self.write(id, ServoRegister::TorqueSwitch, &[mode as u8])
     }
+
+    pub fn write_servo_memory(&self, id: u8, register: ServoRegister, value: u16) -> Result<()> {
+        let data = [(value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8];
+        self.write(id, register, &data)
+    }
 }
 
 impl Drop for Servo {

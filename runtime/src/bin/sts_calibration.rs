@@ -139,8 +139,7 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, c
     sleep(Duration::from_millis(10));
     println!("Switched servo to mode 0.");
 
-    write_servo_memory(
-        &servo,
+    servo.write_servo_memory(
         servo_id,
         ServoRegister::PositionCorrection,
         offset_value,
@@ -148,9 +147,9 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, c
 
     sleep(Duration::from_millis(10));
     // Write servo limits to memory
-    write_servo_memory(&servo, servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
+    servo.write_servo_memory(servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
     sleep(Duration::from_millis(10));
-    write_servo_memory(&servo, servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
+    servo.write_servo_memory(servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
     sleep(Duration::from_millis(10));
     // lock EEPROM
     servo.write(servo_id, ServoRegister::LockMark, &[1])?;
@@ -186,11 +185,6 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, c
         Err(e) => println!("Failed to disable torque. Error: {}", e),
     }
     Ok(())
-}
-
-fn write_servo_memory(servo: &Servo, id: u8, register: ServoRegister, value: u16) -> Result<()> {
-    let data = [(value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8];
-    servo.write(id, register, &data)
 }
 
 fn opposite_direction(direction: ServoDirection) -> ServoDirection {
