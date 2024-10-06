@@ -10,6 +10,14 @@ use cursive::theme::{Color, ColorStyle, BaseColor};
 static CALIBRATION_POSITION: AtomicI16 = AtomicI16::new(-1);
 static CURRENT_POSITION: AtomicI16 = AtomicI16::new(0);
 
+// At the top of the file, add this array of joint names
+const JOINT_NAMES: [&str; 16] = [
+    "R Ank", "R Knee", "R Hip R", "R Hip Y", "R Hip P",
+    "L Ank", "L Knee", "L Hip R", "L Hip Y", "L Hip P",
+    "R Elb", "R Sh Y", "R Sh P",
+    "L Elb", "L Sh Y", "L Sh P"
+];
+
 fn main() -> Result<()> {
     let servo = Arc::new(Servo::new()?);
 
@@ -24,33 +32,28 @@ fn main() -> Result<()> {
     // Add header
     let header = LinearLayout::horizontal()
         .child(TextView::new("ID").center().fixed_width(4))
+        .child(TextView::new("Joint").center().fixed_width(10))
         .child(TextView::new("Pos").center().fixed_width(8))
-        // .child(TextView::new("Targ Pos").center().fixed_width(8))
         .child(TextView::new("Spd").center().fixed_width(8))
-        // .child(TextView::new("Run Spd").center().fixed_width(8))
         .child(TextView::new("Load").center().fixed_width(8))
         .child(TextView::new("Torque").center().fixed_width(8))
-        // .child(TextView::new("Accel").center().fixed_width(8))
         .child(TextView::new("Volt").center().fixed_width(6))
         .child(TextView::new("Temp").center().fixed_width(6))
         .child(TextView::new("Curr").center().fixed_width(6))
         .child(TextView::new("Status").center().fixed_width(8))
         .child(TextView::new("Torq Lim").center().fixed_width(8));
-        // .child(TextView::new("Async").center().fixed_width(6))
-        // .child(TextView::new("Lock").center().fixed_width(6));
     layout.add_child(header);
 
     // Add rows for each servo
     for i in 0..MAX_SERVOS {
+        let joint_name = JOINT_NAMES.get(i).unwrap_or(&"Unknown");
         let row = LinearLayout::horizontal()
             .child(TextView::new(format!("{:2}", i + 1)).center().with_name(format!("ID {}", i)).fixed_width(4))
+            .child(TextView::new(*joint_name).center().fixed_width(10).with_name(format!("Joint {}", i)))
             .child(TextView::new("----").center().with_name(format!("CurrPos {}", i)).fixed_width(8))
-            // .child(TextView::new("----").center().with_name(format!("TargPos {}", i)).fixed_width(8))
             .child(TextView::new("----").center().with_name(format!("CurrSpd {}", i)).fixed_width(8))
-            // .child(TextView::new("----").center().with_name(format!("RunSpd {}", i)).fixed_width(8))
             .child(TextView::new("----").center().with_name(format!("Load {}", i)).fixed_width(8))
             .child(TextView::new("----").center().with_name(format!("Torque {}", i)).fixed_width(8))
-            // .child(TextView::new("----").center().with_name(format!("Accel {}", i)).fixed_width(8))
             .child(TextView::new("----").center().with_name(format!("Volt {}", i)).fixed_width(6))
             .child(TextView::new("----").center().with_name(format!("Temp {}", i)).fixed_width(6))
             .child(TextView::new("----").center().with_name(format!("Curr {}", i)).fixed_width(6))
@@ -60,9 +63,6 @@ fn main() -> Result<()> {
             // .child(TextView::new("----").center().with_name(format!("Async {}", i)).fixed_width(6))
             // .child(TextView::new("----").center().with_name(format!("Lock {}", i)).fixed_width(6));
         layout.add_child(row.with_name(format!("servo_row_{}", i)));
-        siv.call_on_name("ID 0", |view: &mut TextView| {
-            view.set_content(">ID");
-        });
     }
 
     // Add a dummy view to push the task count to the bottom
@@ -183,32 +183,20 @@ fn main() -> Result<()> {
                     s.call_on_name(&format!("CurrPos {}", i), |view: &mut TextView| {
                         view.set_content(format!("{:4}", servo_info.current_location));
                     });
-                    // s.call_on_name(&format!("TargPos {}", i), |view: &mut TextView| {
-                    //     view.set_content(format!("{:4}", servo_info.target_location));
-                    // });
                     s.call_on_name(&format!("CurrSpd {}", i), |view: &mut TextView| {
                         let speed = servo_info.current_speed as u16 & 0x7FFF; // Remove 15th bit
                         let sign = if servo_info.current_speed as u16 & 0x8000 != 0 { '-' } else { '+' };
                         view.set_content(format!("{}{:4}", sign, speed));
                     });
-                    // s.call_on_name(&format!("RunSpd {}", i), |view: &mut TextView| {
-                    //     view.set_content(format!("{:4}", servo_info.running_speed));
-                    // });
                     s.call_on_name(&format!("Load {}", i), |view: &mut TextView| {
                         let speed = servo_info.current_load as u16 & 0x3FF; // Remove 10th bit
                         let sign = if servo_info.current_load as u16 & 0x400 != 0 { '-' } else { '+' };
                         view.set_content(format!("{}{:4}", sign, speed));
                     });
                     update_torque_display(s, (i + 1) as u8, servo_info.torque_switch);
-                    // s.call_on_name(&format!("Torque {}", i), |view: &mut TextView| {
-                    //     view.set_content(format!("{:4}", servo_info.torque_switch));
-                    // });
                     s.call_on_name(&format!("TorqLim {}", i), |view: &mut TextView| {
                         view.set_content(format!("{:4}", servo_info.torque_limit));
                     });
-                    // s.call_on_name(&format!("Accel {}", i), |view: &mut TextView| {
-                    //     view.set_content(format!("{:4}", servo_info.acceleration));
-                    // });
                     s.call_on_name(&format!("Volt {}", i), |view: &mut TextView| {
                         view.set_content(format!("{:2.1}V", servo_info.current_voltage as f32 / 10.0));
                     });
@@ -221,9 +209,6 @@ fn main() -> Result<()> {
                     s.call_on_name(&format!("Status {}", i), |view: &mut TextView| {
                         view.set_content(format!("{:04X}", servo_info.servo_status));
                     });
-                    // s.call_on_name(&format!("Async {}", i), |view: &mut TextView| {
-                    //     view.set_content(format!("{:4}", servo_info.async_write_flag));
-                    // });
                     s.call_on_name(&format!("Lock {}", i), |view: &mut TextView| {
                         view.set_content(format!("{:4}", servo_info.lock_mark));
                     });
@@ -276,9 +261,15 @@ fn update_selected_row(s: &mut cursive::Cursive, selected: usize) {
             view.set_content(format!("{:2}", i + 1));
             view.set_style(ColorStyle::default());
         });
+        s.call_on_name(&format!("Joint {}", i), |view: &mut TextView| {
+            view.set_style(ColorStyle::default());
+        });
     }
     s.call_on_name(&format!("ID {}", selected), |view: &mut TextView| {
         view.set_content(format!(">{:2}", selected + 1));
+        view.set_style(ColorStyle::secondary());
+    });
+    s.call_on_name(&format!("Joint {}", selected), |view: &mut TextView| {
         view.set_style(ColorStyle::secondary());
     });
 }
