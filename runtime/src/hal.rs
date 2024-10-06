@@ -313,6 +313,15 @@ impl Servo {
         let data = [(value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8];
         self.write(id, register, &data)
     }
+
+    pub fn scan(&self, id: u8) -> Result<bool> {
+        // Try to read the servo ID from memory address 0x5 (ServoRegister::ID)
+        match self.read(id, ServoRegister::ID, 1) {
+            Ok(data) if data.len() == 1 && data[0] == id => Ok(true),
+            Ok(_) => Ok(false), // Received data, but it doesn't match the ID
+            Err(_) => Ok(false), // No response, assume no servo at this ID
+        }
+    }
 }
 
 impl Drop for Servo {

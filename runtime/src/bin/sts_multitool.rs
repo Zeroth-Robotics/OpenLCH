@@ -1,14 +1,19 @@
 use anyhow::Result;
 use runtime::hal::{Servo, MAX_SERVOS, TorqueMode, ServoRegister};
-use cursive::views::{TextView, LinearLayout, DummyView, Panel, Dialog, EditView, SelectView, NamedView};
+use cursive::views::{TextView, LinearLayout, DummyView, Panel, Dialog, EditView, SelectView};
 use cursive::traits::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::sync::atomic::{AtomicI16, Ordering};
 use cursive::theme::{Color, ColorStyle, BaseColor};
+use cursive::view::Nameable;
+use std::sync::OnceLock;
 
 static CALIBRATION_POSITION: AtomicI16 = AtomicI16::new(-1);
 static CURRENT_POSITION: AtomicI16 = AtomicI16::new(0);
+
+// Add this near the top of your file
+static UNRESPONSIVE_SERVOS: OnceLock<Arc<Mutex<Vec<bool>>>> = OnceLock::new();
 
 // At the top of the file, add this array of joint names
 const JOINT_NAMES: [&str; 16] = [
@@ -32,7 +37,7 @@ fn main() -> Result<()> {
     // Add header
     let header = LinearLayout::horizontal()
         .child(TextView::new("ID").center().fixed_width(4))
-        .child(TextView::new("Joint").center().fixed_width(10))
+        .child(TextView::new("Joint").center().fixed_width(7))
         .child(TextView::new("Pos").center().fixed_width(8))
         .child(TextView::new("Spd").center().fixed_width(8))
         .child(TextView::new("Load").center().fixed_width(8))
@@ -49,7 +54,7 @@ fn main() -> Result<()> {
         let joint_name = JOINT_NAMES.get(i).unwrap_or(&"Unknown");
         let row = LinearLayout::horizontal()
             .child(TextView::new(format!("{:2}", i + 1)).center().with_name(format!("ID {}", i)).fixed_width(4))
-            .child(TextView::new(*joint_name).center().fixed_width(10).with_name(format!("Joint {}", i)))
+            .child(TextView::new(*joint_name).center().with_name(format!("Joint {}", i)).fixed_width(7))
             .child(TextView::new("----").center().with_name(format!("CurrPos {}", i)).fixed_width(8))
             .child(TextView::new("----").center().with_name(format!("CurrSpd {}", i)).fixed_width(8))
             .child(TextView::new("----").center().with_name(format!("Load {}", i)).fixed_width(8))
@@ -176,7 +181,12 @@ fn main() -> Result<()> {
         end_calibration(s, servo_id, Arc::clone(&servo_clone_calibrate_end));
     });
 
+    let mut update_count = 0;
+    let servo_clone_for_scan = Arc::clone(&servo);
+
     siv.set_global_callback(cursive::event::Event::Refresh, move |s| {
+        update_count += 1;
+
         match servo_clone.read_continuous() {
             Ok(data) => {
                 for (i, servo_info) in data.servo.iter().enumerate() {
@@ -207,11 +217,62 @@ fn main() -> Result<()> {
                         view.set_content(format!("{:4}", servo_info.current_current));
                     });
                     s.call_on_name(&format!("Status {}", i), |view: &mut TextView| {
-                        view.set_content(format!("{:04X}", servo_info.servo_status));
+                        view.set_content(format!("{:05b}", servo_info.servo_status));
                     });
+                    if servo_info.servo_status != 0 {
+                        s.call_on_name(&format!("Status {}", i), |view: &mut TextView| {
+                            view.set_style(ColorStyle::highlight());
+                        });
+                    } else {
+                        s.call_on_name(&format!("Status {}", i), |view: &mut TextView| {
+                            view.set_style(ColorStyle::default());
+                        });
+                    }
                     s.call_on_name(&format!("Lock {}", i), |view: &mut TextView| {
                         view.set_content(format!("{:4}", servo_info.lock_mark));
                     });
+
+                    // Check servo responsiveness every 10th update
+                    if update_count % 10 == 0 {
+                        let servo_id = i as u8 + 1;
+                        let is_responsive = match servo_clone_for_scan.scan(servo_id) {
+                            Ok(true) => true,
+                            Ok(false) => false,
+                            Err(_) => false,
+                        };
+                        
+                        let mut unresponsive_servos = UNRESPONSIVE_SERVOS.get().unwrap().lock().unwrap();
+                        unresponsive_servos[i] = !is_responsive;
+                        
+                        let style = if is_responsive {
+                            ColorStyle::default()
+                        } else {
+                            ColorStyle::highlight()
+                        };
+                        
+                        // Apply style to ID and Joint name
+                        s.call_on_name(&format!("ID {}", i), |view: &mut TextView| {
+                            view.set_style(style);
+                        });
+                        s.call_on_name(&format!("Joint {}", i), |view: &mut TextView| {
+                            view.set_style(style);
+                        });
+
+                        let selected = *selected_servo.lock().unwrap();
+
+                        if selected == i && unresponsive_servos[i] {
+                            s.call_on_name(&format!("ID {}", i), |view: &mut TextView| {
+                                view.set_style(ColorStyle::secondary());
+                            });
+                        } else if selected == i {
+                            s.call_on_name(&format!("ID {}", i), |view: &mut TextView| {
+                                view.set_style(ColorStyle::secondary());
+                            });
+                            s.call_on_name(&format!("Joint {}", i), |view: &mut TextView| {
+                                view.set_style(ColorStyle::secondary());
+                            });
+                        }
+                    }
                 }
                 let mut last_update = last_update_time.lock().unwrap();
                 let now = Instant::now();
@@ -248,30 +309,41 @@ fn main() -> Result<()> {
                 s.add_layer(Dialog::info(format!("Error reading servo data: {}", e)));
             }
         }
+
+        // Reset update count to avoid potential overflow
+        if update_count >= 100 {
+            update_count = 0;
+        }
     });
+
+    // Initialize the OnceLock at the start of main
+    UNRESPONSIVE_SERVOS.get_or_init(|| Arc::new(Mutex::new(vec![false; MAX_SERVOS])));
 
     siv.run();
 
     Ok(())
 }
 
+// Update the update_selected_row function
 fn update_selected_row(s: &mut cursive::Cursive, selected: usize) {
+    let unresponsive_servos = UNRESPONSIVE_SERVOS.get().unwrap().lock().unwrap();
+    
     for i in 0..MAX_SERVOS {
+        let style = if unresponsive_servos[i] {
+            ColorStyle::highlight()
+        } else if i == selected {
+            ColorStyle::secondary()
+        } else {
+            ColorStyle::default()
+        };
+
         s.call_on_name(&format!("ID {}", i), |view: &mut TextView| {
-            view.set_content(format!("{:2}", i + 1));
-            view.set_style(ColorStyle::default());
+            view.set_style(style);
         });
         s.call_on_name(&format!("Joint {}", i), |view: &mut TextView| {
-            view.set_style(ColorStyle::default());
+            view.set_style(style);
         });
     }
-    s.call_on_name(&format!("ID {}", selected), |view: &mut TextView| {
-        view.set_content(format!(">{:2}", selected + 1));
-        view.set_style(ColorStyle::secondary());
-    });
-    s.call_on_name(&format!("Joint {}", selected), |view: &mut TextView| {
-        view.set_style(ColorStyle::secondary());
-    });
 }
 
 fn update_angle_limits(s: &mut cursive::Cursive, servo_id: u8, servo: &Arc<Servo>) {
