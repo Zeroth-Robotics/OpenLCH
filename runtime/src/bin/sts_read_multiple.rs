@@ -2,10 +2,10 @@ use anyhow::Result;
 use runtime::hal::{Servo, MAX_SERVOS, TorqueMode, ServoRegister};
 use cursive::views::{TextView, LinearLayout, DummyView, Panel, Dialog, EditView, SelectView, NamedView};
 use cursive::traits::*;
-use std::cmp::min;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::sync::atomic::{AtomicI16, Ordering};
+use cursive::theme::{Color, ColorStyle, BaseColor};
 
 static CALIBRATION_POSITION: AtomicI16 = AtomicI16::new(-1);
 static CURRENT_POSITION: AtomicI16 = AtomicI16::new(0);
@@ -71,10 +71,25 @@ fn main() -> Result<()> {
     // Add task run count at the bottom
     layout.add_child(
         Panel::new(
-            LinearLayout::vertical()
-                .child(TextView::new("Task Run Count: 0").with_name("Task Count"))
-                .child(TextView::new("Last Update: N/A").with_name("Last Update"))
-                .child(TextView::new("Servo polling rate: N/A").with_name("Servo polling rate"))
+            LinearLayout::horizontal()
+                .child(DummyView)
+                .child(
+                    LinearLayout::horizontal()
+                        .child(
+                            LinearLayout::vertical()
+                                .child(TextView::new("Task Run Count: 0").with_name("Task Count"))
+                                .child(TextView::new("Last Update: N/A").with_name("Last Update"))
+                                .child(TextView::new("Servo polling rate: N/A").with_name("Servo polling rate"))
+                        )
+                        .child(DummyView.fixed_width(2))
+                        .child(
+                            LinearLayout::vertical()
+                                .child(TextView::new("Min Angle: ----").with_name("MinAngle"))
+                                .child(TextView::new("Max Angle: ----").with_name("MaxAngle"))
+                                .child(TextView::new("Offset: ----").with_name("Offset"))
+                        )
+                )
+                .child(DummyView)
         )
         .title("Statistics")
         .full_width()
@@ -87,9 +102,6 @@ fn main() -> Result<()> {
             .full_width()
     );
 
-    layout.add_child(TextView::new("Min Angle: ----").with_name("MinAngle"));
-    layout.add_child(TextView::new("Max Angle: ----").with_name("MaxAngle"));
-    layout.add_child(TextView::new("Offset: ----").with_name("Offset"));
     layout.add_child(TextView::new("Calibration Pos: ----").with_name("CalibrationPos"));
 
     siv.add_fullscreen_layer(layout);
@@ -187,9 +199,10 @@ fn main() -> Result<()> {
                         let sign = if servo_info.current_load as u16 & 0x400 != 0 { '-' } else { '+' };
                         view.set_content(format!("{}{:4}", sign, speed));
                     });
-                    s.call_on_name(&format!("Torque {}", i), |view: &mut TextView| {
-                        view.set_content(format!("{:4}", servo_info.torque_switch));
-                    });
+                    update_torque_display(s, (i + 1) as u8, servo_info.torque_switch);
+                    // s.call_on_name(&format!("Torque {}", i), |view: &mut TextView| {
+                    //     view.set_content(format!("{:4}", servo_info.torque_switch));
+                    // });
                     s.call_on_name(&format!("TorqLim {}", i), |view: &mut TextView| {
                         view.set_content(format!("{:4}", servo_info.torque_limit));
                     });
@@ -402,14 +415,33 @@ fn toggle_servo_torque(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                 TorqueMode::Disabled
             };
             
-            if let Err(e) = servo_clone.set_torque_mode(servo_id, new_torque_mode) {
+            if let Err(e) = servo_clone.set_torque_mode(servo_id, new_torque_mode.clone()) {
                 s.add_layer(Dialog::info(format!("Error setting torque mode: {}", e)));
+            } else {
+                // Update the UI immediately
+                let new_torque_value = match new_torque_mode {
+                    TorqueMode::Enabled => 1,
+                    TorqueMode::Disabled => 0,
+                    TorqueMode::Stiff => 1,
+                };
+                update_torque_display(s, servo_id, new_torque_value);
             }
         }
         Err(e) => {
             s.add_layer(Dialog::info(format!("Error reading servo info: {}", e)));
         }
     }
+}
+
+fn update_torque_display(s: &mut cursive::Cursive, servo_id: u8, torque_value: u8) {
+    s.call_on_name(&format!("Torque {}", servo_id as usize - 1), |view: &mut TextView| {
+        view.set_content(format!("{:4}", torque_value));
+        if torque_value == 1 {
+            view.set_style(ColorStyle::secondary());
+        } else {
+            view.set_style(ColorStyle::default());
+        }
+    });
 }
 
 fn start_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
