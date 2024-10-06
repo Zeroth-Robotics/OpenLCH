@@ -319,8 +319,9 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                 .child(SelectView::new()
                     .item("Enabled", Arc::new(TorqueMode::Enabled))
                     .item("Disabled", Arc::new(TorqueMode::Disabled))
-                    // .item("Stiff", Arc::new(TorqueMode::Stiff))
                     .with_name("torque"))
+                .child(TextView::new("Offset:"))
+                .child(EditView::new().with_name("offset"))
         )
         .button("Apply", move |s| {
             let position = s.call_on_name("position", |view: &mut EditView| {
@@ -331,6 +332,9 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
             }).unwrap();
             let torque_mode = s.call_on_name("torque", |view: &mut SelectView<Arc<TorqueMode>>| {
                 view.selection().unwrap_or_else(|| Arc::new(TorqueMode::Enabled.into()))
+            }).unwrap();
+            let offset = s.call_on_name("offset", |view: &mut EditView| {
+                view.get_content().parse::<i16>().ok()
             }).unwrap();
 
             // Apply settings
@@ -345,6 +349,17 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                 }
             }
 
+            // Set offset if provided
+            if let Some(off) = offset {
+                if let Err(e) = set_servo_offset(servo_id, off, &servo) {
+                    s.add_layer(Dialog::info(format!("Error setting offset: {}", e)));
+                } else {
+                    s.call_on_name("Offset", |view: &mut TextView| {
+                        view.set_content(format!("Offset: {}", off));
+                    });
+                }
+            }
+
             s.pop_layer();
         })
         .button("Cancel", |s| {
@@ -353,6 +368,27 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
         .with_name("servo_settings"); // Add this line to name the dialog
 
     s.add_layer(dialog);
+}
+
+fn set_servo_offset(servo_id: u8, offset: i16, servo: &Arc<Servo>) -> Result<()> {
+    let offset_value = if offset < 0 {
+        (offset.abs() as u16) | 0x800 // Set bit 11 for negative values
+    } else {
+        offset as u16
+    };
+
+    // Unlock EEPROM
+    servo.write(servo_id, ServoRegister::LockMark, &[0])?;
+    std::thread::sleep(Duration::from_millis(10));
+
+    // Write new offset
+    servo.write_servo_memory(servo_id, ServoRegister::PositionCorrection, offset_value)?;
+    std::thread::sleep(Duration::from_millis(10));
+
+    // Lock EEPROM
+    servo.write(servo_id, ServoRegister::LockMark, &[1])?;
+
+    Ok(())
 }
 
 fn toggle_servo_torque(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
@@ -408,13 +444,17 @@ fn end_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
         max_pos += 4096;
     }
 
-    let offset = min_pos + (max_pos - min_pos) / 2 - 2048;
+    let offset_value = min_pos + (max_pos - min_pos) / 2 - 2048;
 
     // Convert offset to 12-bit signed value
-    let offset_value = if offset < 0 {
-        (offset & 0x7FF) as u16 | 0x800 // Set sign bit
+    let offset_value = if offset_value < 0 {
+        offset_value.abs() as u16 | 0x800 // (set negative)
     } else {
-        (offset & 0x7FF) as u16
+        if offset_value > 2048 {
+            (offset_value - 4096).abs() as u16 | 0x800
+        } else {
+            offset_value as u16
+        }
     };
 
     // Calculate new limits
@@ -435,27 +475,27 @@ fn end_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
         view.set_content(format!("Max Angle: {}", max_angle));
     });
     s.call_on_name("Offset", |view: &mut TextView| {
-        view.set_content(format!("Offset: {}", offset));
+        view.set_content(format!("Offset: {}", offset_value));
     });
 
     CALIBRATION_POSITION.store(-1, Ordering::Relaxed);
-    s.add_layer(Dialog::info(format!("Calibration completed for servo {}. New offset: {}", servo_id, offset)));
+    s.add_layer(Dialog::info(format!("Calibration completed for servo {}. New offset: {}", servo_id, offset_value)));
 }
 
 fn write_calibration_to_eeprom(servo_id: u8, servo: &Servo, offset: u16, min_angle: i16, max_angle: i16) -> Result<()> {
     // Unlock EEPROM
     servo.write(servo_id, ServoRegister::LockMark, &[0])?;
-    std::thread::sleep(Duration::from_millis(10));
+    std::thread::sleep(Duration::from_millis(20));
 
     // Write new offset
     servo.write_servo_memory(servo_id, ServoRegister::PositionCorrection, offset)?;
-    std::thread::sleep(Duration::from_millis(10));
+    std::thread::sleep(Duration::from_millis(20));
 
     // Write new limits
     servo.write_servo_memory(servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
-    std::thread::sleep(Duration::from_millis(10));
+    std::thread::sleep(Duration::from_millis(20));
     servo.write_servo_memory(servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
-    std::thread::sleep(Duration::from_millis(10));
+    std::thread::sleep(Duration::from_millis(20));
 
     // Lock EEPROM
     servo.write(servo_id, ServoRegister::LockMark, &[1])?;

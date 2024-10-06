@@ -27,6 +27,7 @@ pub struct ServoInfo {
 }
 
 #[repr(u8)]
+#[derive(Debug, Copy, Clone)]
 pub enum ServoRegister {
     FirmwareMajorVersion = 0x00,
     FirmwareSubVersion = 0x01,
@@ -146,7 +147,9 @@ impl Servo {
     }
 
     pub fn write(&self, id: u8, register: ServoRegister, data: &[u8]) -> Result<()> {
+        let _result = unsafe { servo_write(id, register.clone() as u8, data.as_ptr(), data.len() as c_uchar) };
         let result = unsafe { servo_write(id, register as u8, data.as_ptr(), data.len() as c_uchar) };
+
         if result != 0 {
             anyhow::bail!("Failed to write to servo");
         }
