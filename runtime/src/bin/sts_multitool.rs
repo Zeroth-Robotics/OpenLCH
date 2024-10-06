@@ -274,10 +274,12 @@ fn update_selected_row(s: &mut cursive::Cursive, selected: usize) {
     for i in 0..MAX_SERVOS {
         s.call_on_name(&format!("ID {}", i), |view: &mut TextView| {
             view.set_content(format!("{:2}", i + 1));
+            view.set_style(ColorStyle::default());
         });
     }
     s.call_on_name(&format!("ID {}", selected), |view: &mut TextView| {
         view.set_content(format!(">{:2}", selected + 1));
+        view.set_style(ColorStyle::secondary());
     });
 }
 
@@ -320,6 +322,18 @@ fn update_angle_limits(s: &mut cursive::Cursive, servo_id: u8, servo: &Arc<Servo
 }
 
 fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
+    // Read the current torque mode
+    let current_torque_mode = match servo.read_info(servo_id) {
+        Ok(info) => {
+            if info.torque_switch == 0 {
+                TorqueMode::Disabled
+            } else {
+                TorqueMode::Enabled
+            }
+        },
+        Err(_) => TorqueMode::Enabled, // Default to Enabled if we can't read the current state
+    };
+
     let dialog = Dialog::new()
         .title(format!("Servo {} Settings", servo_id))
         .content(
@@ -332,6 +346,12 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                 .child(SelectView::new()
                     .item("Enabled", Arc::new(TorqueMode::Enabled))
                     .item("Disabled", Arc::new(TorqueMode::Disabled))
+                    .selected(match current_torque_mode {
+                        TorqueMode::Enabled => 0,
+                        TorqueMode::Disabled => 1,
+                        _ => 0, // Default to Enabled for other cases
+                    })
+                    .popup()
                     .with_name("torque"))
                 .child(TextView::new("Offset:"))
                 .child(EditView::new().with_name("offset"))
