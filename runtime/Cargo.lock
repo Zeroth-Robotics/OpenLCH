@@ -282,7 +282,7 @@ dependencies = [
  "cfg-if",
  "crossbeam-channel",
  "crossterm",
- "cursive_core 0.4.6",
+ "cursive_core",
  "lazy_static",
  "libc",
  "log",
@@ -298,26 +298,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac7ac0eb0cede3dfdfebf4d5f22354e05a730b79c25fd03481fc69fcfba0a73e"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "cursive_core"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4db3b58161228d0dcb45c7968c5e74c3f03ad39e8983e58ad7d57061aa2cd94d"
-dependencies = [
- "ahash",
- "crossbeam-channel",
- "enum-map",
- "enumset",
- "lazy_static",
- "log",
- "num",
- "owning_ref",
- "time",
- "unicode-segmentation",
- "unicode-width",
- "xi-unicode",
 ]
 
 [[package]]
@@ -341,15 +321,6 @@ dependencies = [
  "unicode-segmentation",
  "unicode-width",
  "xi-unicode",
-]
-
-[[package]]
-name = "cursive_table_view"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8935dd87d19c54b7506b245bc988a7b4e65b1058e1d0d64c0ad9b3188e48060"
-dependencies = [
- "cursive_core 0.3.7",
 ]
 
 [[package]]
@@ -725,15 +696,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "owning_ref"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ff55baddef9e4ad00f88b6c743a2a8062d4c6ade126c2a528644b8e444d52ce"
-dependencies = [
- "stable_deref_trait",
-]
-
-[[package]]
 name = "parking_lot"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -864,7 +826,6 @@ dependencies = [
  "clap",
  "ctrlc",
  "cursive",
- "cursive_table_view",
  "half",
  "ndarray",
  "rand",
@@ -996,12 +957,6 @@ dependencies = [
  "libc",
  "windows-sys 0.52.0",
 ]
-
-[[package]]
-name = "stable_deref_trait"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "static_assertions"
