@@ -82,7 +82,7 @@ fn main() -> Result<()> {
 
     // Add instructions
     layout.add_child(
-        TextView::new("Use Up/Down to select servo, Enter - servo settings, T - toggle torque, Q - quit")
+        TextView::new("Up/Down - select, Enter - settings, T - toggle torque, Q - quit, [ - start calibration, ] - end calibration")
             .center()
             .full_width()
     );
