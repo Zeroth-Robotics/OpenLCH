@@ -2,9 +2,92 @@
 
 ## Setup
 
+1. Flash the Image to the SD Card
+Download the OpenLCH image from the [releases page](https://github.com/Zeroth-Robotics/OpenLCH-buildroot/releases).
+
+Use Balena Etcher (or any other flashing tool) to flash the image onto your SD card.
+
+Once flashing is complete, remove and reinsert the SD card into your computer.
+
+3. Configure Wi-Fi on Startup
+Open the boot folder on the SD card (it should be visible on macOS since it is formatted as FAT32).
+Create a new file named wpa_supplicant.conf in the boot folder and add the following content:
+
 ```bash
-cargo run
+ctrl_interface=/var/run/wpa_supplicant
+ap_scan=1
+update_config=1
+
+network={
+  ssid="YOURWIFINAME"
+  psk="YOURPASSWORD"
+  key_mgmt=WPA-PSK
+}
 ```
+Replace YOURWIFINAME and YOURPASSWORD with your Wi-Fi credentials.
+
+3. Connect via USB (Optional)
+If you're connecting via USB, use the following details:
+
+IP Address: 192.168.42.1
+Username: root
+Password: milkv
+
+4. Download Required Artifacts
+Go to OpenLCH Artifacts and download the following:
+`runtime`
+`servo`
+`cviwrapper`
+
+6. Transfer Files to the Target Device
+Run the following commands to copy the necessary files to your device:
+
+```bash
+scp -O runtime root@192.168.42.1:/usr/local/bin/
+scp -O servo root@192.168.42.1:/usr/local/bin/
+scp -O cviwrapper root@192.168.42.1:/usr/local/bin/
+
+
+```
+6. Run the Application
+To run the servo setup, execute the following on the target device:
+
+```bash
+
+# List available binaries
+ls /usr/local/bin/
+
+# Run your desired binary (example: runtime)
+sudo /usr/local/bin/runtime
+```
+
+
+
+
+```
+# Install docker / docker desktop
+brew install gitlab-ci-local
+```
+
+### Build
+
+```bash
+gitlab-ci-local --stage build-runtime
+```
+
+Find binaries in target/riscv64gc-unknown-linux-musl/release/
+
+### Copy to the milk-v board
+`scp -O target/riscv64gc-unknown-linux-musl/release/runtime $MILKV_IP:/usr/local/bin/`
+
+If the board is connected over usb, ip is `192.168.42.1`
+
+
+
+
+
+
+---
 
 ## Architecture
 
@@ -32,32 +115,9 @@ Provides the states for the robot.
 
 Based on robot from `kscalelabs/firmware` Robot struct.
 
-## `HAL.rs`
+## `hal.rs`
 
-Define the hardware abstraction layer for the servos controls from firmware.
-
-Rust binding for C++ struct (WIP):
-
-```bash
-//     uint8_t torque_switch;         // 0x28 (1 byte)
-//     uint8_t acceleration;          // 0x29 (1 byte)
-//     int16_t target_location;       // 0x2A (2 bytes)
-//     uint16_t running_time;         // 0x2C (2 bytes)
-//     uint16_t running_speed;        // 0x2E (2 bytes)
-//     uint16_t torque_limit;         // 0x30 (2 bytes)
-//     uint8_t reserved1[6];          // 0x32-0x37 (6 bytes, reserved)
-//     uint8_t lock_mark;             // 0x37 (1 byte)
-//     int16_t current_location;      // 0x38 (2 bytes)
-//     int16_t current_speed;         // 0x3A (2 bytes)
-//     int16_t current_load;          // 0x3C (2 bytes)
-//     uint8_t current_voltage;       // 0x3E (1 byte)
-//     uint8_t current_temperature;   // 0x3F (1 byte)
-//     uint8_t async_write_flag;      // 0x40 (1 byte)
-//     uint8_t servo_status;          // 0x41 (1 byte)
-//     uint8_t mobile_sign;           // 0x42 (1 byte)
-//     uint8_t reserved2[2];          // 0x43-0x44 (2 bytes, reserved)
-//     uint16_t current_current;      // 0x45 (2 bytes)
-```
+Servo control code
 
 ## `controller.rs`
 
@@ -72,17 +132,3 @@ onnx inference session and initalization.
 ## `main.rs`
 
 initialize config, robot, controller and start standing using controller.
-Building for target platform (Milk-V Duo S)
-
-`docker run --rm -v $(pwd):/workspace -w /workspace openlch-runtime-sdk /root/.cargo/bin/cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release`
-
-Uploading to the board (ethernet over usb c)
-`scp -O target/riscv64gc-unknown-linux-musl/release/runtime root@192.168.42.1:`
-
-Remember to first build the docker container with sdk/toolchain
-
-```
-cd ../runtime-sdk
-docker build . -t openlch-runtime-sdk
-```
-
