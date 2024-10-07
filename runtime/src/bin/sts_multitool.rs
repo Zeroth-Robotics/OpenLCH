@@ -23,6 +23,26 @@ const JOINT_NAMES: [&str; 16] = [
     "L Elb", "L Sh Y", "L Sh P"
 ];
 
+fn show_hints(s: &mut cursive::Cursive) {
+    let hints = vec![
+        "Up/Down - Select servo",
+        "Enter - Open servo settings",
+        "T - Toggle torque",
+        "[ - Start calibration",
+        "] - End calibration",
+        "Q - Quit",
+        "H - Show this help",
+    ];
+
+    let content = hints.join("\n");
+
+    s.add_layer(
+        Dialog::around(TextView::new(content))
+            .title("Hints")
+            .button("Close", |s| { s.pop_layer(); })
+    );
+}
+
 fn main() -> Result<()> {
     let servo = Arc::new(Servo::new()?);
 
@@ -102,7 +122,7 @@ fn main() -> Result<()> {
 
     // Add instructions
     layout.add_child(
-        TextView::new("Up/Down - select, Enter - settings, T - toggle torque, Q - quit, [ - start calibration, ] - end calibration")
+        TextView::new("Press 'H' for help")
             .center()
             .full_width()
     );
@@ -143,6 +163,8 @@ fn main() -> Result<()> {
         update_selected_row(s, *selected);
         update_angle_limits(s, *selected as u8 + 1, &servo_clone_down);
     });
+
+    siv.add_global_callback('h', show_hints);
 
     let servo_clone_enter = Arc::clone(&servo);
     let selected_servo_enter = Arc::clone(&selected_servo);
