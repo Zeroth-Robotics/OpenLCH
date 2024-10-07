@@ -4,13 +4,19 @@ use cursive::views::{TextView, LinearLayout, DummyView, Panel, Dialog, EditView,
 use cursive::traits::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
-use std::sync::atomic::{AtomicI16, Ordering};
+use std::sync::atomic::{AtomicI16, Ordering, AtomicBool};
 use cursive::theme::{Color, ColorStyle, BaseColor};
 use cursive::view::Nameable;
 use std::sync::OnceLock;
+use std::fs::File;
+use std::io::Write;
+use chrono::Local;
+use serde_json::{json, Value};
 
 static CALIBRATION_POSITION: AtomicI16 = AtomicI16::new(-1);
 static CURRENT_POSITION: AtomicI16 = AtomicI16::new(0);
+static CAPTURE_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+static CAPTURE_STATE: OnceLock<Arc<Mutex<CaptureState>>> = OnceLock::new();
 
 // Add this near the top of your file
 static UNRESPONSIVE_SERVOS: OnceLock<Arc<Mutex<Vec<bool>>>> = OnceLock::new();
@@ -23,6 +29,12 @@ const JOINT_NAMES: [&str; 16] = [
     "L Elb", "L Sh Y", "L Sh P"
 ];
 
+struct CaptureState {
+    file: Option<File>,
+    captures: Vec<Value>,
+    name: String,
+}
+
 fn show_hints(s: &mut cursive::Cursive) {
     let hints = vec![
         "Up/Down - Select servo",
@@ -30,6 +42,8 @@ fn show_hints(s: &mut cursive::Cursive) {
         "T - Toggle torque",
         "[ - Start calibration",
         "] - End calibration",
+        "c - Capture current position",
+        "C - End and save capture",
         "Q - Quit",
         "H - Show this help",
     ];
@@ -170,7 +184,7 @@ fn main() -> Result<()> {
     let selected_servo_enter = Arc::clone(&selected_servo);
     siv.add_global_callback(cursive::event::Event::Key(cursive::event::Key::Enter), move |s| {
         // Check if a settings dialog is already open
-        if s.find_name::<Dialog>("servo_settings").is_some() {
+        if s.find_name::<Dialog>("servo_settings").is_some() || s.find_name::<Dialog>("capture_dialog").is_some(){
             return; // Do nothing if a dialog is already open
         }
 
@@ -348,6 +362,19 @@ fn main() -> Result<()> {
 
     // Initialize the OnceLock at the start of main
     UNRESPONSIVE_SERVOS.get_or_init(|| Arc::new(Mutex::new(vec![false; MAX_SERVOS])));
+
+    // Initialize capture state
+    CAPTURE_STATE.get_or_init(|| Arc::new(Mutex::new(CaptureState {
+        file: None,
+        captures: Vec::new(),
+        name: String::new(),
+    })));
+
+    siv.set_user_data(servo.clone());
+
+    // Add capture callbacks
+    siv.add_global_callback('c', |s| handle_capture(s, false));
+    siv.add_global_callback('C', |s| handle_capture(s, true));
 
     siv.run();
 
@@ -646,4 +673,107 @@ fn write_calibration_to_eeprom(servo_id: u8, servo: &Servo, offset: u16, min_ang
     servo.write(servo_id, ServoRegister::LockMark, &[1])?;
 
     Ok(())
+}
+
+fn handle_capture(s: &mut cursive::Cursive, end: bool) {
+    if !CAPTURE_IN_PROGRESS.load(Ordering::Relaxed) && !end {
+        // Prompt for capture name
+        s.add_layer(
+            Dialog::new()
+                .title("New Capture")
+                .content(EditView::new().with_name("capture_name"))
+                .button("Start", |s| {
+                    let name = s.call_on_name("capture_name", |view: &mut EditView| {
+                        view.get_content()
+                    }).unwrap();
+                    s.pop_layer();
+                    start_capture(s, name.to_string());
+                })
+                .button("Cancel", |s| { s.pop_layer(); })
+                .with_name("capture_dialog")
+        );
+    } else if CAPTURE_IN_PROGRESS.load(Ordering::Relaxed) {
+        if end {
+            end_capture(s);
+        } else {
+            continue_capture(s);
+        }
+    }
+}
+
+fn start_capture(s: &mut cursive::Cursive, name: String) {
+    let capture_state = CAPTURE_STATE.get().unwrap();
+    let mut capture_state = capture_state.lock().unwrap();
+    let servo = s.user_data::<Arc<Servo>>().unwrap();
+
+    let filename = format!("cap-{}-{}.json", name, Local::now().format("%Y%m%d-%H%M%S"));
+    capture_state.file = Some(File::create(&filename).unwrap());
+    capture_state.captures.clear();
+    capture_state.name = name;
+    CAPTURE_IN_PROGRESS.store(true, Ordering::Relaxed);
+
+    match servo.read_continuous() {
+        Ok(data) => {
+            let positions: serde_json::Map<String, Value> = data.servo
+                .iter()
+                .enumerate()
+                .map(|(i, info)| ((i + 1).to_string(), json!(info.current_location)))
+                .collect();
+            
+            capture_state.captures.push(json!({
+                "pos": positions,
+                "delay": 100
+            }));
+            
+            s.add_layer(Dialog::info(format!("Started capture: {}. First position recorded.", filename)));
+        }
+        Err(e) => {
+            s.add_layer(Dialog::info(format!("Error starting capture: {}", e)));
+            CAPTURE_IN_PROGRESS.store(false, Ordering::Relaxed);
+            capture_state.file = None;
+        }
+    }
+}
+
+fn continue_capture(s: &mut cursive::Cursive) {
+    let capture_state = CAPTURE_STATE.get().unwrap();
+    let mut capture_state = capture_state.lock().unwrap();
+    let servo = s.user_data::<Arc<Servo>>().unwrap();
+
+    match servo.read_continuous() {
+        Ok(data) => {
+            let positions: serde_json::Map<String, Value> = data.servo
+                .iter()
+                .enumerate()
+                .map(|(i, info)| ((i + 1).to_string(), json!(info.current_location)))
+                .collect();
+            
+            capture_state.captures.push(json!({
+                "pos": positions,
+                "delay": 100
+            }));
+            
+            s.add_layer(Dialog::info("Position captured"));
+        }
+        Err(e) => {
+            s.add_layer(Dialog::info(format!("Error capturing position: {}", e)));
+        }
+    }
+}
+
+fn end_capture(s: &mut cursive::Cursive) {
+    let capture_state = CAPTURE_STATE.get().unwrap();
+    let mut capture_state = capture_state.lock().unwrap();
+
+    if let Some(mut file) = capture_state.file.take() {
+        let captures = capture_state.captures.clone();
+        let json = json!({
+            "name": capture_state.name,
+            "cap": captures
+        });
+        write!(file, "{}", json.to_string()).unwrap();
+        capture_state.captures.clear();
+        CAPTURE_IN_PROGRESS.store(false, Ordering::Relaxed);
+        s.add_layer(Dialog::info("Capture ended and saved"));
+    }
 }
