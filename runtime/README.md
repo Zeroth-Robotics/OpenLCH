@@ -2,7 +2,68 @@
 
 ## Setup
 
-### Prerequisites
+1. Flash the Image to the SD Card
+Download the OpenLCH image from the [releases page](https://github.com/Zeroth-Robotics/OpenLCH-buildroot/releases).
+
+Use Balena Etcher (or any other flashing tool) to flash the image onto your SD card.
+
+Once flashing is complete, remove and reinsert the SD card into your computer.
+
+3. Configure Wi-Fi on Startup
+Open the boot folder on the SD card (it should be visible on macOS since it is formatted as FAT32).
+Create a new file named wpa_supplicant.conf in the boot folder and add the following content:
+
+```bash
+ctrl_interface=/var/run/wpa_supplicant
+ap_scan=1
+update_config=1
+
+network={
+  ssid="YOURWIFINAME"
+  psk="YOURPASSWORD"
+  key_mgmt=WPA-PSK
+}
+```
+Replace YOURWIFINAME and YOURPASSWORD with your Wi-Fi credentials.
+
+3. Connect via USB (Optional)
+If you're connecting via USB, use the following details:
+
+IP Address: 192.168.42.1
+Username: root
+Password: milkv
+
+4. Download Required Artifacts
+Go to OpenLCH Artifacts and download the following:
+`runtime`
+`servo`
+`cviwrapper`
+
+6. Transfer Files to the Target Device
+Run the following commands to copy the necessary files to your device:
+
+```bash
+scp -O runtime root@192.168.42.1:/usr/local/bin/
+scp -O servo root@192.168.42.1:/usr/local/bin/
+scp -O cviwrapper root@192.168.42.1:/usr/local/bin/
+
+
+```
+6. Run the Application
+To run the servo setup, execute the following on the target device:
+
+```bash
+
+# List available binaries
+ls /usr/local/bin/
+
+# Run your desired binary (example: runtime)
+sudo /usr/local/bin/runtime
+```
+
+
+
+
 ```
 # Install docker / docker desktop
 brew install gitlab-ci-local
@@ -20,6 +81,13 @@ Find binaries in target/riscv64gc-unknown-linux-musl/release/
 `scp -O target/riscv64gc-unknown-linux-musl/release/runtime $MILKV_IP:/usr/local/bin/`
 
 If the board is connected over usb, ip is `192.168.42.1`
+
+
+
+
+
+
+---
 
 ## Architecture
 
