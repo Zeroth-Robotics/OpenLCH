@@ -26,12 +26,15 @@ network={
 ```
 Replace YOURWIFINAME and YOURPASSWORD with your Wi-Fi credentials.
 
-3. Connect via USB (Optional)
+3. Connect via USB
 If you're connecting via USB, use the following details:
 
-IP Address: 192.168.42.1
-Username: root
-Password: milkv
+- IP Address: 192.168.42.1
+- Username: root
+- Password: milkv
+
+SSH:
+`ssh root@192.168.42.1`
 
 4. Download Required Artifacts
 Go to OpenLCH Artifacts and download the following:
