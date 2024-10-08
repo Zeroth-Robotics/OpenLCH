@@ -73,3 +73,9 @@ for job_name in "build-runtime" "build-servo" "build-cviwrapper"; do
 done
 
 echo "Artifacts download and extraction completed."
+
+# Upload to Milk-V Duo
+echo "Uploading to Milk-V Duo..."
+scp -v -r -O artifacts/runtime/runtime/target/riscv64gc-unknown-linux-musl/release/* root@192.168.42.1:/usr/local/bin/
+
+echo "Upload completed."
