@@ -49,3 +49,5 @@ build/
 # log directory
 logs/
 
+# artifacts
+artifacts/
