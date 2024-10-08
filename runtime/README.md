@@ -135,3 +135,9 @@ onnx inference session and initalization.
 ## `main.rs`
 
 initialize config, robot, controller and start standing using controller.
+
+
+# Hardware
+Servo ID:
+![image](https://github.com/user-attachments/assets/93db0404-bf76-4b4f-9201-665cc868364b)
+
