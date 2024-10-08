@@ -1,6 +1,5 @@
 use crate::model::Model;
 use crate::robot::Robot;
-use crate::hal::Servo;
 use anyhow::Result;
 use async_trait::async_trait;
 use rand::Rng;
@@ -61,24 +60,19 @@ impl Controller for MLController {
 pub struct StandingController {
     robot: Robot,
     controller: Arc<dyn Controller>,
-    servo: Servo, // Add Servo to the struct
 }
 
 impl StandingController {
-    pub fn new(robot: Robot, controller: Arc<dyn Controller>, servo: Servo) -> Self {
-        Self { robot, controller, servo }
+    pub fn new(robot: Robot, controller: Arc<dyn Controller>) -> Self {
+        Self { robot, controller }
     }
 
     pub async fn get_state(&self) -> Result<Vec<f32>> {
-        // Fetch servo data from hal.rs
-        let servo_data = self.servo.read_continuous()?;
-        // Convert servo positions to f32 and collect into a vector
-        let positions: Vec<f32> = servo_data
-            .servo
-            .iter()
-            .map(|s| s.current_location as f32)
-            .collect();
-        Ok(positions)
+        // ### === TODO: DENYS === ###
+        // let state = self.robot.joint_states().await;
+        // let imu = self.robot.imu_state().await;
+        // let action = self.model.infer(state, imu).await?;
+        Ok(vec![0.0; 10])
     }
 
     pub async fn send_command(&self, command: &[f32]) -> Result<()> {
