@@ -141,3 +141,6 @@ initialize config, robot, controller and start standing using controller.
 Servo ID:
 ![image](https://github.com/user-attachments/assets/93db0404-bf76-4b4f-9201-665cc868364b)
 
+Wiring:
+![image](https://github.com/user-attachments/assets/d1c02231-ae6e-4333-bf7e-74db47416b88)
+
