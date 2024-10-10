@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use anyhow::{Result, Context};
 use clap::Parser;
-use runtime::hal::{Servo, MAX_SERVOS};
+use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -56,9 +56,20 @@ fn main() -> Result<()> {
                     })
                     .collect();
 
+                let mut cmd = ServoMultipleWriteCommand {
+                    only_write_positions: 1,
+                    ids: [0; MAX_SERVOS],
+                    positions: [0; MAX_SERVOS],
+                    times: [0; MAX_SERVOS],
+                    speeds: [0; MAX_SERVOS],
+                };
+
                 for (servo_id, &pos) in interpolated_positions.iter().enumerate() {
-                    servo.move_servo(servo_id as u8 + 1, pos as i16, 0, 0)?;
+                    cmd.ids[servo_id] = servo_id as u8 + 1;
+                    cmd.positions[servo_id] = pos as i16;
                 }
+
+                servo.write_multiple(&cmd)?;
 
                 std::thread::sleep(Duration::from_millis(20));
             }
