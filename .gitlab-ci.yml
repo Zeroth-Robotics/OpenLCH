@@ -45,9 +45,7 @@ build-toolchain-manual:
     - docker:dind
   image: docker:latest
   script:
-      - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-      - docker pull $TOOLCHAIN_IMAGE:latest || true
-      - docker
+      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime/toolchain-docker-img/Dockerfile .
 
 build-cviwrapper:
   <<: *runner
