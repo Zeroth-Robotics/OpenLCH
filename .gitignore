@@ -51,3 +51,6 @@ logs/
 
 # artifacts
 artifacts/
+
+# gitlab-ci-local
+.gitlab-ci-local/
