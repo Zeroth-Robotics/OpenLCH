@@ -38,10 +38,8 @@ SSH:
 
 4. Build Runtime
 ```bash
-gitlab-ci-local
+cargo check && gitlab-ci-local # check and build
 ```
-
-
 
 5. Transfer Files to the Target Device
 Find binaries in target/riscv64gc-unknown-linux-musl/release/
