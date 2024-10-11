@@ -38,15 +38,6 @@ build-toolchain:
         - runtime/toolchain-docker-img/**/*
         - .gitlab-ci.yml
 
-build-toolchain-manual:
-  <<: *runner
-  stage: build-toolchain
-  services:
-    - docker:dind
-  image: docker:latest
-  script:
-      - docker build --progress=plain --cache-from $TOOLCHAIN_IMAGE:latest -t $TOOLCHAIN_IMAGE:latest -f runtime/toolchain-docker-img/Dockerfile .
-
 build-cviwrapper:
   <<: *runner
   <<: *c-build
@@ -65,20 +56,6 @@ build-cviwrapper:
         - runtime/**/*
         - .gitlab-ci.yml
 
-build-cviwrapper-manual:
-  <<: *runner
-  <<: *c-build
-  stage: build-runtime
-  image: $TOOLCHAIN_IMAGE:latest
-  script:
-    - cd runtime/firmware/cviwrapper
-    - make
-  artifacts:
-    paths:
-      - runtime/firmware/cviwrapper/libcviwrapper.so
-    expire_in: 1 week
-  when: manual
-
 build-servo:
   <<: *runner
   <<: *c-build
@@ -96,20 +73,6 @@ build-servo:
       changes:
         - runtime/**/*
         - .gitlab-ci.yml
-
-build-servo-manual:
-  <<: *runner
-  <<: *c-build
-  stage: build-runtime
-  image: $TOOLCHAIN_IMAGE:latest
-  script:
-    - cd runtime/firmware/sts3215
-    - make
-  artifacts:
-    paths:
-      - runtime/firmware/sts3215/libsts3215.so
-    expire_in: 1 week
-  when: manual
 
 build-runtime:
   <<: *runner
@@ -142,27 +105,3 @@ build-runtime:
       changes:
         - runtime/**/*
         - .gitlab-ci.yml
-
-build-runtime-manual:
-  <<: *runner
-  stage: build-runtime
-  image: $TOOLCHAIN_IMAGE:latest
-  script:
-    - cd runtime
-    - source /root/.cargo/env
-    - cargo +nightly build --target riscv64gc-unknown-linux-musl -Zbuild-std --release
-  artifacts:
-    paths:
-      - runtime/target/riscv64gc-unknown-linux-musl/release/
-    exclude:
-      - runtime/target/riscv64gc-unknown-linux-musl/release/**/*.d
-      - runtime/target/riscv64gc-unknown-linux-musl/release/**/*.rlib
-      - runtime/target/riscv64gc-unknown-linux-musl/release/build
-      - runtime/target/riscv64gc-unknown-linux-musl/release/build/**/*
-      - runtime/target/riscv64gc-unknown-linux-musl/release/deps
-      - runtime/target/riscv64gc-unknown-linux-musl/release/deps/**/*
-      - runtime/target/riscv64gc-unknown-linux-musl/release/.fingerprint
-      - runtime/target/riscv64gc-unknown-linux-musl/release/.fingerprint/**/*
-      - runtime/target/riscv64gc-unknown-linux-musl/release/.cargo-lock
-    expire_in: 1 week
-  when: manual
