@@ -1,6 +1,6 @@
 use anyhow::Result;
 use runtime::hal::{Servo, ServoMultipleWriteCommand, MAX_SERVOS};
-use tokio::time::{interval, Duration};
+use tokio::time::{sleep, interval, Duration};
 
 async fn joint_states(servo: &Servo) -> Result<()> {
     let mut interval = interval(Duration::from_millis(10)); // 100Hz

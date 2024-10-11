@@ -4,8 +4,7 @@ mod robot;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     // println!("Starting robot initialization");
 
     // let config_path = PathBuf::from("config/stompymicro.toml");

@@ -36,22 +36,26 @@ If you're connecting via USB, use the following details:
 SSH:
 `ssh root@192.168.42.1`
 
-4. Download Required Artifacts
-Go to OpenLCH Artifacts and download the following:
-`runtime`
-`servo`
-`cviwrapper`
+4. Build Runtime
+```bash
+gitlab-ci-local
+```
 
-6. Transfer Files to the Target Device
+5. Transfer Files to the Target Device
 Run the following commands to copy the necessary files to your device:
 
 ```bash
 scp -O runtime root@192.168.42.1:/usr/local/bin/
 scp -O servo root@192.168.42.1:/usr/local/bin/
 scp -O cviwrapper root@192.168.42.1:/usr/local/bin/
-
-
 ```
+
+Debug:
+Note that you cannot ping the device in Cursor editor terminal for some reason. Try:
+```bash
+ping 192.168.42.1
+```
+
 6. Run the Application
 To run the servo setup, execute the following on the target device:
 
