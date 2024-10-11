@@ -693,10 +693,31 @@ fn write_calibration_to_eeprom(servo_id: u8, servo: &Servo, offset: u16, min_ang
     std::thread::sleep(Duration::from_millis(20));
 
     // Write new limits
-    servo.write_servo_memory(servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
-    std::thread::sleep(Duration::from_millis(20));
-    servo.write_servo_memory(servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
-    std::thread::sleep(Duration::from_millis(20));
+    for try_num in 0..3 {
+        servo.write_servo_memory(servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
+        std::thread::sleep(Duration::from_millis(20));
+        let read_min = servo.read(servo_id, ServoRegister::MinAngleLimit, 2)?;
+        let read_min = u16::from_le_bytes([read_min[0], read_min[1]]);
+        if read_min == min_angle as u16 {
+            break;
+        }
+        if try_num == 2 {
+            return Err(anyhow::anyhow!("Failed to write MinAngleLimit after 3 attempts"));
+        }
+    }
+
+    for try_num in 0..3 {
+        servo.write_servo_memory(servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
+        std::thread::sleep(Duration::from_millis(20));
+        let read_max = servo.read(servo_id, ServoRegister::MaxAngleLimit, 2)?;
+        let read_max = u16::from_le_bytes([read_max[0], read_max[1]]);
+        if read_max == max_angle as u16 {
+            break;
+        }
+        if try_num == 2 {
+            return Err(anyhow::anyhow!("Failed to write MaxAngleLimit after 3 attempts"));
+        }
+    }
 
     // Lock EEPROM
     servo.write(servo_id, ServoRegister::LockMark, &[1])?;
