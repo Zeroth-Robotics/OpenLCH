@@ -8,7 +8,7 @@ async fn joint_states(servo: &Servo) -> Result<()> {
         interval.tick().await;
         let servo_data = servo.read_continuous()?;
         for (i, servo_info) in servo_data.servo.iter().enumerate() {
-            println!("Servo {}: Feedback Joint Position = {}", i + 1, servo_info.target_location);
+            // println!("Servo {}: Feedback Joint Position = {}", i + 1, servo_info.target_location);
         }
     }
 }
@@ -43,10 +43,10 @@ pub async fn main() -> Result<()> {
     let servo = Servo::new()?;
     servo.enable_readout()?;
 
-    let position: i16 = 2048; // FIXME: example position
-    let time: u16 = 1000; // FIXME: example time in milliseconds
-    let speed: u16 = 512; // FIXME: example speed
-    let send_only_positions: u8 = 0; // FIXME: example flag
+    let position: i16 = 4000; // position: target position (0-4095)
+    let time: u16 = 100; // time: movement time in milliseconds
+    let speed: u16 = 512; // speed: movement speed (0-4095)
+    let send_only_positions: u8 = 1; // send_only_positions: send only positions (0 or 1)
 
     tokio::join!(
         joint_states(&servo),

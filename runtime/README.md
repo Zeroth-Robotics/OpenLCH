@@ -41,14 +41,12 @@ SSH:
 gitlab-ci-local
 ```
 
-5. Transfer Files to the Target Device
-Run the following commands to copy the necessary files to your device:
 
-```bash
-scp -O runtime root@192.168.42.1:/usr/local/bin/
-scp -O servo root@192.168.42.1:/usr/local/bin/
-scp -O cviwrapper root@192.168.42.1:/usr/local/bin/
-```
+
+5. Transfer Files to the Target Device
+Find binaries in target/riscv64gc-unknown-linux-musl/release/
+
+`scp -O target/riscv64gc-unknown-linux-musl/release/runtime $MILKV_IP:/usr/local/bin/`
 
 Debug:
 Note that you cannot ping the device in Cursor editor terminal for some reason. Try:
@@ -65,27 +63,12 @@ To run the servo setup, execute the following on the target device:
 ls /usr/local/bin/
 
 # Run your desired binary (example: runtime)
-sudo /usr/local/bin/runtime
+ /usr/local/bin/runtime
 ```
 
 
 
 
-```
-# Install docker / docker desktop
-brew install gitlab-ci-local
-```
-
-### Build
-
-```bash
-gitlab-ci-local --stage build-runtime
-```
-
-Find binaries in target/riscv64gc-unknown-linux-musl/release/
-
-### Copy to the milk-v board
-`scp -O target/riscv64gc-unknown-linux-musl/release/runtime $MILKV_IP:/usr/local/bin/`
 
 If the board is connected over usb, ip is `192.168.42.1`
 
