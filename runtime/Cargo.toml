@@ -22,6 +22,7 @@ cursive = "0.21"
 clap = { version = "4.5.19", features = ["derive"] }
 serde_json = "1.0.128"
 chrono = "0.4.38"
+i2cdev = "0.6.1"
 
 # [build-dependencies]
 # pkg-config = "0.3.31"
