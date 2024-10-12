@@ -113,22 +113,23 @@ fn main() -> Result<()> {
             LinearLayout::horizontal()
                 .child(DummyView)
                 .child(
-                    LinearLayout::horizontal()
-                        .child(
-                            LinearLayout::vertical()
-                                .child(TextView::new("Task Run Count: 0").with_name("Task Count"))
-                                .child(TextView::new("Last Update: N/A").with_name("Last Update"))
-                                .child(TextView::new("Servo polling rate: N/A").with_name("Servo polling rate"))
-                        )
-                        .child(DummyView.fixed_width(2))
-                        .child(
-                            LinearLayout::vertical()
-                                .child(TextView::new("Min Angle: ----").with_name("MinAngle"))
-                                .child(TextView::new("Max Angle: ----").with_name("MaxAngle"))
-                                .child(TextView::new("Offset: ----").with_name("Offset"))
-                        )
+                    LinearLayout::vertical()
+                        .child(TextView::new("Task Run Count: 0").with_name("Task Count"))
+                        .child(TextView::new("Last Update: N/A").with_name("Last Update"))
+                        .child(TextView::new("Servo polling rate: N/A").with_name("Servo polling rate"))
                 )
-                .child(DummyView)
+                .child(DummyView.fixed_width(2))
+                .child(
+                    LinearLayout::vertical()
+                        .child(TextView::new("Min Angle: ----").with_name("MinAngle"))
+                        .child(TextView::new("Max Angle: ----").with_name("MaxAngle"))
+                        .child(TextView::new("Offset: ----").with_name("Offset"))
+                )
+                .child(DummyView.fixed_width(2))
+                .child(
+                    LinearLayout::vertical()
+                        .child(TextView::new("Angle Range: ----°").with_name("AngleRange"))
+                )
         )
         .title("Statistics")
         .full_width()
@@ -412,6 +413,12 @@ fn update_angle_limits(s: &mut cursive::Cursive, servo_id: u8, servo: &Arc<Servo
             s.call_on_name("MaxAngle", |view: &mut TextView| {
                 view.set_content(format!("Max Angle: {}", max_angle));
             });
+            
+            // Calculate and display the angle range
+            let angle_range = (max_angle as f64 - min_angle as f64) / 4096.0 * 360.0;
+            s.call_on_name("AngleRange", |view: &mut TextView| {
+                view.set_content(format!("Angle Range: {:.2}°", angle_range));
+            });
         }
         Err(e) => {
             s.call_on_name("MinAngle", |view: &mut TextView| {
@@ -419,6 +426,9 @@ fn update_angle_limits(s: &mut cursive::Cursive, servo_id: u8, servo: &Arc<Servo
             });
             s.call_on_name("MaxAngle", |view: &mut TextView| {
                 view.set_content("Max Angle: Error".to_string());
+            });
+            s.call_on_name("AngleRange", |view: &mut TextView| {
+                view.set_content("Angle Range: Error".to_string());
             });
             eprintln!("Error reading angle limits: {}", e);
         }
@@ -442,16 +452,17 @@ fn update_angle_limits(s: &mut cursive::Cursive, servo_id: u8, servo: &Arc<Servo
 }
 
 fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
-    // Read the current torque mode
-    let current_torque_mode = match servo.read_info(servo_id) {
+    // Read the current torque mode and torque limit
+    let (current_torque_mode, current_torque_limit) = match servo.read_info(servo_id) {
         Ok(info) => {
-            if info.torque_switch == 0 {
+            let mode = if info.torque_switch == 0 {
                 TorqueMode::Disabled
             } else {
                 TorqueMode::Enabled
-            }
+            };
+            (mode, info.torque_limit)
         },
-        Err(_) => TorqueMode::Enabled, // Default to Enabled if we can't read the current state
+        Err(_) => (TorqueMode::Enabled, 1000), // Default values if we can't read the current state
     };
 
     let dialog = Dialog::new()
@@ -473,6 +484,10 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                     })
                     .popup()
                     .with_name("torque"))
+                .child(TextView::new("Torque Limit:"))
+                .child(EditView::new()
+                    .content(current_torque_limit.to_string())
+                    .with_name("torque_limit"))
                 .child(TextView::new("Offset:"))
                 .child(EditView::new().with_name("offset"))
         )
@@ -488,6 +503,9 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
             }).unwrap();
             let offset = s.call_on_name("offset", |view: &mut EditView| {
                 view.get_content().parse::<i16>().ok()
+            }).unwrap();
+            let torque_limit = s.call_on_name("torque_limit", |view: &mut EditView| {
+                view.get_content().parse::<u16>().unwrap_or(0)
             }).unwrap();
 
             // Apply settings
@@ -509,6 +527,17 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                 } else {
                     s.call_on_name("Offset", |view: &mut TextView| {
                         view.set_content(format!("Offset: {}", off));
+                    });
+                }
+            }
+
+            // Set torque limit if provided
+            if torque_limit > 0 {
+                if let Err(e) = set_servo_torque(servo_id, torque_limit, &servo) {
+                    s.add_layer(Dialog::info(format!("Error setting torque limit: {}", e)));
+                } else {
+                    s.call_on_name("CurrentTorque", |view: &mut TextView| {
+                        view.set_content(format!("Current Torque: {}", torque_limit));
                     });
                 }
             }
@@ -664,10 +693,31 @@ fn write_calibration_to_eeprom(servo_id: u8, servo: &Servo, offset: u16, min_ang
     std::thread::sleep(Duration::from_millis(20));
 
     // Write new limits
-    servo.write_servo_memory(servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
-    std::thread::sleep(Duration::from_millis(20));
-    servo.write_servo_memory(servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
-    std::thread::sleep(Duration::from_millis(20));
+    for try_num in 0..3 {
+        servo.write_servo_memory(servo_id, ServoRegister::MinAngleLimit, min_angle as u16)?;
+        std::thread::sleep(Duration::from_millis(20));
+        let read_min = servo.read(servo_id, ServoRegister::MinAngleLimit, 2)?;
+        let read_min = u16::from_le_bytes([read_min[0], read_min[1]]);
+        if read_min == min_angle as u16 {
+            break;
+        }
+        if try_num == 2 {
+            return Err(anyhow::anyhow!("Failed to write MinAngleLimit after 3 attempts"));
+        }
+    }
+
+    for try_num in 0..3 {
+        servo.write_servo_memory(servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)?;
+        std::thread::sleep(Duration::from_millis(20));
+        let read_max = servo.read(servo_id, ServoRegister::MaxAngleLimit, 2)?;
+        let read_max = u16::from_le_bytes([read_max[0], read_max[1]]);
+        if read_max == max_angle as u16 {
+            break;
+        }
+        if try_num == 2 {
+            return Err(anyhow::anyhow!("Failed to write MaxAngleLimit after 3 attempts"));
+        }
+    }
 
     // Lock EEPROM
     servo.write(servo_id, ServoRegister::LockMark, &[1])?;
@@ -776,4 +826,20 @@ fn end_capture(s: &mut cursive::Cursive) {
         CAPTURE_IN_PROGRESS.store(false, Ordering::Relaxed);
         s.add_layer(Dialog::info("Capture ended and saved"));
     }
+}
+
+// Add this function to set the torque for a servo
+fn set_servo_torque(servo_id: u8, torque: u16, servo: &Arc<Servo>) -> Result<()> {
+    // Unlock EEPROM
+    servo.write(servo_id, ServoRegister::LockMark, &[0])?;
+    std::thread::sleep(Duration::from_millis(10));
+
+    // Write new torque limit
+    servo.write_servo_memory(servo_id, ServoRegister::TorqueLimit, torque)?;
+    std::thread::sleep(Duration::from_millis(10));
+
+    // Lock EEPROM
+    servo.write(servo_id, ServoRegister::LockMark, &[1])?;
+
+    Ok(())
 }

@@ -1,5 +1,8 @@
 use anyhow::Result;
 use std::os::raw::{c_int, c_short, c_uchar, c_ushort, c_uint};
+use std::error::Error;
+use i2cdev::linux::LinuxI2CDevice;
+use i2cdev::core::I2CDevice;
 
 pub const MAX_SERVOS: usize = 16;
 
@@ -343,4 +346,44 @@ impl PartialEq for TorqueMode {
     fn eq(&self, other: &Self) -> bool {
         self == other
     }
+}
+
+pub struct IMU {
+    i2c: LinuxI2CDevice,
+}
+
+impl IMU {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
+        let i2c = LinuxI2CDevice::new("/dev/i2c-1", 0x50)?;
+        Ok(IMU { i2c })
+    }
+
+    pub fn read_data(&mut self) -> Result<IMUData, Box<dyn Error>> {
+        let mut buffer = [0u8; 24];
+        self.i2c.read(&mut buffer)?;
+
+        let mut values = [0f32; 6];
+        for i in 0..6 {
+            values[i] = f32::from_le_bytes(buffer[i*4..(i+1)*4].try_into().unwrap());
+        }
+
+        Ok(IMUData {
+            acc_x: values[0],
+            acc_y: values[1],
+            acc_z: values[2],
+            gyro_x: values[3],
+            gyro_y: values[4],
+            gyro_z: values[5],
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct IMUData {
+    pub acc_x: f32,
+    pub acc_y: f32,
+    pub acc_z: f32,
+    pub gyro_x: f32,
+    pub gyro_y: f32,
+    pub gyro_z: f32,
 }
