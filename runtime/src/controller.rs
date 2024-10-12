@@ -39,7 +39,7 @@ async fn joint_commands(servo: &Servo, position: i16, time: u16, speed: u16, sen
 }
 
 #[tokio::main]
-pub async fn main() -> Result<()> {
+pub async fn run() -> Result<()> {
     let servo = Servo::new()?;
     servo.enable_readout()?;
 

@@ -1,8 +1,7 @@
 mod controller;
 mod model;
 mod robot;
-use anyhow::{Context, Result};
-use std::path::PathBuf;
+use anyhow::Result;
 
 fn main() -> Result<()> {
     // println!("Starting robot initialization");
@@ -18,7 +17,7 @@ fn main() -> Result<()> {
 
     // println!("Initializing controller...");
 
-    controller::main()?;
+    controller::run()?;
     
     Ok(())
 }
