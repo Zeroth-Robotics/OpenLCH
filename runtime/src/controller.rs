@@ -1,55 +1,127 @@
+use crate::model::Model;
+use crate::robot::Robot;
 use anyhow::Result;
-use runtime::hal::{Servo, ServoMultipleWriteCommand, MAX_SERVOS};
-use tokio::time::{sleep, interval, Duration};
+use async_trait::async_trait;
+use rand::Rng;
+use std::sync::Arc;
+use std::time::Instant;
 
-async fn joint_states(servo: &Servo) -> Result<()> {
-    let mut interval = interval(Duration::from_millis(10)); // 100Hz
-    loop {
-        interval.tick().await;
-        let servo_data = servo.read_continuous()?;
-        for (i, servo_info) in servo_data.servo.iter().enumerate() {
-            println!("Servo {}: Feedback Position = {}", i + 1, servo_info.target_location);
-        }
+#[async_trait]
+pub trait Controller: Send + Sync {
+    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>>;
+}
+
+pub struct PIDController {
+    // PID parameters
+}
+
+#[async_trait]
+impl Controller for PIDController {
+    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
+        // PID control logic
+        println!("Computing action with PID controller");
+
+        // Define a small factor for tiny changes (e.g., 1%)
+        let small_change_factor = 0.01;
+
+        // Create a random vector with tiny changes relative to the state
+        let mut rng = rand::thread_rng();
+        let random_vec: Vec<f32> = state
+            .iter()
+            .map(|&value| {
+                let random_change = rng.gen_range(-small_change_factor..small_change_factor);
+                value + random_change
+            })
+            .collect();
+
+        Ok(random_vec)
     }
 }
 
-async fn joint_commands(servo: &Servo, position: i16, time: u16, speed: u16, send_only_positions: u8) -> Result<()> {
-    let mut interval = interval(Duration::from_millis(20)); // 50Hz
-    loop {
-        interval.tick().await;
-        let mut cmd = ServoMultipleWriteCommand {
-            ids: [0; MAX_SERVOS],
-            positions: [0; MAX_SERVOS],
-            times: [0; MAX_SERVOS],
-            speeds: [0; MAX_SERVOS],
-            only_write_positions: send_only_positions,
-        };
+pub struct MLController {
+    model: Model,
+}
 
-        for i in 0..MAX_SERVOS {
-            cmd.ids[i] = (i + 1) as u8;
-            cmd.positions[i] = position;
-            cmd.times[i] = time;
-            cmd.speeds[i] = speed;
-        }
-
-        servo.write_multiple(&cmd)?;
-
-        println!("Command sent to move all servos to position {} with time {} ms and speed {}, send_only_positions: {}", position, time, speed, send_only_positions);
+impl MLController {
+    pub fn new(model: Model) -> Self {
+        Self { model }
     }
 }
 
-#[tokio::main]
-pub async fn run() -> Result<()> {
-    let servo = Servo::new()?;
-    servo.enable_readout()?;
+#[async_trait]
+impl Controller for MLController {
+    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
+        // ML control logic
+        println!("Computing action with ML controller");
+        self.model.infer(state)
+    }
+}
 
-    let position: i16 = 2000; // position: target position (0-4095)
-    let time: u16 = 100; // time: movement time in milliseconds
-    let speed: u16 = 512; // speed: movement speed (0-4095)
-    let send_only_positions: u8 = 1; // send_only_positions: send only positions (0 or 1)
+pub struct StandingController {
+    robot: Robot,
+    controller: Arc<dyn Controller>,
+}
 
-    tokio::join!(
-        joint_states(&servo),
-        joint_commands(&servo, position, time, speed, send_only_positions));
-    Ok(())
+impl StandingController {
+    pub fn new(robot: Robot, controller: Arc<dyn Controller>) -> Self {
+        Self { robot, controller }
+    }
+
+    pub async fn get_state(&self) -> Result<Vec<f32>> {
+        // ### === TODO: DENYS === ###
+        // let state = self.robot.joint_states().await;
+        // let imu = self.robot.imu_state().await;
+        // let action = self.model.infer(state, imu).await?;
+        Ok(vec![0.0; 10])
+    }
+
+    pub async fn send_command(&self, command: &[f32]) -> Result<()> {
+        // ### === TODO: DENYS === ###
+        let time = Instant::now();
+        println!("Sending command: {:?}", command);
+        println!("Start time: {:?}", time);
+        Ok(())
+    }
+
+    pub async fn stand(&mut self) -> Result<()> {
+        let desired_positions = self.robot.get_default_standing_positions();
+        let mut commands = Vec::new();
+
+        for (joint_name, &position) in desired_positions {
+            if let Some(joint_config) = self.robot.find_joint_config(joint_name) {
+                commands.push((joint_config.id, position));
+            }
+        }
+
+        for (joint_id, position) in commands {
+            self.robot.set_joint_command(joint_id, position, 0.0);
+        }
+
+        Ok(())
+    }
+
+    pub async fn run(&mut self, iterations: Option<u32>) -> Result<()> {
+        println!("Starting StandingController");
+
+        let mut i = 0;
+        loop {
+            // Check if a limit is set and if the iteration count has reached it
+            if let Some(max_iterations) = iterations {
+                if i >= max_iterations {
+                    break;
+                }
+            }
+
+            println!("Controller iteration {}", i);
+            let state = self.get_state().await?;
+            let command = self.controller.compute_action(&state).await?;
+            self.send_command(&command).await?;
+
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            i += 1;
+        }
+
+        println!("StandingController finished");
+        Ok(())
+    }
 }
