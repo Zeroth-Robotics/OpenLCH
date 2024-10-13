@@ -51,8 +51,6 @@ logs/
 
 # artifacts
 artifacts/
-# Model artifacts directories in models/
-models/*_artifacts/
 
 # gitlab-ci-local
 .gitlab-ci-local/

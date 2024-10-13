@@ -7,6 +7,6 @@
 [submodule "runtime/firmware/duo-sdk"]
 	path = runtime/firmware/duo-sdk
 	url = https://github.com/milkv-duo/duo-sdk.git
-[submodule "models/tpu-mlir"]
-	path = models/tpu-mlir
-	url = https://github.com/milkv-duo/tpu-mlir.git
+[submodule "runtime/models/tpu-mlir"]
+	path = runtime/models/tpu-mlir
+	url = https://github.com/milkv-duo/tpu-mlir

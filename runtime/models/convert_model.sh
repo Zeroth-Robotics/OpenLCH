@@ -2,22 +2,26 @@
 
 # Function to print usage
 print_usage() {
-    echo "Usage: $0 <model_path> [model_shape]"
-    echo "  <model_path>: Path to your .pt model file (required)"
-    echo "  [model_shape]: Shape of the input tensor (optional)"
-    echo "                 Default is '1,615' if not specified"
+    echo "Usage: MODEL_PATH=/path/to/your/model.pt [MODEL_SHAPE='1,615'] ./convert_model.sh [model_shape]"
+    echo "  MODEL_PATH: Path to your .pt model file (required)"
+    echo "  MODEL_SHAPE: Shape of the input tensor (optional, can be set as env var or command-line arg)"
+    echo "               Default is '1,615' if not specified"
 }
 
-# Check if at least one argument is provided
-if [ $# -lt 1 ]; then
-    echo "Error: Model path is required."
+# Check if MODEL_PATH is set
+if [ -z "$MODEL_PATH" ]; then
+    echo "Error: MODEL_PATH environment variable is not set."
     print_usage
     exit 1
 fi
 
-# Set model path and shape
-MODEL_PATH="$1"
-MODEL_SHAPE="${2:-1,615}"
+# Set default model shape
+MODEL_SHAPE=${MODEL_SHAPE:-"1,615"}
+
+# Override MODEL_SHAPE if provided as command-line argument
+if [ $# -eq 1 ]; then
+    MODEL_SHAPE=$1
+fi
 
 # Extract directory, filename, and name without extension
 MODEL_DIR=$(dirname "$MODEL_PATH")

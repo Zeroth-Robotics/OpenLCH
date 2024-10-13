@@ -13,7 +13,7 @@ extern "C" {
 }
 
 pub struct Model {
-    _private: (), // prevent direct construction
+    _private: (), // Prevent direct construction
 }
 
 impl Model {
