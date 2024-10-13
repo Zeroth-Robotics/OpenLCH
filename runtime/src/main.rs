@@ -1,48 +1,45 @@
-// src/main.rs
-
-mod hal;
 mod controller;
 mod model;
 mod robot;
-
-use anyhow::{Context, Result};
+use anyhow::Result;
+use rand::Rng;
+use half::f16;
 use std::path::PathBuf;
-use std::sync::Arc;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    println!("Starting robot initialization");
 
-    let config_path = PathBuf::from("config/stompymicro.toml");
-    println!("Loading config from: {:?}", config_path);
+fn main() -> Result<()> {
 
-    let robot = robot::Robot::new(config_path).context("Failed to initialize robot")?;
+    println!("Initializing robot...");
 
-    println!("Robot initialized. Printing configuration:");
-    robot.print_config();
+    // let robot = robot::Robot::new(config_path).context("Failed to initialize robot")?;
+    // println!("Robot initialized. Printing configuration:");
+    // robot.print_config();
 
-    println!("Initializing controller"); // Onnx or PID
+    println!("Robot initialized.");
 
-    // Onnx
-    // let model_path = PathBuf::from("path/to/model.onnx");
-    // let device = Device::Cpu; // or Device::Cuda(0) for GPU
-    // let model = model::Model::new(model_path, &device)?;
-    // let controller: Arc<dyn controller::Controller> =
-    //     Arc::new(controller::MLController::new(model));
+    println!("Loading model...");
+    let model_path = PathBuf::from("/root/models/ppo_walking.cvimodel"); // PATH IN MILK-V
+    let model = model::Model::new(model_path)?;
 
-    // PID
-    let controller: Arc<dyn controller::Controller + Send + Sync> =
-        Arc::new(controller::PIDController {});
-    println!("Creating StandingController");
-    let mut standing_controller = controller::StandingController::new(robot, controller);
+    println!("Model loaded.");
 
-    println!("Starting controller");
-    let iterations = Some(10); // Run for 10 iterations, None for infinite
-    standing_controller
-        .run(iterations)
-        .await
-        .context("Controller run failed")?;
+    // generate 615 random float32 values with reduced precision
+    let mut rng = rand::thread_rng();
+    let input: Vec<f32> = (0..615).map(|_| {
+        let f32_value: f32 = rng.gen();
+        // Convert to f16 and back to f32 to simulate float16 precision
+        f16::from_f32(f32_value).to_f32()
+    }).collect();
 
-    println!("Controller finished running");
+     // run inference
+     let output = model.infer(&input)?;
+
+     println!("Inference completed. Output size: {}", output.len());
+     println!("First 5 output values: {:?}", &output[..5.min(output.len())]);
+
+
+    println!("Controller started...");
+    // controller::run(); // TODO pass model or other controller parameters
+    
     Ok(())
 }

@@ -36,22 +36,22 @@ If you're connecting via USB, use the following details:
 SSH:
 `ssh root@192.168.42.1`
 
-4. Download Required Artifacts
-Go to OpenLCH Artifacts and download the following:
-`runtime`
-`servo`
-`cviwrapper`
-
-6. Transfer Files to the Target Device
-Run the following commands to copy the necessary files to your device:
-
+4. Build Runtime
 ```bash
-scp -O runtime root@192.168.42.1:/usr/local/bin/
-scp -O servo root@192.168.42.1:/usr/local/bin/
-scp -O cviwrapper root@192.168.42.1:/usr/local/bin/
-
-
+cargo check && gitlab-ci-local # check and build
 ```
+
+5. Transfer Files to the Target Device
+Find binaries in target/riscv64gc-unknown-linux-musl/release/
+
+`scp -O target/riscv64gc-unknown-linux-musl/release/runtime $MILKV_IP:/usr/local/bin/`
+
+Debug:
+Note that you cannot ping the device in Cursor editor terminal for some reason. Try:
+```bash
+ping 192.168.42.1
+```
+
 6. Run the Application
 To run the servo setup, execute the following on the target device:
 
@@ -61,27 +61,12 @@ To run the servo setup, execute the following on the target device:
 ls /usr/local/bin/
 
 # Run your desired binary (example: runtime)
-sudo /usr/local/bin/runtime
+ /usr/local/bin/runtime
 ```
 
 
 
 
-```
-# Install docker / docker desktop
-brew install gitlab-ci-local
-```
-
-### Build
-
-```bash
-gitlab-ci-local --stage build-runtime
-```
-
-Find binaries in target/riscv64gc-unknown-linux-musl/release/
-
-### Copy to the milk-v board
-`scp -O target/riscv64gc-unknown-linux-musl/release/runtime $MILKV_IP:/usr/local/bin/`
 
 If the board is connected over usb, ip is `192.168.42.1`
 
