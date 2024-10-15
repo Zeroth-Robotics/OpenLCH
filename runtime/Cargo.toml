@@ -14,7 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.83"
-ndarray = "0.15.1"
+ndarray = "0.15.1"  # cannot be upgraded to 0.16+ due to a breaking change
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.28.0", features = ["full"] }
@@ -22,7 +22,7 @@ toml = "0.8.19"
 half = "2.4.1"
 ctrlc = "3.2"
 cursive = "0.21"
-clap = { version = "4.5.19", features = ["derive"] }
+clap = { version = "4.5.20", features = ["derive"] }
 serde_json = "1.0.128"
 chrono = "0.4.38"
 
