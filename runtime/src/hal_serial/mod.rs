@@ -1,11 +1,14 @@
+use crate::hal::{
+    IMUData, MemoryLockState, ServoData, ServoDirection, ServoInfo, ServoMode,
+    ServoMultipleWriteCommand, ServoRegister, TorqueMode, MAX_SERVOS,
+};
+use anyhow::{bail, Context, Result};
 use serialport::SerialPort;
-use std::time::Duration;
+use std::env;
 use std::io::{Read, Write};
-use anyhow::{Result, bail, Context};
 use std::sync::Arc;
 use std::sync::Mutex;
-use crate::hal::{ServoInfo, ServoRegister, ServoData, ServoMultipleWriteCommand, ServoMode, ServoDirection, TorqueMode, MemoryLockState, IMUData, MAX_SERVOS};
-use std::env;
+use std::time::Duration;
 
 // Constants
 const SERVO_START_BYTE: u8 = 0xFF;
@@ -32,7 +35,6 @@ const SERVO_ADDR_CURRENT_CURRENT: u8 = 0x45;
 const TORQUE_OFF: u8 = 0;
 const TORQUE_ON: u8 = 1;
 
-
 #[derive(Debug, Clone)]
 pub struct ServoCommand {
     pub id: u8,
@@ -45,11 +47,8 @@ pub struct ServoSerial {
     port: Box<dyn SerialPort>,
 }
 
-
-
 impl ServoSerial {
     pub fn new(port_name: &str, baud_rate: u32) -> Result<Self, Box<dyn std::error::Error>> {
-
         let port = serialport::new(port_name, baud_rate)
             .timeout(Duration::from_millis(100))
             .open()?;
@@ -97,13 +96,21 @@ impl ServoSerial {
 
         let response = self.receive_packet(6)?;
         if response.len() != 6 || response[2] != id || response[4] != 0 {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Invalid response",
+            ));
         }
 
         Ok(())
     }
 
-    pub fn servo_read(&mut self, id: u8, address: u8, length: u8) -> Result<Vec<u8>, std::io::Error> {
+    pub fn servo_read(
+        &mut self,
+        id: u8,
+        address: u8,
+        length: u8,
+    ) -> Result<Vec<u8>, std::io::Error> {
         let packet = [
             SERVO_START_BYTE,
             SERVO_START_BYTE,
@@ -121,7 +128,10 @@ impl ServoSerial {
 
         let response = self.receive_packet(256)?;
         if response.len() < 6 || response[2] != id {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Invalid response",
+            ));
         }
 
         Ok(response[5..response.len() - 1].to_vec())
@@ -148,7 +158,10 @@ impl ServoSerial {
         if id != SERVO_BROADCAST_ID {
             let response = self.receive_packet(6)?;
             if response.len() != 6 || response[2] != id || response[4] != 0 {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Invalid response",
+                ));
             }
         }
 
@@ -159,7 +172,12 @@ impl ServoSerial {
         self.servo_write(cmd.id, cmd.address, &cmd.data)
     }
 
-    pub fn servo_reg_write(&mut self, id: u8, address: u8, data: &[u8]) -> Result<(), std::io::Error> {
+    pub fn servo_reg_write(
+        &mut self,
+        id: u8,
+        address: u8,
+        data: &[u8],
+    ) -> Result<(), std::io::Error> {
         let mut packet = vec![
             SERVO_START_BYTE,
             SERVO_START_BYTE,
@@ -176,7 +194,10 @@ impl ServoSerial {
         if id != SERVO_BROADCAST_ID {
             let response = self.receive_packet(6)?;
             if response.len() != 6 || response[2] != id || response[4] != 0 {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Invalid response",
+                ));
             }
         }
 
@@ -229,14 +250,23 @@ impl ServoSerial {
         if id != SERVO_BROADCAST_ID {
             let response = self.receive_packet(6)?;
             if response.len() != 6 || response[2] != id || response[4] != 0 {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Invalid response",
+                ));
             }
         }
 
         Ok(())
     }
 
-    pub fn servo_move(&mut self, id: u8, position: i16, time: u16, speed: u16) -> Result<(), std::io::Error> {
+    pub fn servo_move(
+        &mut self,
+        id: u8,
+        position: i16,
+        time: u16,
+        speed: u16,
+    ) -> Result<(), std::io::Error> {
         let data = [
             (position & 0xFF) as u8,
             ((position >> 8) & 0xFF) as u8,
@@ -248,9 +278,16 @@ impl ServoSerial {
         self.servo_write(id, SERVO_ADDR_TARGET_POSITION, &data)
     }
 
-    pub fn servo_move_multiple(&mut self, ids: &[u8], positions: &[i16]) -> Result<(), std::io::Error> {
+    pub fn servo_move_multiple(
+        &mut self,
+        ids: &[u8],
+        positions: &[i16],
+    ) -> Result<(), std::io::Error> {
         if ids.len() != positions.len() {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Mismatched ids and positions lengths"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Mismatched ids and positions lengths",
+            ));
         }
 
         let mut data = Vec::with_capacity(1 + 1 + ids.len() * 3);
@@ -266,14 +303,26 @@ impl ServoSerial {
         self.servo_sync_write(&data)
     }
 
-    pub fn servo_move_multiple_sync(&mut self, cmd: &ServoMultipleWriteCommand) -> Result<(), std::io::Error> {
-        if cmd.ids.len() != cmd.positions.len() || cmd.ids.len() != cmd.times.len() || cmd.ids.len() != cmd.speeds.len() {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Mismatched input lengths"));
+    pub fn servo_move_multiple_sync(
+        &mut self,
+        cmd: &ServoMultipleWriteCommand,
+    ) -> Result<(), std::io::Error> {
+        if cmd.ids.len() != cmd.positions.len()
+            || cmd.ids.len() != cmd.times.len()
+            || cmd.ids.len() != cmd.speeds.len()
+        {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Mismatched input lengths",
+            ));
         }
 
         let count = cmd.ids.len();
         if count == 0 || count > MAX_SERVOS {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid count"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Invalid count",
+            ));
         }
 
         let mut packet = Vec::with_capacity(256);
@@ -304,7 +353,10 @@ impl ServoSerial {
     pub fn servo_read_position(&mut self, id: u8) -> Result<i16, std::io::Error> {
         let data = self.servo_read(id, SERVO_ADDR_CURRENT_POSITION, 2)?;
         if data.len() != 2 {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response length"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Invalid response length",
+            ));
         }
         Ok(i16::from_le_bytes([data[0], data[1]]))
     }
@@ -312,7 +364,10 @@ impl ServoSerial {
     pub fn servo_read_current(&mut self, id: u8) -> Result<u16, std::io::Error> {
         let data = self.servo_read(id, SERVO_ADDR_CURRENT_CURRENT, 2)?;
         if data.len() != 2 {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response length"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Invalid response length",
+            ));
         }
         Ok(u16::from_le_bytes([data[0], data[1]]))
     }
@@ -320,7 +375,10 @@ impl ServoSerial {
     pub fn servo_read_load(&mut self, id: u8) -> Result<i16, std::io::Error> {
         let data = self.servo_read(id, SERVO_ADDR_CURRENT_LOAD, 2)?;
         if data.len() != 2 {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response length"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Invalid response length",
+            ));
         }
         Ok(i16::from_le_bytes([data[0], data[1]]))
     }
@@ -328,15 +386,24 @@ impl ServoSerial {
     pub fn servo_read_voltage(&mut self, id: u8) -> Result<u8, std::io::Error> {
         let data = self.servo_read(id, SERVO_ADDR_CURRENT_VOLTAGE, 1)?;
         if data.len() != 1 {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response length"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Invalid response length",
+            ));
         }
         Ok(data[0])
     }
 
-    pub fn servo_read_position_and_status(&mut self, id: u8) -> Result<(i16, i16, i16), std::io::Error> {
+    pub fn servo_read_position_and_status(
+        &mut self,
+        id: u8,
+    ) -> Result<(i16, i16, i16), std::io::Error> {
         let data = self.servo_read(id, SERVO_ADDR_CURRENT_POSITION, 6)?;
         if data.len() != 6 {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid response length"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Invalid response length",
+            ));
         }
 
         let current_location = i16::from_le_bytes([data[0], data[1]]);
@@ -373,7 +440,7 @@ impl Servo {
 
         let serial = ServoSerial::new(&port_name, baud_rate)
             .map_err(|e| anyhow::anyhow!("Failed to create ServoSerial: {}", e))?;
-        
+
         Ok(Servo {
             serial: Arc::new(Mutex::new(serial)),
         })
@@ -383,7 +450,7 @@ impl Servo {
         let mut serial = self.serial.lock().unwrap();
         match serial.servo_write(id, register as u8, data) {
             Ok(_) => Ok(()),
-            Err(_) => Ok(()),  // Silently ignore errors
+            Err(_) => Ok(()), // Silently ignore errors
         }
     }
 
@@ -391,13 +458,14 @@ impl Servo {
         let mut serial = self.serial.lock().unwrap();
         match serial.servo_read(id, register as u8, length) {
             Ok(data) => Ok(data),
-            Err(_) => Ok(Vec::new()),  // Return empty Vec on error
+            Err(_) => Ok(Vec::new()), // Return empty Vec on error
         }
     }
 
     pub fn move_servo(&self, id: u8, position: i16, time: u16, speed: u16) -> Result<()> {
         let mut serial = self.serial.lock().unwrap();
-        serial.servo_move(id, position, time, speed)
+        serial
+            .servo_move(id, position, time, speed)
             .map_err(|e| anyhow::anyhow!("Failed to move servo: {}", e))
     }
 
@@ -406,14 +474,18 @@ impl Servo {
     }
 
     pub fn set_speed(&self, id: u8, speed: u16, direction: ServoDirection) -> Result<()> {
-        let speed = if direction == ServoDirection::Clockwise { speed } else { speed | 0x8000 };
+        let speed = if direction == ServoDirection::Clockwise {
+            speed
+        } else {
+            speed | 0x8000
+        };
         self.write(id, ServoRegister::RunningSpeed, &speed.to_le_bytes())
     }
 
     pub fn read_info(&self, id: u8) -> Result<ServoInfo> {
         let mut serial = self.serial.lock().unwrap();
         let data = serial.servo_read(id, ServoRegister::TorqueSwitch as u8, 30)?;
-        
+
         if data.len() != 30 {
             bail!("Failed to read servo info: incorrect data length");
         }
@@ -465,7 +537,8 @@ impl Servo {
             times: cmd.times,
             speeds: cmd.speeds,
         };
-        serial.servo_move_multiple_sync(&adapted_cmd)
+        serial
+            .servo_move_multiple_sync(&adapted_cmd)
             .map_err(|e| anyhow::anyhow!("Failed to write multiple servo positions: {}", e))
     }
 
@@ -478,7 +551,11 @@ impl Servo {
 
     pub fn set_pid(&self, id: u8, p: u8, i: u8, d: u8) -> Result<()> {
         // Unlock flash
-        self.write(id, ServoRegister::LockMark, &[MemoryLockState::Unlocked as u8])?;
+        self.write(
+            id,
+            ServoRegister::LockMark,
+            &[MemoryLockState::Unlocked as u8],
+        )?;
 
         // Set PID parameters
         self.write(id, ServoRegister::PProportionalCoeff, &[p])?;
@@ -486,7 +563,11 @@ impl Servo {
         self.write(id, ServoRegister::DDifferentialCoeff, &[d])?;
 
         // Lock flash
-        self.write(id, ServoRegister::LockMark, &[MemoryLockState::Locked as u8])?;
+        self.write(
+            id,
+            ServoRegister::LockMark,
+            &[MemoryLockState::Locked as u8],
+        )?;
 
         Ok(())
     }
@@ -496,8 +577,16 @@ impl Servo {
     }
 
     pub fn read_angle_limits(&self, id: u8) -> Result<(i16, i16)> {
-        let min_limit = i16::from_le_bytes(self.read(id, ServoRegister::MinAngleLimit, 2)?.try_into().unwrap());
-        let max_limit = i16::from_le_bytes(self.read(id, ServoRegister::MaxAngleLimit, 2)?.try_into().unwrap());
+        let min_limit = i16::from_le_bytes(
+            self.read(id, ServoRegister::MinAngleLimit, 2)?
+                .try_into()
+                .unwrap(),
+        );
+        let max_limit = i16::from_le_bytes(
+            self.read(id, ServoRegister::MaxAngleLimit, 2)?
+                .try_into()
+                .unwrap(),
+        );
         Ok((min_limit, max_limit))
     }
 

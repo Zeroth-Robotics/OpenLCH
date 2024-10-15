@@ -1,11 +1,11 @@
+use anyhow::{Context, Result};
+use clap::Parser;
+use runtime::hal::{Servo, ServoMultipleWriteCommand, MAX_SERVOS};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
-use clap::Parser;
-use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -47,10 +47,12 @@ fn main() -> Result<()> {
             let start_time = Instant::now();
             let steps = (frame.delay as f64 / 20.0).ceil() as u64;
             let target_positions = frame_to_positions(frame);
-            
+
             for step in 0..steps {
                 let progress = step as f64 / steps as f64;
-                let interpolated_positions: Vec<i32> = current_positions.iter().zip(target_positions.iter())
+                let interpolated_positions: Vec<i32> = current_positions
+                    .iter()
+                    .zip(target_positions.iter())
                     .map(|(&current, &target)| {
                         (current as f64 + (target as f64 - current as f64) * progress) as i32
                     })
@@ -92,9 +94,11 @@ fn main() -> Result<()> {
 fn load_capture_file(path: &PathBuf) -> Result<CaptureData> {
     let mut file = File::open(path).context("Failed to open capture file")?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).context("Failed to read capture file")?;
+    file.read_to_string(&mut contents)
+        .context("Failed to read capture file")?;
 
-    let capture_data: CaptureData = serde_json::from_str(&contents).context("Failed to parse JSON")?;
+    let capture_data: CaptureData =
+        serde_json::from_str(&contents).context("Failed to parse JSON")?;
     Ok(capture_data)
 }
 

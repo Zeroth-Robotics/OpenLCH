@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Deserialize, Debug, Clone)]
 pub struct PID {
     pub p: f32,

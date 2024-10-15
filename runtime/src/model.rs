@@ -62,8 +62,8 @@ mod milkv_model {
 #[cfg(not(feature = "milkv"))]
 mod onnx_model {
     use super::*;
-    use ort::{Environment, Session, SessionBuilder, Value};
     use ndarray::{Array, CowArray, IxDyn};
+    use ort::{Environment, Session, SessionBuilder, Value};
 
     pub struct Model {
         session: Arc<Session>,
@@ -75,12 +75,14 @@ mod onnx_model {
             println!("Loading ONNX model from: {:?}", model_path.as_ref());
             let environment = Environment::builder().build()?;
             let environment = Arc::new(environment);
-            
-            let session = SessionBuilder::new(&environment)?
-                .with_model_from_file(model_path)?;
+
+            let session = SessionBuilder::new(&environment)?.with_model_from_file(model_path)?;
             let session = Arc::new(session);
 
-            Ok(Model { session, environment })
+            Ok(Model {
+                session,
+                environment,
+            })
         }
 
         pub fn infer(&self, input: &[f32]) -> Result<Vec<f32>> {
@@ -91,14 +93,14 @@ mod onnx_model {
 
             let array = Array::from_shape_vec(IxDyn(&input_shape), input.to_vec())?;
             let input_tensor: CowArray<f32, IxDyn> = CowArray::from(array);
-            
+
             let inputs = vec![Value::from_array(self.session.allocator(), &input_tensor)?];
-            
+
             let outputs: Vec<Value> = self.session.run(inputs)?;
-            
+
             let output: ort::tensor::OrtOwnedTensor<f32, _> = outputs[0].try_extract()?;
             let output_vec = output.view().to_owned().as_slice().unwrap().to_vec();
-            
+
             Ok(output_vec)
         }
     }

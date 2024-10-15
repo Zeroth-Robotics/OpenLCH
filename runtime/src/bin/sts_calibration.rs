@@ -1,12 +1,10 @@
-use ctrlc;
-use runtime::hal::{Servo, ServoRegister, ServoMode, ServoDirection};
+use anyhow::Result;
+use clap::Parser;
+use runtime::hal::{Servo, ServoDirection, ServoMode, ServoRegister};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
-use std::env;
-use anyhow::{Result, bail};
-use clap::Parser;
 
 const MIN_SPEED: u16 = 10;
 
@@ -15,15 +13,21 @@ const MIN_SPEED: u16 = 10;
 struct Args {
     #[arg(short, long)]
     servo_id: u8,
-    
+
     #[arg(short, long, default_value_t = 150)]
     calibration_speed: u16,
-    
+
     #[arg(short, long, default_value_t = 200.0)]
     current_threshold: f32,
 }
 
-pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, calibration_speed: u16, current_threshold: f32) -> Result<()> {
+pub fn calibrate_servo(
+    servo: &Servo,
+    servo_id: u8,
+    running: &Arc<AtomicBool>,
+    calibration_speed: u16,
+    current_threshold: f32,
+) -> Result<()> {
     println!("Starting servo calibration for ID: {}", servo_id);
     println!("Calibration speed: {}", calibration_speed);
     println!("Current threshold: {} mA", current_threshold);
@@ -35,7 +39,11 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, c
     let mut max_backward = 0;
 
     for pass in 0..2 {
-        let direction = if pass == 0 { ServoDirection::Clockwise } else { ServoDirection::Counterclockwise };
+        let direction = if pass == 0 {
+            ServoDirection::Clockwise
+        } else {
+            ServoDirection::Counterclockwise
+        };
         println!(
             "Starting calibration pass {}, direction: {:?}",
             pass + 1,
@@ -53,10 +61,13 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, c
 
             let info = servo.read_info(servo_id)?;
             let position = info.current_location;
-            let mut current = info.current_current as f32 * 6.5 / 100.0;
+            let current = info.current_current as f32 * 6.5 / 100.0;
 
             if current > current_threshold {
-                println!("Current: {:.2}, Threshold: {:.2}", current, current_threshold);
+                println!(
+                    "Current: {:.2}, Threshold: {:.2}",
+                    current, current_threshold
+                );
                 println!("Current threshold reached at position {}", position);
 
                 // Stop
@@ -77,7 +88,6 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, c
                     "Calibration complete for this direction. Final position: {}",
                     info.current_location
                 );
-
 
                 if direction == ServoDirection::Clockwise {
                     println!("direction = clockwise");
@@ -139,11 +149,7 @@ pub fn calibrate_servo(servo: &Servo, servo_id: u8, running: &Arc<AtomicBool>, c
     sleep(Duration::from_millis(10));
     println!("Switched servo to mode 0.");
 
-    servo.write_servo_memory(
-        servo_id,
-        ServoRegister::PositionCorrection,
-        offset_value,
-    )?;
+    servo.write_servo_memory(servo_id, ServoRegister::PositionCorrection, offset_value)?;
 
     sleep(Duration::from_millis(10));
     // Write servo limits to memory
@@ -211,7 +217,13 @@ fn main() -> Result<()> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let result = calibrate_servo(&servo, args.servo_id, &running, args.calibration_speed, args.current_threshold);
+    let result = calibrate_servo(
+        &servo,
+        args.servo_id,
+        &running,
+        args.calibration_speed,
+        args.current_threshold,
+    );
 
     if !running.load(Ordering::SeqCst) {
         println!("Calibration was interrupted. Cleaning up...");

@@ -6,7 +6,10 @@ fn main() -> Result<()> {
     // Parse command-line arguments
     let args: Vec<String> = env::args().collect();
     if args.len() != 5 {
-        println!("Usage: {} <position> <time> <speed> <send_only_positions>", args[0]);
+        println!(
+            "Usage: {} <position> <time> <speed> <send_only_positions>",
+            args[0]
+        );
         println!("  position: target position (0-4095)");
         println!("  time: movement time in milliseconds");
         println!("  speed: movement speed (0-4095)");
@@ -52,7 +55,11 @@ fn main() -> Result<()> {
     // Read and print the current positions of all servos
     let servo_data = servo.read_continuous()?;
     for (i, servo_info) in servo_data.servo.iter().enumerate() {
-        println!("Servo {}: Current position = {}", i + 1, servo_info.current_location);
+        println!(
+            "Servo {}: Current position = {}",
+            i + 1,
+            servo_info.current_location
+        );
     }
 
     Ok(())

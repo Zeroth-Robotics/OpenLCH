@@ -5,7 +5,6 @@ mod model;
 mod robot;
 
 use anyhow::{Context, Result};
-use runtime::hal;
 use std::path::PathBuf;
 use std::sync::Arc;
 

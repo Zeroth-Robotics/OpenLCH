@@ -1,4 +1,3 @@
-
 #[cfg(all(target_arch = "riscv64", target_os = "linux", feature = "milkv"))]
 pub mod hal_risc;
 
@@ -7,7 +6,7 @@ pub mod hal_serial;
 
 // Create a public hal module
 pub mod hal {
-    use std::os::raw::{c_short, c_uchar, c_ushort, c_uint};
+    use std::os::raw::{c_short, c_uchar, c_uint, c_ushort};
 
     pub const MAX_SERVOS: usize = 16;
 
