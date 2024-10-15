@@ -1,6 +1,8 @@
 mod controller;
 mod model;
-use anyhow::{Result, Context};
+
+use anyhow::{Context, Result};
+use runtime::hal;
 use std::path::PathBuf;
 use std::env;
 use runtime::model::Model;
