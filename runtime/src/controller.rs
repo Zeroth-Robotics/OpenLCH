@@ -1,127 +1,108 @@
-use crate::model::Model;
-use crate::robot::Robot;
 use anyhow::Result;
-use async_trait::async_trait;
-use rand::Rng;
+use runtime::hal::{Servo, ServoMultipleWriteCommand, MAX_SERVOS};
+use tokio::time::{sleep, interval, Duration};
 use std::sync::Arc;
-use std::time::Instant;
+use tokio::sync::Mutex;
+use runtime::hal::Model;
+use ndarray::Array1;
 
-#[async_trait]
-pub trait Controller: Send + Sync {
-    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>>;
+pub struct Robot{
+
+    servo: Servo,
 }
 
-pub struct PIDController {
-    // PID parameters
-}
+impl Robot{
+    pub fn new() -> Result<Self> {
+        let servo = Servo::new()?;
 
-#[async_trait]
-impl Controller for PIDController {
-    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
-        // PID control logic
-        println!("Computing action with PID controller");
-
-        // Define a small factor for tiny changes (e.g., 1%)
-        let small_change_factor = 0.01;
-
-        // Create a random vector with tiny changes relative to the state
-        let mut rng = rand::thread_rng();
-        let random_vec: Vec<f32> = state
-            .iter()
-            .map(|&value| {
-                let random_change = rng.gen_range(-small_change_factor..small_change_factor);
-                value + random_change
-            })
-            .collect();
-
-        Ok(random_vec)
-    }
-}
-
-pub struct MLController {
-    model: Model,
-}
-
-impl MLController {
-    pub fn new(model: Model) -> Self {
-        Self { model }
-    }
-}
-
-#[async_trait]
-impl Controller for MLController {
-    async fn compute_action(&self, state: &[f32]) -> Result<Vec<f32>> {
-        // ML control logic
-        println!("Computing action with ML controller");
-        self.model.infer(state)
-    }
-}
-
-pub struct StandingController {
-    robot: Robot,
-    controller: Arc<dyn Controller>,
-}
-
-impl StandingController {
-    pub fn new(robot: Robot, controller: Arc<dyn Controller>) -> Self {
-        Self { robot, controller }
+        Ok(Self { servo })
     }
 
-    pub async fn get_state(&self) -> Result<Vec<f32>> {
-        // ### === TODO: DENYS === ###
-        // let state = self.robot.joint_states().await;
-        // let imu = self.robot.imu_state().await;
-        // let action = self.model.infer(state, imu).await?;
-        Ok(vec![0.0; 10])
-    }
+    pub async fn run(&self, model: Arc<Model>) -> Result<()> {
+        let mut control_interval = interval(Duration::from_millis(20));
 
-    pub async fn send_command(&self, command: &[f32]) -> Result<()> {
-        // ### === TODO: DENYS === ###
-        let time = Instant::now();
-        println!("Sending command: {:?}", command);
-        println!("Start time: {:?}", time);
-        Ok(())
-    }
-
-    pub async fn stand(&mut self) -> Result<()> {
-        let desired_positions = self.robot.get_default_standing_positions();
-        let mut commands = Vec::new();
-
-        for (joint_name, &position) in desired_positions {
-            if let Some(joint_config) = self.robot.find_joint_config(joint_name) {
-                commands.push((joint_config.id, position));
-            }
-        }
-
-        for (joint_id, position) in commands {
-            self.robot.set_joint_command(joint_id, position, 0.0);
-        }
-
-        Ok(())
-    }
-
-    pub async fn run(&mut self, iterations: Option<u32>) -> Result<()> {
-        println!("Starting StandingController");
-
-        let mut i = 0;
         loop {
-            // Check if a limit is set and if the iteration count has reached it
-            if let Some(max_iterations) = iterations {
-                if i >= max_iterations {
-                    break;
-                }
-            }
+            control_interval.tick().await;
 
-            println!("Controller iteration {}", i);
-            let state = self.get_state().await?;
-            let command = self.controller.compute_action(&state).await?;
-            self.send_command(&command).await?;
+            // get joint states
+            let current_joint_states = self.get_joint_states().await?;
+            
+            // get desired joint positions (inferenced from model)
+            let desired_joint_positions = self.model_inference(&model, &current_joint_states).await?;
+            
+            // send joint commands
+            self.send_joint_commands(&desired_joint_positions).await?;
+        }
+    }
 
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            i += 1;
+    async fn get_joint_states(&self) -> Result<[f32; 16]> {
+        let servo_data = self.servo.read_continuous()?;
+        let joint_states: [f32; 16] = servo_data.servo.iter()
+            .take(16)
+            .map(|s| s.target_location as f32)
+            .collect::<Vec<f32>>()
+            .try_into()
+            .unwrap_or([0.0; 16]);
+        Ok(joint_states)
+    }
+
+    async fn model_inference(&self, model: &Model, joint_states: &[f32; 16]) -> Result<[f32; 16]> {
+        //  
+        // x_vel: Array1<f32>,
+        // y_vel: Array1<f32>,
+        // rot: Array1<f32>,
+        // t: Array1<f32>,
+        // dof_pos: Array1<f32>,
+        // dof_vel: Array1<f32>,
+        // prev_actions: Array1<f32>,
+        // imu_ang_vel: Array1<f32>,
+        // imu_euler_xyz: Array1<f32>,
+        // buffer: Array1<f32>,
+
+
+        let model_output = model.infer(joint_states)?;
+
+        // TODO: Implement proper conversion from model output to desired joint positions
+        let desired_joint_positions: [f32; 16] = model_output.iter()
+            .take(16)
+            .map(|&x| x)
+            .collect::<Vec<f32>>()
+            .try_into()
+            .unwrap_or([0.0; 16]);
+
+        Ok(desired_joint_positions)   
+    }
+
+    async fn send_joint_commands(&self, positions: &[f32; 16]) -> Result<()> {
+        let mut cmd = ServoMultipleWriteCommand {
+            ids: [0; MAX_SERVOS],
+            positions: [0; MAX_SERVOS],
+            times: [0; MAX_SERVOS],
+            speeds: [0; MAX_SERVOS],
+            only_write_positions: 0,
+        };
+
+        for i in 0..16 {
+            cmd.ids[i] = (i + 1) as u8;
+            cmd.positions[i] = positions[i] as i16;
+            cmd.times[i] = 20;
         }
 
-        println!("StandingController finished");
-        Ok(())
+        self.servo.write_multiple(&cmd)?;
+
+        println!("Command sent to move all servos to position {} with time {} ms and speed {}, send_only_positions: {}", positions[0] as i16, 20, 0, 0);
     }
 }
+
+#[tokio::main]
+pub async fn main(model: Arc<Model>, robot: Arc<Robot>) -> Result<()> {
+
+    robot.servo.enable_readout()?;  
+
+    robot.run(model).await?;
+
+    Ok(())
+}
+
+
+
