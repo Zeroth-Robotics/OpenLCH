@@ -59,10 +59,10 @@
    brew install gitlab-ci-local
    ```
 
-## Build
+## Build Runtime
 
 ```bash
-gitlab-ci-local --stage build-runtime
+cargo check && gitlab-ci-local --stage build-runtime  # check and build
 ```
 
 Find binaries in `target/riscv64gc-unknown-linux-musl/release/`
@@ -73,7 +73,7 @@ Find binaries in `target/riscv64gc-unknown-linux-musl/release/`
 scp -O target/riscv64gc-unknown-linux-musl/release/runtime $MILKV_IP:/usr/local/bin/
 ```
 
-If the board is connected over USB, IP is `192.168.42.1`
+If the board is connected over USB, IP is `192.168.42.1`. Try `ping 192.168.42.1` to verify that the board is reachable.
 
 ## Architecture
 
