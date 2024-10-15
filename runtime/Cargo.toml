@@ -2,7 +2,10 @@
 name = "runtime"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
+
+[features]
+default = []
+risc = []
 
 [lib]
 name = "runtime"
@@ -22,10 +25,15 @@ cursive = "0.21"
 clap = { version = "4.5.19", features = ["derive"] }
 serde_json = "1.0.128"
 chrono = "0.4.38"
-i2cdev = "0.6.1"
 
 # [build-dependencies]
 # pkg-config = "0.3.31"
 
 # [target.'cfg(target_os = "macos")'.dependencies]
 # onnxruntime-sys = { version = "0.0.14", features = ["disable-sys-build"] }
+
+[target.'cfg(all(target_arch = "riscv64gc", target_os = "linux", feature = "risc"))'.dependencies]
+i2cdev = "0.6.1"
+
+[target.'cfg(any(target_os = "macos", all(target_os = "linux", not(feature = "risc"))))'.dependencies]
+serialport = "4.2.0"
