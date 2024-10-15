@@ -5,7 +5,7 @@ edition = "2021"
 
 [features]
 default = []
-risc = []
+milkv = ["i2cdev"]
 
 [lib]
 name = "runtime"
@@ -26,14 +26,9 @@ clap = { version = "4.5.19", features = ["derive"] }
 serde_json = "1.0.128"
 chrono = "0.4.38"
 
-# [build-dependencies]
-# pkg-config = "0.3.31"
+# Conditional dependencies
+i2cdev = { version = "0.6.1", optional = true }
+serialport = { version = "4.2.0", optional = true }
 
-# [target.'cfg(target_os = "macos")'.dependencies]
-# onnxruntime-sys = { version = "0.0.14", features = ["disable-sys-build"] }
-
-[target.'cfg(all(target_arch = "riscv64gc", target_os = "linux", feature = "risc"))'.dependencies]
-i2cdev = "0.6.1"
-
-[target.'cfg(any(target_os = "macos", all(target_os = "linux", not(feature = "risc"))))'.dependencies]
+[target.'cfg(any(target_os = "macos", all(target_os = "linux")))'.dependencies]
 serialport = "4.2.0"

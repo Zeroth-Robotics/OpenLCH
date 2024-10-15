@@ -90,7 +90,7 @@ build-runtime:
   script:
     - cd runtime
     - source /root/.cargo/env
-    - cargo +nightly build --features risc --target riscv64gc-unknown-linux-musl -Zbuild-std --release
+    - cargo +nightly build --features milkv --target riscv64gc-unknown-linux-musl -Zbuild-std --release
 
   artifacts:
     paths:
