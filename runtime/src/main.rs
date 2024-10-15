@@ -7,7 +7,7 @@ use crate::model::Model;
 use anyhow::{Context, Result};
 // use runtime::hal; 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -18,8 +18,8 @@ async fn main() -> Result<()> {
 
     // initialize robot
     let robot = Robot::new()?;
-    let robot = Arc::new(robot);
-    robot.initialize().await?;
+    let robot = Arc::new(Mutex::new(robot));
+    robot.lock().unwrap().initialize().await?;
 
     // run controller
     controller::run(model, robot).await.context("Controller encountered an error")
