@@ -1,23 +1,16 @@
 # Open Low Cost Humanoid (WIP)
 
-<div align="center">
 
-[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/kscalelabs/onshape/blob/main/LICENSE)
-[![Version](https://img.shields.io/badge/Version%20-V0%20-blue)]()
-<!-- [![Discord](https://img.shields.io/discord/1280974143936004238)](https://discord.gg/kN8jXdt7Rx)  -->
-<!-- [![Wiki](https://img.shields.io/badge/wiki-humanoids-black)](https://humanoids.wiki) -->
-</div>
+**OpenLCH is an open-source ultra-low-cost humanoid robot designed for experimenting with machine learning methods for robot control.** 
 
-**OpenLCH is an open-source ultra-low-cost humanoid robot designed for experimenting with machine learning methods for robot control.** This is project is currently work-in-progress.
+> [!WARNING]
+> The project is currently in progress (V0.3.1)
 
-Using the [K-Scale humanoid robotics development ecosystem](https://docs.kscale.dev), we designed our robot in OnShape, trained the PPO model in Isaac Gym, and are now transfering it onto the physical robot. Check out our public roadmap for updates [here](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4).
+We designed our robot in OnShape, trained the PPO model in Isaac Gym, and are now transfering it onto the physical robot. Check out our public roadmap for updates [here](https://jingxiangmo.notion.site/1041ecfa6e9680ebba48e2d6671842ee?v=db386e8deaab4b008bdca9787878d743&pvs=4).
 
 Our goal is to build and deploy a large amount (20-30) of small humanoid robots to the physical world and create an affordable open-source platform for humanoid research and competitions. The robot design is inspired by [Robotis OP3](https://emanual.robotis.com/docs/en/platform/op3/introduction/), while the initative is inspired by [Alex Koch's robot arms](https://github.com/AlexanderKoch-Koch/low_cost_robot).
 
 We made the first version of this humanoid robot at a [hackathon](https://github.com/jingxiangmo/low_cost_humanoid/blob/0ab372ece6673fc3f66a62588d88ebfb2695d9be/README.md) in 24 hours on 2024/08/31.
-
-Interested in updates, contributing, or building your own mini humanoid? Let us know through our interset form [here](https://forms.gle/AvDzMEFUYeVNtFvj6): https://forms.gle/AvDzMEFUYeVNtFvj6!
-
 <br/>
 
 
@@ -27,6 +20,12 @@ Interested in updates, contributing, or building your own mini humanoid? Let us 
 </div>
 
 <br/>
+
+> [!NOTE]  
+> Interested in updates, contributing, or building your own mini humanoid? Let us know through our interset form [here](https://forms.gle/AvDzMEFUYeVNtFvj6): https://forms.gle/AvDzMEFUYeVNtFvj6!
+
+<br/>
+
 
 ## Mechatronics
 
@@ -124,7 +123,7 @@ Core contributors:
 - **Denys Bezmenov** - electrical & embedded
 - **Jingxiang Mo** - electrical, software, & ML
 
-Acknowledgment:
+Open Source Acknowledgment:
 - **Henri Lemoine** - ML
 - **Advait Patel** - ML
 
