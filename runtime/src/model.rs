@@ -62,44 +62,63 @@ mod milkv_model {
 #[cfg(not(feature = "milkv"))]
 mod onnx_model {
     use super::*;
-    use ort::{Environment, Session, SessionBuilder, Value};
-    use ndarray::{Array, CowArray, IxDyn};
+    use ort::{tensor::InputTensor, tensor::OrtOwnedTensor, Environment, GraphOptimizationLevel, Session};
+    use ndarray::{Array1, Array, IxDyn};
+    use std::sync::Arc;
 
     pub struct Model {
         session: Arc<Session>,
-        environment: Arc<Environment>,
     }
 
     impl Model {
         pub fn new<P: AsRef<Path>>(model_path: P) -> Result<Self> {
             println!("Loading ONNX model from: {:?}", model_path.as_ref());
             let environment = Environment::builder().build()?;
-            let environment = Arc::new(environment);
-            
-            let session = SessionBuilder::new(&environment)?
+            let session = Session::builder()?
+                .with_environment(&environment)?
+                .with_optimization_level(GraphOptimizationLevel::Level3)?
+                .with_intra_threads(4)?
                 .with_model_from_file(model_path)?;
             let session = Arc::new(session);
 
-            Ok(Model { session, environment })
+            Ok(Model { session })
         }
 
-        pub fn infer(&self, input: &[f32]) -> Result<Vec<f32>> {
-            let input_shape: Vec<usize> = self.session.inputs[0]
-                .dimensions()
-                .map(|d| d.unwrap_or(1))
-                .collect();
+        pub fn infer(
+            &self,
+            x_vel: &Array1<f32>,
+            y_vel: &Array1<f32>,
+            rot: &Array1<f32>,
+            t: &Array1<f32>,
+            dof_pos: &Array1<f32>,
+            dof_vel: &Array1<f32>,
+            prev_actions: &Array1<f32>,
+            imu_ang_vel: &Array1<f32>,
+            imu_euler_xyz: &Array1<f32>,
+            buffer: &Array1<f32>,
+        ) -> Result<Vec<OrtOwnedTensor<f32, IxDyn>>> {
+            let inputs = [
+                ("x_vel.1", x_vel),
+                ("y_vel.1", y_vel),
+                ("rot.1", rot),
+                ("t.1", t),
+                ("dof_pos.1", dof_pos),
+                ("dof_vel.1", dof_vel),
+                ("prev_actions.1", prev_actions),
+                ("imu_ang_vel.1", imu_ang_vel),
+                ("imu_euler_xyz.1", imu_euler_xyz),
+                ("buffer.1", buffer),
+            ];
 
-            let array = Array::from_shape_vec(IxDyn(&input_shape), input.to_vec())?;
-            let input_tensor: CowArray<f32, IxDyn> = CowArray::from(array);
-            
-            let inputs = vec![Value::from_array(self.session.allocator(), &input_tensor)?];
-            
-            let outputs: Vec<Value> = self.session.run(inputs)?;
-            
-            let output: ort::tensor::OrtOwnedTensor<f32, _> = outputs[0].try_extract()?;
-            let output_vec = output.view().to_owned().as_slice().unwrap().to_vec();
-            
-            Ok(output_vec)
+            let mut ort_inputs = Vec::new();
+            for (name, array) in &inputs {
+                let input_tensor = InputTensor::from_array(array.clone());
+                ort_inputs.push((*name, input_tensor));
+            }
+
+            let outputs = self.session.run(ort_inputs)?;
+
+            Ok(outputs)
         }
     }
 }

@@ -11,18 +11,16 @@ use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // // load model
-    // let model_path = PathBuf::from("/root/models/ppo_walking.cvimodel"); // PATH IN MILK-V
-    // let model = Model::new(model_path).context("Failed to load model")?;
-    // let model = Arc::new(model);
+    // load model
+    let model_path = PathBuf::from("/root/models/ppo_walking.cvimodel"); // PATH IN MILK-V
+    let model = Model::new(model_path).context("Failed to load model")?;
+    let model = Arc::new(model);
 
-    // // initialize robot
-    // let robot = Robot::new()?;
-    // let robot = Arc::new(Mutex::new(robot));
-    // robot.lock().unwrap().initialize().await?;
+    // initialize robot
+    let robot = Robot::new()?;
+    let robot = Arc::new(Mutex::new(robot));
+    robot.lock().unwrap().initialize().await?;
 
-    // // run controller
-    // controller::run(model, robot).await.context("Controller encountered an error")
-
-    Ok(())
+    // run controller
+    controller::run(model, robot).await.context("Controller encountered an error")
 }
