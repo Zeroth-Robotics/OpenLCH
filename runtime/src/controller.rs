@@ -28,21 +28,25 @@ impl Robot{
             let current_joint_states = self.get_joint_states().await?;
             
             // get desired joint positions (inferenced from model)
-            let desired_joint_positions = self.model_inference(&current_joint_states)
+            let desired_joint_positions = self.model_inference(&model, &current_joint_states).await?;
             
             // send joint commands
-            self.send_joint_commands(desired_joint_positions).await?;
+            self.send_joint_commands(&desired_joint_positions).await?;
         }
     }
 
     async fn get_joint_states(&self) -> Result<[f32; 16]> {
-        let servo_data = servo.read_continuous()?;
-        let joint_states = servo_data.servo.iter().map(|s| s.target_location as f32).collect();
-        Ok(joint_states);
+        let servo_data = self.servo.read_continuous()?;
+        let joint_states: [f32; 16] = servo_data.servo.iter()
+            .take(16)
+            .map(|s| s.target_location as f32)
+            .collect::<Vec<f32>>()
+            .try_into()
+            .unwrap_or([0.0; 16]);
+        Ok(joint_states)
     }
 
-    async fn model_inference(&self, model: &Model, joint_states: &[f32; 16]) -> Result<([f32; 16])> {
-
+    async fn model_inference(&self, model: &Model, joint_states: &[f32; 16]) -> Result<[f32; 16]> {
         //  
         // x_vel: Array1<f32>,
         // y_vel: Array1<f32>,
@@ -56,51 +60,48 @@ impl Robot{
         // buffer: Array1<f32>,
 
 
-        let model_output = model.infer(&joint_states)?;
+        let model_output = model.infer(joint_states)?;
 
-        // TODO
-        //
-        // get model output and convert to desired joint positions
-        //
-        let desired_joint_positions = model_output.iter().map(|x| x as i16).collect();
-
+        // TODO: Implement proper conversion from model output to desired joint positions
+        let desired_joint_positions: [f32; 16] = model_output.iter()
+            .take(16)
+            .map(|&x| x)
+            .collect::<Vec<f32>>()
+            .try_into()
+            .unwrap_or([0.0; 16]);
 
         Ok(desired_joint_positions)   
     }
 
-    async fn send_joint_commands(robot: &Robot, position: i16, time: u16, speed: u16, send_only_positions: u8) -> Result<()> {
-        let mut interval = interval(Duration::from_millis(20)); // 50Hz
-        loop {
-            interval.tick().await;
-            let mut cmd = ServoMultipleWriteCommand {
-                ids: [0; MAX_SERVOS],
-                positions: [0; MAX_SERVOS],
-                times: [0; MAX_SERVOS],
-                speeds: [0; MAX_SERVOS],
-                only_write_positions: send_only_positions,
-            };
+    async fn send_joint_commands(&self, positions: &[f32; 16]) -> Result<()> {
+        let mut cmd = ServoMultipleWriteCommand {
+            ids: [0; MAX_SERVOS],
+            positions: [0; MAX_SERVOS],
+            times: [0; MAX_SERVOS],
+            speeds: [0; MAX_SERVOS],
+            only_write_positions: 0,
+        };
 
-            for i in 0..MAX_SERVOS {
-                cmd.ids[i] = (i + 1) as u8;
-                cmd.positions[i] = position;
-                cmd.times[i] = time;
-                cmd.speeds[i] = speed;
-            }
-
-            robot.servo.write_multiple(&cmd)?;
-
-            println!("Command sent to move all servos to position {} with time {} ms and speed {}, send_only_positions: {}", position, time, speed, send_only_positions);
+        for i in 0..16 {
+            cmd.ids[i] = (i + 1) as u8;
+            cmd.positions[i] = positions[i] as i16;
+            cmd.times[i] = 20;
         }
+
+        self.servo.write_multiple(&cmd)?;
+
+        println!("Command sent to move all servos to position {} with time {} ms and speed {}, send_only_positions: {}", positions[0] as i16, 20, 0, 0);
     }
 }
 
 #[tokio::main]
-pub async fn main(model: &Model) -> Result<()> {
+pub async fn main(model: Arc<Model>, robot: Arc<Robot>) -> Result<()> {
 
-    let robot = Robot::new()?;
-    robot.servo.enable_readout()?; 
-    
-    robot.run();
+    robot.servo.enable_readout()?;  
+
+    robot.run(model).await?;
+
+    Ok(())
 }
 
 
