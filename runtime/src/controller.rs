@@ -95,7 +95,7 @@ impl Robot{
 }
 
 #[tokio::main]
-pub async fn main(model: Arc<Model>, robot: Arc<Robot>) -> Result<()> {
+pub async fn run_controller(model: Arc<Model>, robot: Arc<Robot>) -> Result<()> {
 
     robot.servo.enable_readout()?;  
 
