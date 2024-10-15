@@ -18,6 +18,7 @@ pub struct Model {
 
 impl Model {
     pub fn new<P: AsRef<Path>>(model_path: P) -> Result<Self> {
+
         println!("Loading model from: {:?}", model_path.as_ref());
         let c_model_path = CString::new(model_path.as_ref().to_str().unwrap())?;
         let result = unsafe { init_model(c_model_path.as_ptr()) };
