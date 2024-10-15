@@ -12,7 +12,7 @@ pub mod hal {
     pub const MAX_SERVOS: usize = 16;
 
     #[repr(C)]
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug, Copy, Clone, Default)]
     pub struct ServoInfo {
         pub torque_switch: c_uchar,
         pub acceleration: c_uchar,
