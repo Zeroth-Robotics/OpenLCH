@@ -1,8 +1,6 @@
 use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
-use ort::{Environment, Session, SessionBuilder, Value};
-use ndarray::{Array, CowArray, IxDyn};
 
 #[cfg(feature = "milkv")]
 mod milkv_model {
