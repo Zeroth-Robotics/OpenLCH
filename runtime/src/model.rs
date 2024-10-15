@@ -15,7 +15,6 @@ mod milkv_model {
         fn cleanup();
         fn get_input_size() -> usize;
         fn get_output_size() -> usize;
-
     }
 
     pub struct Model {
