@@ -17,5 +17,5 @@ async fn main() -> Result<()> {
     let model_arc = Arc::new(model);
 
     // run controller
-    controller::main(model_arc).await.context("Controller encountered an error")
+    controller::main(model_arc, robot).await.context("Controller encountered an error")
 }
