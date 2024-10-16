@@ -13,7 +13,7 @@ use std::time::Duration;
 // Constants
 const SERVO_START_BYTE: u8 = 0xFF;
 const SERVO_BROADCAST_ID: u8 = 0xFE;
-const MAX_SERVO_COMMAND_DATA: usize = 256;
+const _MAX_SERVO_COMMAND_DATA: usize = 256;
 
 // Servo commands
 const SERVO_CMD_PING: u8 = 0x01;

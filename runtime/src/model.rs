@@ -67,6 +67,8 @@ mod onnx_model {
 
     pub struct Model {
         session: Arc<Session>,
+
+        #[allow(dead_code)]
         environment: Arc<Environment>,
     }
 

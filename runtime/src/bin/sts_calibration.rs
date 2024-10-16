@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 
-const MIN_SPEED: u16 = 10;
+const _MIN_SPEED: u16 = 10;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
