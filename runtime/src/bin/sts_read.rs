@@ -1,18 +1,19 @@
-use anyhow::{Result, bail};
-use ctrlc;
+use anyhow::{bail, Result};
 use runtime::hal::{Servo, ServoRegister};
+use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
-use std::env;
 
 const LOOP_RATE: f64 = 50.0; // Hz
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let servo_id = match args.get(1) {
-        Some(arg) => arg.parse().map_err(|_| anyhow::anyhow!("Invalid servo ID"))?,
+        Some(arg) => arg
+            .parse()
+            .map_err(|_| anyhow::anyhow!("Invalid servo ID"))?,
         None => bail!("Servo ID must be specified as a command-line argument"),
     };
 
@@ -40,10 +41,7 @@ fn main() -> Result<()> {
             Ok(info) => {
                 println!(
                     "Position: {}, Speed: {}, Load: {}, Current: {} mA",
-                    info.position,
-                    info.speed,
-                    info.load,
-                    info.current
+                    info.position, info.speed, info.load, info.current
                 );
             }
             Err(e) => {

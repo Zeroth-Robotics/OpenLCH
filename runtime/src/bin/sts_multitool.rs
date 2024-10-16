@@ -1,17 +1,17 @@
 use anyhow::Result;
-use runtime::hal::{Servo, MAX_SERVOS, TorqueMode, ServoRegister};
-use cursive::views::{TextView, LinearLayout, DummyView, Panel, Dialog, EditView, SelectView};
+use chrono::Local;
+use cursive::theme::ColorStyle;
 use cursive::traits::*;
-use std::sync::{Arc, Mutex};
-use std::time::{Instant, Duration};
-use std::sync::atomic::{AtomicI16, Ordering, AtomicBool};
-use cursive::theme::{Color, ColorStyle, BaseColor};
 use cursive::view::Nameable;
-use std::sync::OnceLock;
+use cursive::views::{Dialog, DummyView, EditView, LinearLayout, Panel, SelectView, TextView};
+use runtime::hal::{Servo, ServoRegister, TorqueMode, MAX_SERVOS};
+use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
-use chrono::Local;
-use serde_json::{json, Value};
+use std::sync::atomic::{AtomicBool, AtomicI16, Ordering};
+use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 static CALIBRATION_POSITION: AtomicI16 = AtomicI16::new(-1);
 static CURRENT_POSITION: AtomicI16 = AtomicI16::new(0);
@@ -23,10 +23,8 @@ static UNRESPONSIVE_SERVOS: OnceLock<Arc<Mutex<Vec<bool>>>> = OnceLock::new();
 
 // At the top of the file, add this array of joint names
 const JOINT_NAMES: [&str; 16] = [
-    "R Ank", "R Knee", "R Hip R", "R Hip Y", "R Hip P",
-    "L Ank", "L Knee", "L Hip R", "L Hip Y", "L Hip P",
-    "R Elb", "R Sh Y", "R Sh P",
-    "L Elb", "L Sh Y", "L Sh P"
+    "R Ank", "R Knee", "R Hip R", "R Hip Y", "R Hip P", "L Ank", "L Knee", "L Hip R", "L Hip Y",
+    "L Hip P", "R Elb", "R Sh Y", "R Sh P", "L Elb", "L Sh Y", "L Sh P",
 ];
 
 struct CaptureState {
@@ -36,7 +34,7 @@ struct CaptureState {
 }
 
 fn show_hints(s: &mut cursive::Cursive) {
-    let hints = vec![
+    let hints = [
         "Up/Down - Select servo",
         "Enter - Open servo settings",
         "T - Toggle torque",
@@ -53,7 +51,9 @@ fn show_hints(s: &mut cursive::Cursive) {
     s.add_layer(
         Dialog::around(TextView::new(content))
             .title("Hints")
-            .button("Close", |s| { s.pop_layer(); })
+            .button("Close", |s| {
+                s.pop_layer();
+            }),
     );
 }
 
@@ -87,20 +87,75 @@ fn main() -> Result<()> {
     for i in 0..MAX_SERVOS {
         let joint_name = JOINT_NAMES.get(i).unwrap_or(&"Unknown");
         let row = LinearLayout::horizontal()
-            .child(TextView::new(format!("{:2}", i + 1)).center().with_name(format!("ID {}", i)).fixed_width(4))
-            .child(TextView::new(*joint_name).center().with_name(format!("Joint {}", i)).fixed_width(7))
-            .child(TextView::new("----").center().with_name(format!("CurrPos {}", i)).fixed_width(8))
-            .child(TextView::new("----").center().with_name(format!("CurrSpd {}", i)).fixed_width(8))
-            .child(TextView::new("----").center().with_name(format!("Load {}", i)).fixed_width(8))
-            .child(TextView::new("----").center().with_name(format!("Torque {}", i)).fixed_width(8))
-            .child(TextView::new("----").center().with_name(format!("Volt {}", i)).fixed_width(6))
-            .child(TextView::new("----").center().with_name(format!("Temp {}", i)).fixed_width(6))
-            .child(TextView::new("----").center().with_name(format!("Curr {}", i)).fixed_width(6))
-            .child(TextView::new("----").center().with_name(format!("Status {}", i)).fixed_width(8))
-        .child(TextView::new("----").center().with_name(format!("TorqLim {}", i)).fixed_width(8));
+            .child(
+                TextView::new(format!("{:2}", i + 1))
+                    .center()
+                    .with_name(format!("ID {}", i))
+                    .fixed_width(4),
+            )
+            .child(
+                TextView::new(*joint_name)
+                    .center()
+                    .with_name(format!("Joint {}", i))
+                    .fixed_width(7),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("CurrPos {}", i))
+                    .fixed_width(8),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("CurrSpd {}", i))
+                    .fixed_width(8),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("Load {}", i))
+                    .fixed_width(8),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("Torque {}", i))
+                    .fixed_width(8),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("Volt {}", i))
+                    .fixed_width(6),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("Temp {}", i))
+                    .fixed_width(6),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("Curr {}", i))
+                    .fixed_width(6),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("Status {}", i))
+                    .fixed_width(8),
+            )
+            .child(
+                TextView::new("----")
+                    .center()
+                    .with_name(format!("TorqLim {}", i))
+                    .fixed_width(8),
+            );
 
-            // .child(TextView::new("----").center().with_name(format!("Async {}", i)).fixed_width(6))
-            // .child(TextView::new("----").center().with_name(format!("Lock {}", i)).fixed_width(6));
+        // .child(TextView::new("----").center().with_name(format!("Async {}", i)).fixed_width(6))
+        // .child(TextView::new("----").center().with_name(format!("Lock {}", i)).fixed_width(6));
         layout.add_child(row.with_name(format!("servo_row_{}", i)));
     }
 
@@ -116,31 +171,30 @@ fn main() -> Result<()> {
                     LinearLayout::vertical()
                         .child(TextView::new("Task Run Count: 0").with_name("Task Count"))
                         .child(TextView::new("Last Update: N/A").with_name("Last Update"))
-                        .child(TextView::new("Servo polling rate: N/A").with_name("Servo polling rate"))
+                        .child(
+                            TextView::new("Servo polling rate: N/A")
+                                .with_name("Servo polling rate"),
+                        ),
                 )
                 .child(DummyView.fixed_width(2))
                 .child(
                     LinearLayout::vertical()
                         .child(TextView::new("Min Angle: ----").with_name("MinAngle"))
                         .child(TextView::new("Max Angle: ----").with_name("MaxAngle"))
-                        .child(TextView::new("Offset: ----").with_name("Offset"))
+                        .child(TextView::new("Offset: ----").with_name("Offset")),
                 )
                 .child(DummyView.fixed_width(2))
                 .child(
                     LinearLayout::vertical()
-                        .child(TextView::new("Angle Range: ----°").with_name("AngleRange"))
-                )
+                        .child(TextView::new("Angle Range: ----°").with_name("AngleRange")),
+                ),
         )
         .title("Statistics")
-        .full_width()
+        .full_width(),
     );
 
     // Add instructions
-    layout.add_child(
-        TextView::new("Press 'H' for help")
-            .center()
-            .full_width()
-    );
+    layout.add_child(TextView::new("Press 'H' for help").center().full_width());
 
     layout.add_child(TextView::new("Calibration Pos: ----").with_name("CalibrationPos"));
 
@@ -163,36 +217,47 @@ fn main() -> Result<()> {
     // Modify Up and Down callbacks to wrap around
     let servo_clone_up = Arc::clone(&servo);
     let selected_servo_up = Arc::clone(&selected_servo);
-    siv.add_global_callback(cursive::event::Event::Key(cursive::event::Key::Up), move |s| {
-        let mut selected = selected_servo_up.lock().unwrap();
-        *selected = (*selected + MAX_SERVOS - 1) % MAX_SERVOS;
-        update_selected_row(s, *selected);
-        update_angle_limits(s, *selected as u8 + 1, &servo_clone_up);
-    });
+    siv.add_global_callback(
+        cursive::event::Event::Key(cursive::event::Key::Up),
+        move |s| {
+            let mut selected = selected_servo_up.lock().unwrap();
+            *selected = (*selected + MAX_SERVOS - 1) % MAX_SERVOS;
+            update_selected_row(s, *selected);
+            update_angle_limits(s, *selected as u8 + 1, &servo_clone_up);
+        },
+    );
 
     let servo_clone_down = Arc::clone(&servo);
     let selected_servo_down = Arc::clone(&selected_servo);
-    siv.add_global_callback(cursive::event::Event::Key(cursive::event::Key::Down), move |s| {
-        let mut selected = selected_servo_down.lock().unwrap();
-        *selected = (*selected + 1) % MAX_SERVOS;
-        update_selected_row(s, *selected);
-        update_angle_limits(s, *selected as u8 + 1, &servo_clone_down);
-    });
+    siv.add_global_callback(
+        cursive::event::Event::Key(cursive::event::Key::Down),
+        move |s| {
+            let mut selected = selected_servo_down.lock().unwrap();
+            *selected = (*selected + 1) % MAX_SERVOS;
+            update_selected_row(s, *selected);
+            update_angle_limits(s, *selected as u8 + 1, &servo_clone_down);
+        },
+    );
 
     siv.add_global_callback('h', show_hints);
 
     let servo_clone_enter = Arc::clone(&servo);
     let selected_servo_enter = Arc::clone(&selected_servo);
-    siv.add_global_callback(cursive::event::Event::Key(cursive::event::Key::Enter), move |s| {
-        // Check if a settings dialog is already open
-        if s.find_name::<Dialog>("servo_settings").is_some() || s.find_name::<Dialog>("capture_dialog").is_some(){
-            return; // Do nothing if a dialog is already open
-        }
+    siv.add_global_callback(
+        cursive::event::Event::Key(cursive::event::Key::Enter),
+        move |s| {
+            // Check if a settings dialog is already open
+            if s.find_name::<Dialog>("servo_settings").is_some()
+                || s.find_name::<Dialog>("capture_dialog").is_some()
+            {
+                return; // Do nothing if a dialog is already open
+            }
 
-        let selected = *selected_servo_enter.lock().unwrap();
-        let servo_id = selected as u8 + 1;
-        open_servo_settings(s, servo_id, Arc::clone(&servo_clone_enter));
-    });
+            let selected = *selected_servo_enter.lock().unwrap();
+            let servo_id = selected as u8 + 1;
+            open_servo_settings(s, servo_id, Arc::clone(&servo_clone_enter));
+        },
+    );
 
     let servo_clone_toggle = Arc::clone(&servo);
     let selected_servo_toggle = Arc::clone(&selected_servo);
@@ -232,12 +297,20 @@ fn main() -> Result<()> {
                     });
                     s.call_on_name(&format!("CurrSpd {}", i), |view: &mut TextView| {
                         let speed = servo_info.current_speed as u16 & 0x7FFF; // Remove 15th bit
-                        let sign = if servo_info.current_speed as u16 & 0x8000 != 0 { '-' } else { '+' };
+                        let sign = if servo_info.current_speed as u16 & 0x8000 != 0 {
+                            '-'
+                        } else {
+                            '+'
+                        };
                         view.set_content(format!("{}{:4}", sign, speed));
                     });
                     s.call_on_name(&format!("Load {}", i), |view: &mut TextView| {
                         let speed = servo_info.current_load as u16 & 0x3FF; // Remove 10th bit
-                        let sign = if servo_info.current_load as u16 & 0x400 != 0 { '-' } else { '+' };
+                        let sign = if servo_info.current_load as u16 & 0x400 != 0 {
+                            '-'
+                        } else {
+                            '+'
+                        };
                         view.set_content(format!("{}{:4}", sign, speed));
                     });
                     update_torque_display(s, (i + 1) as u8, servo_info.torque_switch);
@@ -245,7 +318,10 @@ fn main() -> Result<()> {
                         view.set_content(format!("{:4}", servo_info.torque_limit));
                     });
                     s.call_on_name(&format!("Volt {}", i), |view: &mut TextView| {
-                        view.set_content(format!("{:2.1}V", servo_info.current_voltage as f32 / 10.0));
+                        view.set_content(format!(
+                            "{:2.1}V",
+                            servo_info.current_voltage as f32 / 10.0
+                        ));
                     });
                     s.call_on_name(&format!("Temp {}", i), |view: &mut TextView| {
                         view.set_content(format!("{}°C", servo_info.current_temperature));
@@ -285,16 +361,17 @@ fn main() -> Result<()> {
                                 Err(_) => false,
                             };
                         }
-                        
-                        let mut unresponsive_servos = UNRESPONSIVE_SERVOS.get().unwrap().lock().unwrap();
+
+                        let mut unresponsive_servos =
+                            UNRESPONSIVE_SERVOS.get().unwrap().lock().unwrap();
                         unresponsive_servos[i] = !is_responsive;
-                        
+
                         let style = if is_responsive {
                             ColorStyle::default()
                         } else {
                             ColorStyle::highlight()
                         };
-                        
+
                         // Apply style to ID and Joint name
                         s.call_on_name(&format!("ID {}", i), |view: &mut TextView| {
                             view.set_style(style);
@@ -347,7 +424,14 @@ fn main() -> Result<()> {
 
                 s.call_on_name("CalibrationPos", |view: &mut TextView| {
                     let cal_pos = CALIBRATION_POSITION.load(Ordering::Relaxed);
-                    view.set_content(format!("Calibration Pos: {}", if cal_pos >= 0 { cal_pos.to_string() } else { "----".to_string() }));
+                    view.set_content(format!(
+                        "Calibration Pos: {}",
+                        if cal_pos >= 0 {
+                            cal_pos.to_string()
+                        } else {
+                            "----".to_string()
+                        }
+                    ));
                 });
             }
             Err(e) => {
@@ -365,11 +449,13 @@ fn main() -> Result<()> {
     UNRESPONSIVE_SERVOS.get_or_init(|| Arc::new(Mutex::new(vec![false; MAX_SERVOS])));
 
     // Initialize capture state
-    CAPTURE_STATE.get_or_init(|| Arc::new(Mutex::new(CaptureState {
-        file: None,
-        captures: Vec::new(),
-        name: String::new(),
-    })));
+    CAPTURE_STATE.get_or_init(|| {
+        Arc::new(Mutex::new(CaptureState {
+            file: None,
+            captures: Vec::new(),
+            name: String::new(),
+        }))
+    });
 
     siv.set_user_data(servo.clone());
 
@@ -385,7 +471,7 @@ fn main() -> Result<()> {
 // Update the update_selected_row function
 fn update_selected_row(s: &mut cursive::Cursive, selected: usize) {
     let unresponsive_servos = UNRESPONSIVE_SERVOS.get().unwrap().lock().unwrap();
-    
+
     for i in 0..MAX_SERVOS {
         let style = if unresponsive_servos[i] {
             ColorStyle::highlight()
@@ -413,7 +499,7 @@ fn update_angle_limits(s: &mut cursive::Cursive, servo_id: u8, servo: &Arc<Servo
             s.call_on_name("MaxAngle", |view: &mut TextView| {
                 view.set_content(format!("Max Angle: {}", max_angle));
             });
-            
+
             // Calculate and display the angle range
             let angle_range = (max_angle as f64 - min_angle as f64) / 4096.0 * 360.0;
             s.call_on_name("AngleRange", |view: &mut TextView| {
@@ -461,7 +547,7 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                 TorqueMode::Enabled
             };
             (mode, info.torque_limit)
-        },
+        }
         Err(_) => (TorqueMode::Enabled, 1000), // Default values if we can't read the current state
     };
 
@@ -474,39 +560,54 @@ fn open_servo_settings(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
                 .child(TextView::new("Speed:"))
                 .child(EditView::new().with_name("speed"))
                 .child(TextView::new("Torque:"))
-                .child(SelectView::new()
-                    .item("Enabled", Arc::new(TorqueMode::Enabled))
-                    .item("Disabled", Arc::new(TorqueMode::Disabled))
-                    .selected(match current_torque_mode {
-                        TorqueMode::Enabled => 0,
-                        TorqueMode::Disabled => 1,
-                        _ => 0, // Default to Enabled for other cases
-                    })
-                    .popup()
-                    .with_name("torque"))
+                .child(
+                    SelectView::new()
+                        .item("Enabled", Arc::new(TorqueMode::Enabled))
+                        .item("Disabled", Arc::new(TorqueMode::Disabled))
+                        .selected(match current_torque_mode {
+                            TorqueMode::Enabled => 0,
+                            TorqueMode::Disabled => 1,
+                            _ => 0, // Default to Enabled for other cases
+                        })
+                        .popup()
+                        .with_name("torque"),
+                )
                 .child(TextView::new("Torque Limit:"))
-                .child(EditView::new()
-                    .content(current_torque_limit.to_string())
-                    .with_name("torque_limit"))
+                .child(
+                    EditView::new()
+                        .content(current_torque_limit.to_string())
+                        .with_name("torque_limit"),
+                )
                 .child(TextView::new("Offset:"))
-                .child(EditView::new().with_name("offset"))
+                .child(EditView::new().with_name("offset")),
         )
         .button("Apply", move |s| {
-            let position = s.call_on_name("position", |view: &mut EditView| {
-                view.get_content().parse::<i16>().ok()
-            }).unwrap();
-            let speed = s.call_on_name("speed", |view: &mut EditView| {
-                view.get_content().parse::<u16>().unwrap_or(0)
-            }).unwrap();
-            let torque_mode = s.call_on_name("torque", |view: &mut SelectView<Arc<TorqueMode>>| {
-                view.selection().unwrap_or_else(|| Arc::new(TorqueMode::Enabled.into()))
-            }).unwrap();
-            let offset = s.call_on_name("offset", |view: &mut EditView| {
-                view.get_content().parse::<i16>().ok()
-            }).unwrap();
-            let torque_limit = s.call_on_name("torque_limit", |view: &mut EditView| {
-                view.get_content().parse::<u16>().unwrap_or(0)
-            }).unwrap();
+            let position = s
+                .call_on_name("position", |view: &mut EditView| {
+                    view.get_content().parse::<i16>().ok()
+                })
+                .unwrap();
+            let speed = s
+                .call_on_name("speed", |view: &mut EditView| {
+                    view.get_content().parse::<u16>().unwrap_or(0)
+                })
+                .unwrap();
+            let torque_mode = s
+                .call_on_name("torque", |view: &mut SelectView<Arc<TorqueMode>>| {
+                    view.selection()
+                        .unwrap_or_else(|| Arc::new(TorqueMode::Enabled.into()))
+                })
+                .unwrap();
+            let offset = s
+                .call_on_name("offset", |view: &mut EditView| {
+                    view.get_content().parse::<i16>().ok()
+                })
+                .unwrap();
+            let torque_limit = s
+                .call_on_name("torque_limit", |view: &mut EditView| {
+                    view.get_content().parse::<u16>().unwrap_or(0)
+                })
+                .unwrap();
 
             // Apply settings
             if let Err(e) = servo.set_torque_mode(servo_id, (**torque_mode).clone()) {
@@ -575,7 +676,7 @@ fn set_servo_offset(servo_id: u8, offset: i16, servo: &Arc<Servo>) -> Result<()>
 
 fn toggle_servo_torque(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
     let servo_clone = Arc::clone(&servo);
-    
+
     match servo_clone.read_info(servo_id) {
         Ok(info) => {
             let new_torque_mode = if info.torque_switch == 0 {
@@ -583,7 +684,7 @@ fn toggle_servo_torque(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
             } else {
                 TorqueMode::Disabled
             };
-            
+
             if let Err(e) = servo_clone.set_torque_mode(servo_id, new_torque_mode.clone()) {
                 s.add_layer(Dialog::info(format!("Error setting torque mode: {}", e)));
             } else {
@@ -603,19 +704,25 @@ fn toggle_servo_torque(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>
 }
 
 fn update_torque_display(s: &mut cursive::Cursive, servo_id: u8, torque_value: u8) {
-    s.call_on_name(&format!("Torque {}", servo_id as usize - 1), |view: &mut TextView| {
-        view.set_content(format!("{:4}", torque_value));
-        if torque_value == 1 {
-            view.set_style(ColorStyle::secondary());
-        } else {
-            view.set_style(ColorStyle::default());
-        }
-    });
+    s.call_on_name(
+        &format!("Torque {}", servo_id as usize - 1),
+        |view: &mut TextView| {
+            view.set_content(format!("{:4}", torque_value));
+            if torque_value == 1 {
+                view.set_style(ColorStyle::secondary());
+            } else {
+                view.set_style(ColorStyle::default());
+            }
+        },
+    );
 }
 
 fn start_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
     if let Err(e) = servo.write(servo_id, ServoRegister::PositionCorrection, &[0, 0]) {
-        s.add_layer(Dialog::info(format!("Error setting position correction to 0: {}", e)));
+        s.add_layer(Dialog::info(format!(
+            "Error setting position correction to 0: {}",
+            e
+        )));
         return;
     }
 
@@ -624,7 +731,10 @@ fn start_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) 
     match servo.read_info(servo_id) {
         Ok(info) => {
             CALIBRATION_POSITION.store(info.current_location, Ordering::Relaxed);
-            s.add_layer(Dialog::info(format!("Calibration started for servo {}. Current position: {}", servo_id, info.current_location)));
+            s.add_layer(Dialog::info(format!(
+                "Calibration started for servo {}. Current position: {}",
+                servo_id, info.current_location
+            )));
         }
         Err(e) => {
             s.add_layer(Dialog::info(format!("Error reading servo info: {}", e)));
@@ -635,7 +745,9 @@ fn start_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) 
 fn end_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
     let min_pos = CALIBRATION_POSITION.load(Ordering::Relaxed);
     if min_pos < 0 {
-        s.add_layer(Dialog::info("Please start calibration first by pressing '['"));
+        s.add_layer(Dialog::info(
+            "Please start calibration first by pressing '['",
+        ));
         return;
     }
 
@@ -663,8 +775,13 @@ fn end_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
     let max_angle = 2048 + (max_pos - min_pos) / 2;
 
     // Write new values to EEPROM
-    if let Err(e) = write_calibration_to_eeprom(servo_id, &servo, offset_value, min_angle, max_angle) {
-        s.add_layer(Dialog::info(format!("Error writing calibration to EEPROM: {}", e)));
+    if let Err(e) =
+        write_calibration_to_eeprom(servo_id, &servo, offset_value, min_angle, max_angle)
+    {
+        s.add_layer(Dialog::info(format!(
+            "Error writing calibration to EEPROM: {}",
+            e
+        )));
         return;
     }
 
@@ -680,10 +797,19 @@ fn end_calibration(s: &mut cursive::Cursive, servo_id: u8, servo: Arc<Servo>) {
     });
 
     CALIBRATION_POSITION.store(-1, Ordering::Relaxed);
-    s.add_layer(Dialog::info(format!("Calibration completed for servo {}. New offset: {}", servo_id, offset_value)));
+    s.add_layer(Dialog::info(format!(
+        "Calibration completed for servo {}. New offset: {}",
+        servo_id, offset_value
+    )));
 }
 
-fn write_calibration_to_eeprom(servo_id: u8, servo: &Servo, offset: u16, min_angle: i16, max_angle: i16) -> Result<()> {
+fn write_calibration_to_eeprom(
+    servo_id: u8,
+    servo: &Servo,
+    offset: u16,
+    min_angle: i16,
+    max_angle: i16,
+) -> Result<()> {
     // Unlock EEPROM
     servo.write(servo_id, ServoRegister::LockMark, &[0])?;
     std::thread::sleep(Duration::from_millis(20));
@@ -702,7 +828,9 @@ fn write_calibration_to_eeprom(servo_id: u8, servo: &Servo, offset: u16, min_ang
             break;
         }
         if try_num == 2 {
-            return Err(anyhow::anyhow!("Failed to write MinAngleLimit after 3 attempts"));
+            return Err(anyhow::anyhow!(
+                "Failed to write MinAngleLimit after 3 attempts"
+            ));
         }
     }
 
@@ -715,7 +843,9 @@ fn write_calibration_to_eeprom(servo_id: u8, servo: &Servo, offset: u16, min_ang
             break;
         }
         if try_num == 2 {
-            return Err(anyhow::anyhow!("Failed to write MaxAngleLimit after 3 attempts"));
+            return Err(anyhow::anyhow!(
+                "Failed to write MaxAngleLimit after 3 attempts"
+            ));
         }
     }
 
@@ -733,14 +863,16 @@ fn handle_capture(s: &mut cursive::Cursive, end: bool) {
                 .title("New Capture")
                 .content(EditView::new().with_name("capture_name"))
                 .button("Start", |s| {
-                    let name = s.call_on_name("capture_name", |view: &mut EditView| {
-                        view.get_content()
-                    }).unwrap();
+                    let name = s
+                        .call_on_name("capture_name", |view: &mut EditView| view.get_content())
+                        .unwrap();
                     s.pop_layer();
                     start_capture(s, name.to_string());
                 })
-                .button("Cancel", |s| { s.pop_layer(); })
-                .with_name("capture_dialog")
+                .button("Cancel", |s| {
+                    s.pop_layer();
+                })
+                .with_name("capture_dialog"),
         );
     } else if CAPTURE_IN_PROGRESS.load(Ordering::Relaxed) {
         if end {
@@ -764,18 +896,22 @@ fn start_capture(s: &mut cursive::Cursive, name: String) {
 
     match servo.read_continuous() {
         Ok(data) => {
-            let positions: serde_json::Map<String, Value> = data.servo
+            let positions: serde_json::Map<String, Value> = data
+                .servo
                 .iter()
                 .enumerate()
                 .map(|(i, info)| ((i + 1).to_string(), json!(info.current_location)))
                 .collect();
-            
+
             capture_state.captures.push(json!({
                 "pos": positions,
                 "delay": 100
             }));
-            
-            s.add_layer(Dialog::info(format!("Started capture: {}. First position recorded.", filename)));
+
+            s.add_layer(Dialog::info(format!(
+                "Started capture: {}. First position recorded.",
+                filename
+            )));
         }
         Err(e) => {
             s.add_layer(Dialog::info(format!("Error starting capture: {}", e)));
@@ -792,17 +928,18 @@ fn continue_capture(s: &mut cursive::Cursive) {
 
     match servo.read_continuous() {
         Ok(data) => {
-            let positions: serde_json::Map<String, Value> = data.servo
+            let positions: serde_json::Map<String, Value> = data
+                .servo
                 .iter()
                 .enumerate()
                 .map(|(i, info)| ((i + 1).to_string(), json!(info.current_location)))
                 .collect();
-            
+
             capture_state.captures.push(json!({
                 "pos": positions,
                 "delay": 100
             }));
-            
+
             s.add_layer(Dialog::info("Position captured"));
         }
         Err(e) => {
