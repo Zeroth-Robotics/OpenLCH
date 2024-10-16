@@ -5,7 +5,7 @@ edition = "2021"
 
 [features]
 default = ["use_ort"]
-milkv = []
+milkv = ["i2cdev"]
 use_ort = ["ort"]
 
 [lib]
