@@ -1,4 +1,3 @@
-
 #[cfg(all(target_arch = "riscv64", target_os = "linux", feature = "milkv"))]
 pub mod hal_risc;
 
@@ -8,11 +7,13 @@ pub mod hal_serial;
 // Create a public hal module
 pub mod hal {
     use std::os::raw::{c_short, c_uchar, c_ushort, c_uint};
+    use serde::{Serialize, Deserialize};
+
 
     pub const MAX_SERVOS: usize = 16;
 
     #[repr(C)]
-    #[derive(Debug, Copy, Clone, Default)]
+    #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
     pub struct ServoInfo {
         pub torque_switch: c_uchar,
         pub acceleration: c_uchar,
@@ -35,7 +36,7 @@ pub mod hal {
     }
 
     #[repr(u8)]
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
     pub enum ServoRegister {
         FirmwareMajorVersion = 0x00,
         FirmwareSubVersion = 0x01,
@@ -89,20 +90,21 @@ pub mod hal {
     }
 
     #[repr(u8)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
     pub enum MemoryLockState {
         Unlocked = 0,
         Locked = 1,
     }
 
     #[repr(C)]
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
     pub struct ServoData {
         pub servo: [ServoInfo; MAX_SERVOS],
         pub task_run_count: c_uint,
     }
 
     #[repr(C)]
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
     pub struct ServoMultipleWriteCommand {
         pub only_write_positions: c_uchar,
         pub ids: [c_uchar; MAX_SERVOS],
@@ -111,6 +113,8 @@ pub mod hal {
         pub speeds: [c_ushort; MAX_SERVOS],
     }
 
+    #[repr(u8)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
     pub enum ServoMode {
         Position = 0,
         ConstantSpeed = 1,
@@ -119,14 +123,14 @@ pub mod hal {
     }
 
     #[repr(i32)]
-    #[derive(Debug, Copy, Clone, PartialEq)]
+    #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
     pub enum ServoDirection {
         Clockwise = 0,
         Counterclockwise = 1,
     }
 
     #[repr(u8)]
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
     pub enum TorqueMode {
         Disabled = 0,
         Enabled = 1,
@@ -139,7 +143,7 @@ pub mod hal {
         }
     }
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
     pub struct IMUData {
         pub acc_x: f32,
         pub acc_y: f32,

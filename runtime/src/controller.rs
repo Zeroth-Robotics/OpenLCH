@@ -3,7 +3,7 @@ use runtime::hal::{Servo, ServoMultipleWriteCommand, MAX_SERVOS};
 use tokio::time::{sleep, interval, Duration};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use runtime::hal::Model;
+use crate::model::Model;
 use ndarray::Array1;
 
 pub struct Robot{
@@ -91,11 +91,12 @@ impl Robot{
         self.servo.write_multiple(&cmd)?;
 
         println!("Command sent to move all servos to position {} with time {} ms and speed {}, send_only_positions: {}", positions[0] as i16, 20, 0, 0);
+        Ok(())
     }
 }
 
 #[tokio::main]
-pub async fn main(model: Arc<Model>, robot: Arc<Robot>) -> Result<()> {
+pub async fn run(model: Arc<Model>, robot: Arc<Robot>) -> Result<()> {
 
     robot.servo.enable_readout()?;  
 
