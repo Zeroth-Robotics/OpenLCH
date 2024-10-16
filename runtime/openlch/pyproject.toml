@@ -1,0 +1,72 @@
+[tool.black]
+
+line-length = 120
+target-version = ["py311"]
+include = '\.pyi?$'
+
+[tool.pytest.ini_options]
+
+addopts = "-rx -rf -x -q --full-trace"
+testpaths = ["tests"]
+
+markers = [
+    "slow: Marks test as being slow",
+]
+
+[tool.mypy]
+
+pretty = true
+show_column_numbers = true
+show_error_context = true
+show_error_codes = true
+show_traceback = true
+disallow_untyped_defs = true
+strict_equality = true
+allow_redefinition = true
+
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+incremental = true
+namespace_packages = false
+
+# Uncomment to exclude modules from Mypy.
+# [[tool.mypy.overrides]]
+# module = []
+# ignore_missing_imports = true
+
+[tool.isort]
+
+profile = "black"
+
+[tool.ruff]
+
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+
+select = ["ANN", "D", "E", "F", "I", "N", "PGH", "PLC", "PLE", "PLR", "PLW", "W"]
+
+ignore = [
+    "ANN101", "ANN102",
+    "D101", "D102", "D103", "D104", "D105", "D106", "D107",
+    "N812", "N817",
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004",
+    "PLW0603", "PLW2901",
+]
+
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+
+"__init__.py" = ["E402", "F401", "F403", "F811"]
+
+[tool.ruff.lint.isort]
+
+known-first-party = ["openlch", "tests"]
+combine-as-imports = true
+
+[tool.ruff.lint.pydocstyle]
+
+convention = "google"
