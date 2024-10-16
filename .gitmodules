@@ -10,3 +10,6 @@
 [submodule "models/tpu-mlir"]
 	path = models/tpu-mlir
 	url = https://github.com/milkv-duo/tpu-mlir.git
+[submodule "runtime/tonic"]
+	path = runtime/tonic
+	url = https://github.com/hyperium/tonic.git

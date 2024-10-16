@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use anyhow::{Result, bail, Context};
 use std::sync::Arc;
 use std::sync::Mutex;
-use crate::hal::{ServoInfo, ServoRegister, ServoData, ServoMultipleWriteCommand, ServoMode, ServoDirection, TorqueMode, MemoryLockState, IMUData, MAX_SERVOS};
+use crate::hal::{ServoInfo, ServoRegister, ServoData, ServoMultipleWriteCommand, TorqueMode, ServoMode, ServoDirection, MemoryLockState, IMUData, MAX_SERVOS};
 use std::env;
 
 // Constants
