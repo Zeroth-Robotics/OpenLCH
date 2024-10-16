@@ -1,23 +1,28 @@
 mod controller;
 mod model;
+mod robot;
 
+use crate::robot::Robot;
+use crate::model::Model;
 use anyhow::{Context, Result};
-use runtime::hal;
+// use runtime::hal; 
 use std::path::PathBuf;
-use std::env;
-use runtime::model::Model;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // initialize robot
-    let robot = robot::Robot::new().context("Failed to initialize robot")?;
+    // // load model
+    // let model_path = PathBuf::from("/root/models/ppo_walking.cvimodel"); // PATH IN MILK-V
+    // let model = Model::new(model_path).context("Failed to load model")?;
+    // let model = Arc::new(model);
 
-    // load model
-    let model_path = PathBuf::from("/root/models/ppo_walking.cvimodel"); // PATH IN MILK-V
-    let model = Model::new(model_path).context("Failed to load model")?;
-    let model_arc = Arc::new(model);
+    // // initialize robot
+    // let robot = Robot::new()?;
+    // let robot = Arc::new(Mutex::new(robot));
+    // robot.lock().unwrap().initialize().await?;
 
-    // run controller
-    controller::main(model_arc, robot).await.context("Controller encountered an error")
+    // // run controller
+    // controller::run(model, robot).await.context("Controller encountered an error")
+
+    Ok(())
 }
