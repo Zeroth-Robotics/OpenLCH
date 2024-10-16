@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = []
-milkv = ["i2cdev"]
+default = ["use_ort"]
+milkv = []
+use_ort = ["ort"]
 
 [lib]
 name = "runtime"
