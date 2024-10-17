@@ -41,6 +41,7 @@ pub struct ServoCommand {
     pub data: Vec<u8>,
 }
 
+#[derive(Debug)]
 pub struct ServoSerial {
     port: Box<dyn SerialPort>,
 }
@@ -359,6 +360,7 @@ impl ServoSerial {
     }
 }
 
+#[derive(Debug)]
 pub struct Servo {
     serial: Arc<Mutex<ServoSerial>>,
 }
@@ -516,6 +518,31 @@ impl Servo {
             Ok(_) => Ok(false),
             Err(_) => Ok(false),
         }
+    }
+
+    pub fn degrees_to_raw(degrees: f32) -> u16 {
+        // Ensure the input is within the valid range
+        let clamped_degrees = degrees.max(-180.0).min(180.0);
+        
+        // Convert degrees to raw value
+        let raw = (clamped_degrees + 180.0) / 360.0 * 4096.0;
+        
+        // Round to nearest integer and ensure it's within the valid range
+        raw.round().max(0.0).min(4095.0) as u16
+    }
+
+    pub fn raw_to_degrees(raw: u16) -> f32 {
+        // Ensure the input is within the valid range
+        let clamped_raw = raw.max(0).min(4095);
+        
+        // Convert raw value to degrees
+        let degrees = (clamped_raw as f32 / 4096.0) * 360.0 - 180.0;
+        
+        // Round to two decimal places
+        (degrees * 100.0).round() / 100.0;
+
+        // clamp to -180.0 to 180.0
+        degrees.max(-180.0).min(180.0)
     }
 
     pub fn enable_readout(&self) -> Result<()> {
