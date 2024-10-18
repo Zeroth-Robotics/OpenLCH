@@ -1,4 +1,5 @@
 use tonic::{transport::Server, Request, Response, Status};
+use tower_http::cors::CorsLayer;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use anyhow::Result;
@@ -185,8 +186,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
     let servo_control = StsServoControl::new()?;
 
+    let service = tower::ServiceBuilder::new()
+        .layer(tonic_web::GrpcWebLayer::new())
+        .service(ServoControlServer::new(servo_control));
+
     Server::builder()
-        .add_service(ServoControlServer::new(servo_control))
+        // GrpcWeb is over http1 so we must enable it.
+        .accept_http1(true)
+        .layer(CorsLayer::permissive())
+        .add_service(service)
         .serve(addr)
         .await?;
 
