@@ -26,8 +26,11 @@ clap = { version = "4.5.19", features = ["derive"] }
 serde_json = "1.0.128"
 chrono = "0.4.38"
 tonic = { git = "https://github.com/hatomist/tonic-milkv.git" }
+tonic-web = { git = "https://github.com/hatomist/tonic-milkv.git" }
 prost = "0.13"
 tokio = { version = "1.40.0", features = ["full", "macros", "rt-multi-thread"] }
+tower= "0.5"
+tower-http = "0.6"
 
 # Conditional dependencies
 i2cdev = { version = "0.6.1", optional = true }
