@@ -59,7 +59,7 @@ impl ServoControl for StsServoControl {
     async fn set_positions(&self, request: Request<JointPositions>) -> Result<Response<Empty>, Status> {
         let positions = request.into_inner();
         let servo = self.servo.lock().await;
-        let last_positions = self.last_positions.lock().await;
+        let mut last_positions = self.last_positions.lock().await;
         
         let mut cmd = ServoMultipleWriteCommand {
             only_write_positions: 1,
@@ -81,6 +81,8 @@ impl ServoControl for StsServoControl {
             // You can set times and speeds here if needed
             cmd.times[i] = 0;
             cmd.speeds[i] = 0;
+
+            last_positions.servo[i].current_location = Servo::degrees_to_raw(position) as u16;
         }
 
         servo.write_multiple(&cmd)
