@@ -4,70 +4,10 @@ this is for running the model on the robot
 note that all arms are not used (as it's not used in the training)
 """
 
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import onnxruntime as ort
-from dataclasses import dataclass, field
 from openlch import HAL
 
-
-# @dataclass
-# class JointData:
-#     position : float = 0.0
-#     velocity : float = 0.0
-
-# @dataclass
-# class LegData:
-#     hip_roll : JointData = field(default_factory=JointData)
-#     hip_yaw : JointData = field(default_factory=JointData)
-#     hip_pitch : JointData = field(default_factory=JointData)
-#     knee_pitch : JointData = field(default_factory=JointData)
-#     ankle_pitch : JointData = field(default_factory=JointData)
-
-#     def set_feedback(self, position_feedback : list, velocity_feedback : list) -> None:
-#         self.hip_roll.position = position_feedback[0]
-#         self.hip_yaw.position = position_feedback[1]
-#         self.hip_pitch.position = position_feedback[2]
-#         self.knee_pitch.position = position_feedback[3]
-#         self.ankle_pitch.position = position_feedback[4]
-
-#         self.hip_roll.velocity = velocity_feedback[0]
-#         self.hip_yaw.velocity = velocity_feedback[1]
-#         self.hip_pitch.velocity = velocity_feedback[2]
-#         self.knee_pitch.velocity = velocity_feedback[3]
-#         self.ankle_pitch.velocity = velocity_feedback[4]
-
-# @dataclass
-# class ArmData:
-#     shoulder_yaw : JointData = field(default_factory=JointData)
-#     shoulder_pitch : JointData = field(default_factory=JointData)
-#     elbow_yaw : JointData = field(default_factory=JointData)
-
-#     def set_feedback(self, position_feedback : list, velocity_feedback : list) -> None:
-#         self.shoulder_yaw.position = position_feedback[0]
-#         self.shoulder_pitch.position = position_feedback[1]
-#         self.elbow_yaw.position = position_feedback[2]
-
-#         self.shoulder_yaw.velocity = velocity_feedback[0]
-#         self.shoulder_pitch.velocity = velocity_feedback[1]
-#         self.elbow_yaw.velocity = velocity_feedback[2]
-
-# @dataclass
-# class RobotData:
-#     left_leg: LegData = field(default_factory=LegData)
-#     right_leg: LegData = field(default_factory=LegData)
-#     left_arm : ArmData = field(default_factory=ArmData)
-#     right_arm : ArmData = field(default_factory=ArmData)
-
-
-
-# def initialize_robot_data(robot_data : RobotData) -> None:
-#     robot_data.left_leg.set_feedback(get_servo_positions()[0:5], [0.0, 0.0, 0.0, 0.0, 0.0])
-#     robot_data.right_leg.set_feedback(get_servo_positions()[5:10], [0.0, 0.0, 0.0, 0.0, 0.0])
-#     # robot_data.left_arm.set_feedback(get_servo_positions()[10:13], [0.0, 0.0, 0.0])
-#     # robot_data.right_arm.set_feedback(get_servo_positions()[13:16], [0.0, 0.0, 0.0])
-#     print("robot data initialized: ", robot_data)
 
 
 def get_velocities(current_positions : list, previous_positions : list, dt : float) -> list:
@@ -132,7 +72,6 @@ def inference(session : ort.InferenceSession #, robot_data : RobotData
             input_data["dof_vel.1"] = (current_positions - prev_positions) / dt
         prev_positions = current_positions
 
-        # print(f"Position: {positions}")
 
         ### ====[ SEND TO ROBOT ]=== ###
 
@@ -142,31 +81,12 @@ def inference(session : ort.InferenceSession #, robot_data : RobotData
         # send to robot
         set_servo_positions(positions_list)
 
-        # print(f"Positions List: {positions_list}")
-        # update robot data
-        # robot_data.left_leg.set_feedback(positions_list[0:5], velocity_list[0:5])
-        # robot_data.right_leg.set_feedback(positions_list[5:10], velocity_list[5:10])
-
-        # print robot for each leg data
-        # print(f"Left Leg: {robot_data.left_leg.hip_roll.position}, {robot_data.left_leg.hip_yaw.position}, {robot_data.left_leg.hip_pitch.position}, {robot_data.left_leg.knee_pitch.position}, {robot_data.left_leg.ankle_pitch.position}")
-        # print(f"Right Leg: {robot_data.right_leg.hip_roll.position}, {robot_data.right_leg.hip_yaw.position}, {robot_data.right_leg.hip_pitch.position}, {robot_data.right_leg.knee_pitch.position}, {robot_data.right_leg.ankle_pitch.position}")
-
-
-
-    # for i, line in enumerate(lines):
-    #     line.set_data(time_data, position_data[i])
-    # ax.relim()
-    # ax.autoscale_view()
-
-    # plt.show()
 
 
 
 if __name__ == "__main__":
 
     hal = HAL()
-    # robot_data = RobotData()
-    # initialize_robot_data(robot_data)
 
     MODEL_PATH = "standing_micro.onnx"
     session = ort.InferenceSession(MODEL_PATH)
