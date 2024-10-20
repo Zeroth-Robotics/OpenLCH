@@ -36,7 +36,7 @@ impl StsServoControl {
 #[tonic::async_trait]
 impl ServoControl for StsServoControl {
     async fn get_positions(&self, _request: Request<Empty>) -> Result<Response<JointPositions>, Status> {
-        let servo = self.servo.lock().await;
+        let servo: tokio::sync::MutexGuard<'_, Servo> = self.servo.lock().await;
         let servo_data = servo.read_continuous().map_err(|e| Status::internal(e.to_string()))?;
         
         // Update last_positions
@@ -133,6 +133,9 @@ network={{
         let servo = self.servo.lock().await;
         
         let servo_info = servo.read_info(id).map_err(|e| Status::internal(e.to_string()))?;
+        let (min_position, max_position) = servo.read_angle_limits(id).map_err(|e| Status::internal(e.to_string()))?;
+        let min_position = Servo::raw_to_degrees(min_position as u16);
+        let max_position = Servo::raw_to_degrees(max_position as u16);
         
         let info = ServoInfo {
             id: id as i32,
@@ -141,6 +144,8 @@ network={{
             voltage: ((servo_info.current_voltage as f32 / 10.0) * 10.0).round() / 10.0,
             speed: servo_info.current_speed as f32 / 4096.0 * 360.0,
             current_position: Servo::raw_to_degrees(servo_info.current_location as u16),
+            min_position: min_position as f32,
+            max_position: max_position as f32,
         };
         Ok(Response::new(ServoInfoResponse {
             result: Some(servo_info_response::Result::Info(info)),

@@ -38,6 +38,8 @@ message ServoInfo {
   float voltage = 4;
   float speed = 5;
   float current_position = 6;
+  float min_position = 7;
+  float max_position = 8;
 }
 
 message ServoInfoResponse {
