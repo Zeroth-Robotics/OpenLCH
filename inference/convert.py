@@ -6,6 +6,7 @@ import torch
 from torch import Tensor, nn
 from torch.distributions import Normal
 
+# FIXME: update this to match the Micro Stompy model
 DOF_NAMES = [
     "L_hip_y",
     "L_hip_x",
@@ -19,28 +20,6 @@ DOF_NAMES = [
     "R_ankle_y",
 ]
 
-BODY_NAMES = [
-    "base",
-    "trunk",
-    "L_buttock",
-    "L_leg",
-    "L_thigh",
-    "L_calf",
-    "L_foot",
-    "L_clav",
-    "L_scapula",
-    "L_uarm",
-    "L_farm",
-    "R_buttock",
-    "R_leg",
-    "R_thigh",
-    "R_calf",
-    "R_foot",
-    "R_clav",
-    "R_scapula",
-    "R_uarm",
-    "R_farm",
-]
 
 DEFAULT_JOINT_ANGLES = {
     "L_ankle_y": -0.258,
@@ -218,7 +197,7 @@ class Actor(nn.Module):
 
 
 def convert() -> None:
-    all_weights = torch.load("position_control.pt", map_location="cpu", weights_only=True)
+    all_weights = torch.load("model_3001.pt", map_location="cpu", weights_only=True)
     weights = all_weights["model_state_dict"]
     num_actor_obs = weights["actor.0.weight"].shape[1]
     num_critic_obs = weights["critic.0.weight"].shape[1]
@@ -251,7 +230,7 @@ def convert() -> None:
     # a_model(*input_tensors)
 
     jit_model = torch.jit.script(a_model)
-    torch.onnx.export(jit_model, input_tensors, "position_control.onnx")
+    torch.onnx.export(jit_model, input_tensors, "standing_micro.onnx")
 
 
 if __name__ == "__main__":
