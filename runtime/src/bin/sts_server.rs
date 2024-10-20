@@ -6,6 +6,7 @@ use anyhow::Result;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::process::Command;
 
 pub mod servo_control {
     tonic::include_proto!("hal_pb");
@@ -112,6 +113,12 @@ network={{
             .map_err(|e| Status::internal(format!("Failed to write to file: {}", e)))?;
 
         println!("WiFi configuration written to /boot/wpa_supplicant.conf");
+
+        match Command::new("sync").output() {
+            Ok(_) => println!("Sync command executed successfully"),
+            Err(e) => eprintln!("Failed to execute sync command: {}", e),
+        }
+
         Ok(Response::new(Empty {}))
     }
 
