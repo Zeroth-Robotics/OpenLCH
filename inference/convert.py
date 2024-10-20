@@ -1,4 +1,7 @@
-"""Script to convert weights to Rust-compatible format."""
+"""Script to convert weights (.pt) to ONNX (.onx) to be runtime compitable.
+
+Note that the weights MUST be from logs (Dict State) and not from train or play (TorchScript) in sim.
+"""
 
 import re
 
