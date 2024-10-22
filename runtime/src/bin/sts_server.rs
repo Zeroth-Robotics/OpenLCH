@@ -7,19 +7,26 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;
+use std::net::IpAddr;
+use regex::Regex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tokio::task;
+use std::time::Duration;
 
 pub mod servo_control {
     tonic::include_proto!("hal_pb");
 }
 
 use servo_control::servo_control_server::{ServoControl, ServoControlServer};
-use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response};
-use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand, ServoData};
+use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection};
+use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus};
 
 #[derive(Debug)]
 pub struct StsServoControl {
     servo: Arc<Mutex<Servo>>,
     last_positions: Arc<Mutex<ServoData>>,
+    calibrating_servo: Arc<Mutex<Option<u8>>>,
+    calibration_running: Arc<AtomicBool>,
 }
 
 impl StsServoControl {
@@ -30,7 +37,89 @@ impl StsServoControl {
         Ok(Self {
             servo: Arc::new(Mutex::new(servo)),
             last_positions: Arc::new(Mutex::new(initial_data)),
+            calibrating_servo: Arc::new(Mutex::new(None)),
+            calibration_running: Arc::new(AtomicBool::new(false)),
         })
+    }
+
+    fn get_interface_ip(interface: &str) -> Option<IpAddr> {
+        let output = Command::new("ip")
+            .args(&["addr", "show", interface])
+            .output()
+            .ok()?;
+        
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let ip_regex = Regex::new(r"inet\s+(\d+\.\d+\.\d+\.\d+)").ok()?;
+        
+        ip_regex.captures(&output_str)
+            .and_then(|cap| cap.get(1))
+            .and_then(|m| m.as_str().parse().ok())
+    }
+
+    async fn calibrate_servo(&self, servo_id: u8, calibration_speed: u16, current_threshold: f32) -> Result<(), Status> {
+        let servo = self.servo.clone();
+        let calibrating_servo = self.calibrating_servo.clone();
+        let calibration_running = self.calibration_running.clone();
+
+        task::spawn(async move {
+            let servo = servo.lock().await;
+            servo.disable_readout().unwrap();
+            servo.set_mode(servo_id, ServoMode::ConstantSpeed).unwrap();
+
+            let mut max_forward = 0;
+            let mut max_backward = 0;
+
+            for pass in 0..2 {
+                let direction = if pass == 0 { ServoDirection::Clockwise } else { ServoDirection::Counterclockwise };
+                servo.set_speed(servo_id, calibration_speed, direction).unwrap();
+
+                loop {
+                    if !calibration_running.load(Ordering::SeqCst) {
+                        servo.set_speed(servo_id, 0, ServoDirection::Clockwise).unwrap();
+                        return;
+                    }
+
+                    let info = servo.read_info(servo_id).unwrap();
+                    let position = info.current_location;
+                    let current = info.current_current as f32 * 6.5 / 100.0;
+
+                    if current > current_threshold {
+                        servo.set_speed(servo_id, 0, direction).unwrap();
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+
+                        servo.set_speed(servo_id, calibration_speed, opposite_direction(direction)).unwrap();
+                        tokio::time::sleep(Duration::from_millis(350)).await;
+
+                        servo.set_speed(servo_id, 0, opposite_direction(direction)).unwrap();
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+
+                        let info = servo.read_info(servo_id).unwrap();
+
+                        if direction == ServoDirection::Clockwise {
+                            max_forward = info.current_location;
+                        } else {
+                            max_backward = info.current_location;
+                        }
+
+                        break;
+                    }
+
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+
+                if pass < 1 {
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+                }
+            }
+
+            // ... (rest of the calibration logic, similar to sts_calibration.rs)
+
+            servo.enable_readout().unwrap();
+            *calibrating_servo.lock().await = None;
+            calibration_running.store(false, Ordering::SeqCst);
+        });
+
+        Ok(())
     }
 }
 
@@ -60,6 +149,11 @@ impl ServoControl for StsServoControl {
         let positions = request.into_inner();
         let servo = self.servo.lock().await;
         let mut last_positions = self.last_positions.lock().await;
+        let calibration_running = self.calibration_running.clone();
+
+        if calibration_running.load(Ordering::SeqCst) {
+            return Err(Status::internal("Calibration is in progress"));
+        }
         
         let mut cmd = ServoMultipleWriteCommand {
             only_write_positions: 1,
@@ -82,7 +176,7 @@ impl ServoControl for StsServoControl {
             cmd.times[i] = 0;
             cmd.speeds[i] = 0;
 
-            last_positions.servo[i].current_location = Servo::degrees_to_raw(position) as u16;
+            last_positions.servo[i].current_location = Servo::degrees_to_raw(position) as i16;
         }
 
         servo.write_multiple(&cmd)
@@ -192,6 +286,111 @@ network={{
                 })),
             }))
         }
+    }
+
+    async fn start_calibration(&self, request: Request<ServoId>) -> Result<Response<CalibrationResponse>, Status> {
+        let servo_id = request.into_inner().id as u8;
+        let mut calibrating_servo = self.calibrating_servo.lock().await;
+
+        if calibrating_servo.is_some() {
+            return Ok(Response::new(CalibrationResponse {
+                result: Some(servo_control::calibration_response::Result::Error(servo_control::ErrorInfo {
+                    message: "Another calibration is already in progress".to_string(),
+                    code: 1,
+                })),
+            }));
+        }
+
+        *calibrating_servo = Some(servo_id);
+        self.calibration_running.store(true, Ordering::SeqCst);
+        
+        // Start calibration in a separate task
+        let calibration_speed = 150; // You may want to make this configurable
+        let current_threshold = 200.0; // You may want to make this configurable
+        self.calibrate_servo(servo_id, calibration_speed, current_threshold).await?;
+
+        Ok(Response::new(CalibrationResponse {
+            result: Some(servo_control::calibration_response::Result::Success(true)),
+        }))
+    }
+
+    async fn cancel_calibration(&self, _request: Request<ServoId>) -> Result<Response<CalibrationResponse>, Status> {
+        let mut calibrating_servo = self.calibrating_servo.lock().await;
+
+        if calibrating_servo.is_none() {
+            return Ok(Response::new(CalibrationResponse {
+                result: Some(servo_control::calibration_response::Result::Error(servo_control::ErrorInfo {
+                    message: "No calibration is currently in progress".to_string(),
+                    code: 2,
+                })),
+            }));
+        }
+
+        self.calibration_running.store(false, Ordering::SeqCst);
+        *calibrating_servo = None;
+
+        Ok(Response::new(CalibrationResponse {
+            result: Some(servo_control::calibration_response::Result::Success(true)),
+        }))
+    }
+
+    async fn start_video_stream(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
+        // Stub implementation
+        Ok(Response::new(Empty {}))
+    }
+
+    async fn stop_video_stream(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
+        // Stub implementation
+        Ok(Response::new(Empty {}))
+    }
+
+    async fn get_video_stream_urls(&self, _request: Request<Empty>) -> Result<Response<VideoStreamUrls>, Status> {
+        let usb0_ip = Self::get_interface_ip("usb0").unwrap_or(IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)));
+        let wlan0_ip = Self::get_interface_ip("wlan0").unwrap_or(IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)));
+        let stream_id = "s1";
+        let channel_id = "0";
+
+        let make_url = |ip: IpAddr, protocol: &str, port: u16, path: &str| -> String {
+            format!("{}://{}:{}{}", protocol, ip, port, path)
+        };
+
+        let create_urls = |ip: IpAddr| -> (String, String, String, String, String) {
+            (
+                make_url(ip, "http", 8083, &format!("/stream/{}/channel/{}/webrtc", stream_id, channel_id)),
+                make_url(ip, "http", 8083, &format!("/stream/{}/channel/{}/hls/live/index.m3u8", stream_id, channel_id)),
+                make_url(ip, "http", 8083, &format!("/stream/{}/channel/{}/hlsll/live/index.m3u8", stream_id, channel_id)),
+                make_url(ip, "ws", 8083, &format!("/stream/{}/channel/{}/mse?uuid={}&channel={}", stream_id, channel_id, stream_id, channel_id)),
+                make_url(ip, "rtsp", 553, &format!("/{}/{}", stream_id, channel_id)),
+            )
+        };
+
+        let (usb0_webrtc, usb0_hls, usb0_hls_ll, usb0_mse, usb0_rtsp) = create_urls(usb0_ip);
+        let (wlan0_webrtc, wlan0_hls, wlan0_hls_ll, wlan0_mse, wlan0_rtsp) = create_urls(wlan0_ip);
+
+        let urls = VideoStreamUrls {
+            webrtc: vec![usb0_webrtc, wlan0_webrtc],
+            hls: vec![usb0_hls, wlan0_hls],
+            hls_ll: vec![usb0_hls_ll, wlan0_hls_ll],
+            mse: vec![usb0_mse, wlan0_mse],
+            rtsp: vec![usb0_rtsp, wlan0_rtsp],
+        };
+
+        Ok(Response::new(urls))
+    }
+
+    async fn get_calibration_status(&self, _request: Request<Empty>) -> Result<Response<CalibrationStatus>, Status> {
+        let calibrating_servo = self.calibrating_servo.lock().await;
+        Ok(Response::new(CalibrationStatus {
+            is_calibrating: calibrating_servo.is_some(),
+            calibrating_servo_id: calibrating_servo.unwrap_or(0) as i32,
+        }))
+    }
+}
+
+fn opposite_direction(direction: ServoDirection) -> ServoDirection {
+    match direction {
+        ServoDirection::Clockwise => ServoDirection::Counterclockwise,
+        ServoDirection::Counterclockwise => ServoDirection::Clockwise,
     }
 }
 
