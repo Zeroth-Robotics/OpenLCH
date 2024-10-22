@@ -1,4 +1,4 @@
-TARGETS = efuse efuse_write_serial efuse_read_serial
+TARGETS = efuse efuse_read_serial
 
 ifeq (,$(TOOLCHAIN_PREFIX))
 $(error TOOLCHAIN_PREFIX is not set)
