@@ -19,6 +19,7 @@ pub mod servo_control {
 
 use servo_control::servo_control_server::{ServoControl, ServoControlServer};
 use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection, ServoRegister};
+use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection, ServoRegister};
 use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus};
 
 #[derive(Debug)]
@@ -61,9 +62,13 @@ impl StsServoControl {
         let calibrating_servo = self.calibrating_servo.clone();
         let calibration_running = self.calibration_running.clone();
 
+        println!("Starting calibration for servo {}", servo_id);
+
         task::spawn(async move {
             let servo = servo.lock().await;
+            println!("Acquired servo lock");
             servo.disable_readout().unwrap();
+            println!("Disabled readout");
             servo.set_mode(servo_id, ServoMode::ConstantSpeed).unwrap();
 
             servo.write_servo_memory(servo_id, runtime::hal::ServoRegister::TorqueLimit, 150).unwrap();
@@ -72,6 +77,7 @@ impl StsServoControl {
             let mut max_backward = 0;
 
             for pass in 0..2 {
+                println!("Starting pass {}", pass);
                 let direction = if pass == 0 { ServoDirection::Clockwise } else { ServoDirection::Counterclockwise };
                 servo.set_speed(servo_id, calibration_speed, direction).unwrap();
 
@@ -79,6 +85,7 @@ impl StsServoControl {
 
                 loop {
                     if !calibration_running.load(Ordering::SeqCst) {
+                        println!("Calibration cancelled");
                         servo.set_speed(servo_id, 0, ServoDirection::Clockwise).unwrap();
                         return;
                     }
@@ -90,8 +97,16 @@ impl StsServoControl {
                         info = servo.read_info(servo_id).unwrap();
                         retry_count += 1;
                     }
+                    let mut info = servo.read_info(servo_id).unwrap();
+                    let mut retry_count = 0;
+                    while info.current_current == 0 && info.current_location == 0 && retry_count < 3 {
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        info = servo.read_info(servo_id).unwrap();
+                        retry_count += 1;
+                    }
                     let position = info.current_location;
                     let current = info.current_current as f32 * 6.5 / 100.0;
+                    println!("Position: {}, Current: {}", position, current);
 
                     if current > current_threshold {
                         threshold_exceeded_count += 1;
@@ -110,6 +125,7 @@ impl StsServoControl {
                             tokio::time::sleep(Duration::from_millis(100)).await;
 
                             let info = servo.read_info(servo_id).unwrap();
+                            let info = servo.read_info(servo_id).unwrap();
 
                             if direction == ServoDirection::Clockwise {
                                 max_forward = info.current_location;
@@ -121,12 +137,17 @@ impl StsServoControl {
                         }
                     } else {
                         threshold_exceeded_count = 0;
+                            break;
+                        }
+                    } else {
+                        threshold_exceeded_count = 0;
                     }
 
                     tokio::time::sleep(Duration::from_millis(10)).await;
                 }
 
                 if pass < 1 {
+                    println!("Waiting between passes");
                     tokio::time::sleep(Duration::from_millis(500)).await;
                 }
             }
@@ -138,10 +159,79 @@ impl StsServoControl {
             servo.write(servo_id, ServoRegister::LockMark, &[1]).unwrap();
 
             servo.enable_readout().unwrap();
+            println!("Enabled readout");
             *calibrating_servo.lock().await = None;
             calibration_running.store(false, Ordering::SeqCst);
             Self::calculate_and_write_calibration(servo_id, &servo, max_backward, max_forward).await.unwrap();
         });
+
+        Ok(())
+    }
+
+    async fn calculate_and_write_calibration(servo_id: u8, servo: &Servo, min_pos: i16, max_pos: i16) -> Result<(), Status> {
+        let mut max_pos = max_pos;
+
+        if max_pos < min_pos {
+            max_pos += 4096;
+        }
+    
+        let offset_value = min_pos + (max_pos - min_pos) / 2 - 2048;
+    
+        // Convert offset to 12-bit signed value
+        let offset_value = if offset_value < 0 {
+            offset_value.abs() as u16 | 0x800 // (set negative bit)
+        } else {
+            if offset_value > 2048 {
+                (offset_value - 4096).abs() as u16 | 0x800
+            } else {
+                offset_value as u16
+            }
+        };
+    
+        // Calculate new limits
+        let min_angle = 2048 - (max_pos - min_pos) / 2;
+        let max_angle = 2048 + (max_pos - min_pos) / 2;
+
+        println!("Writing calibration, offset: {}, min_angle: {}, max_angle: {}", offset_value, min_angle, max_angle);
+
+        // Unlock EEPROM
+        servo.write(servo_id, ServoRegister::LockMark, &[0])
+            .map_err(|e| Status::internal(format!("Failed to unlock EEPROM: {}", e)))?;
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        // Write new offset
+        servo.write_servo_memory(servo_id, ServoRegister::PositionCorrection, offset_value)
+            .map_err(|e| Status::internal(format!("Failed to write offset: {}", e)))?;
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        // Write new limits
+        for _ in 0..3 {
+            servo.write_servo_memory(servo_id, ServoRegister::MinAngleLimit, min_angle as u16)
+                .map_err(|e| Status::internal(format!("Failed to write MinAngleLimit: {}", e)))?;
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            let read_min = servo.read(servo_id, ServoRegister::MinAngleLimit, 2)
+                .map_err(|e| Status::internal(format!("Failed to read MinAngleLimit: {}", e)))?;
+            let read_min = u16::from_le_bytes([read_min[0], read_min[1]]);
+            if read_min == min_angle as u16 {
+                break;
+            }
+        }
+
+        for _ in 0..3 {
+            servo.write_servo_memory(servo_id, ServoRegister::MaxAngleLimit, max_angle as u16)
+                .map_err(|e| Status::internal(format!("Failed to write MaxAngleLimit: {}", e)))?;
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            let read_max = servo.read(servo_id, ServoRegister::MaxAngleLimit, 2)
+                .map_err(|e| Status::internal(format!("Failed to read MaxAngleLimit: {}", e)))?;
+            let read_max = u16::from_le_bytes([read_max[0], read_max[1]]);
+            if read_max == max_angle as u16 {
+                break;
+            }
+        }
+
+        // Lock EEPROM
+        servo.write(servo_id, ServoRegister::LockMark, &[1])
+            .map_err(|e| Status::internal(format!("Failed to lock EEPROM: {}", e)))?;
 
         Ok(())
     }
@@ -397,6 +487,8 @@ network={{
         self.calibration_running.store(true, Ordering::SeqCst);
         
         // Start calibration in a separate task
+        let calibration_speed = 300; // You may want to make this configurable
+        let current_threshold = 600.0; // You may want to make this configurable
         let calibration_speed = 300; // You may want to make this configurable
         let current_threshold = 600.0; // You may want to make this configurable
         self.calibrate_servo(servo_id, calibration_speed, current_threshold).await?;
