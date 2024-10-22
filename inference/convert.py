@@ -11,34 +11,34 @@ from torch.distributions import Normal
 
 # FIXME: update this to match the Micro Stompy model
 DOF_NAMES = [
-    "L_hip_y",
-    "L_hip_x",
-    "L_hip_z",
-    "L_knee",
-    "L_ankle_y",
-    "R_hip_y",
-    "R_hip_x",
-    "R_hip_z",
-    "R_knee",
-    "R_ankle_y",
+    "left_hip_roll",
+    "left_hip_yaw",
+    "left_hip_pitch",
+    "left_knee_pitch",
+    "left_ankle_pitch",
+    "right_hip_roll",
+    "right_hip_yaw",
+    "right_hip_pitch",
+    "right_knee_pitch",
+    "right_ankle_pitch",
 ]
 
 
 DEFAULT_JOINT_ANGLES = {
-    "L_ankle_y": -0.258,
-    "L_hip_y": -0.157,
-    "L_hip_z": 0.0628,
-    "L_hip_x": 0.0394,
-    "L_knee": 0.441,
-    "R_ankle_y": -0.223,
-    "R_hip_y": -0.22,
-    "R_hip_z": 0.0314,
-    "R_hip_x": 0.026,
-    "R_knee": 0.441,
+    "left_hip_roll": 0.0,
+    "left_hip_yaw": 0.0,
+    "left_hip_pitch": 0.0,
+    "left_knee_pitch": 0.0,
+    "left_ankle_pitch": 0.0,
+    "right_hip_roll": 0.0,
+    "right_hip_yaw": 0.0,
+    "right_hip_pitch": 0.0,
+    "right_knee_pitch": 0.0,
+    "right_ankle_pitch": 0.0,
 }
 
-STIFFNESS = {"hip_y": 120, "hip_x": 60, "hip_z": 60, "knee": 120, "ankle_y": 17}
-DAMPING = {"hip_y": 10, "hip_x": 10, "hip_z": 10, "knee": 10, "ankle_y": 5}
+STIFFNESS = {"hip_pitch": 5, "hip_yaw": 5, "hip_roll": 5, "knee_pitch": 5, "ankle_pitch": 5}
+DAMPING = {"hip_pitch": 0.3, "hip_yaw": 0.3, "hip_roll": 0.3, "knee_pitch": 0.3, "ankle_pitch": 0.3}
 
 NUM_ACTIONS = len(DOF_NAMES)
 
@@ -200,7 +200,7 @@ class Actor(nn.Module):
 
 
 def convert() -> None:
-    all_weights = torch.load("model_3001.pt", map_location="cpu", weights_only=True)
+    all_weights = torch.load("standing_micro.pt", map_location="cpu", weights_only=True)
     weights = all_weights["model_state_dict"]
     num_actor_obs = weights["actor.0.weight"].shape[1]
     num_critic_obs = weights["critic.0.weight"].shape[1]
@@ -233,7 +233,7 @@ def convert() -> None:
     # a_model(*input_tensors)
 
     jit_model = torch.jit.script(a_model)
-    torch.onnx.export(jit_model, input_tensors, "standing_micro.onnx")
+    torch.onnx.export(jit_model, input_tensors, "standing_micro_fixed.onnx")
 
 
 if __name__ == "__main__":

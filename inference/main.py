@@ -45,7 +45,6 @@ def inference(session : ort.InferenceSession, hal : HAL) -> None:
 
     prev_positions: np.ndarray | None = None
 
-
     dt = 1 / 50.0 # 50 Hz
 
     for t in range(1000):
@@ -56,9 +55,6 @@ def inference(session : ort.InferenceSession, hal : HAL) -> None:
 
         # get current positions
         current_positions = get_servo_positions(hal)
-
-
-
 
         # convert list to numpy array and change input data dof_pos
         input_data["dof_pos.1"] = np.array(current_positions).astype(np.float32)
@@ -95,7 +91,7 @@ if __name__ == "__main__":
 
     hal = HAL()
 
-    MODEL_PATH = "standing_micro.onnx"
+    MODEL_PATH = "standing_micro_fixed.onnx"
     session = ort.InferenceSession(MODEL_PATH)
 
     inference(session, hal)
