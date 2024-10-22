@@ -9,6 +9,12 @@ service ServoControl {
   rpc GetServoInfo (ServoId) returns (ServoInfoResponse);
   rpc Scan (Empty) returns (ServoIds);
   rpc ChangeId (IdChange) returns (ChangeIdResponse);
+  rpc StartCalibration (ServoId) returns (CalibrationResponse);
+  rpc CancelCalibration (ServoId) returns (CalibrationResponse);
+  rpc StartVideoStream (Empty) returns (Empty);
+  rpc StopVideoStream (Empty) returns (Empty);
+  rpc GetVideoStreamUrls (Empty) returns (VideoStreamUrls);
+  rpc GetCalibrationStatus (Empty) returns (CalibrationStatus);
 }
 
 message Empty {}
@@ -38,6 +44,8 @@ message ServoInfo {
   float voltage = 4;
   float speed = 5;
   float current_position = 6;
+  float min_position = 7;
+  float max_position = 8;
 }
 
 message ServoInfoResponse {
@@ -66,4 +74,24 @@ message ServoIds {
 message IdChange {
   int32 old_id = 1;
   int32 new_id = 2;
+}
+
+message VideoStreamUrls {
+  repeated string webrtc = 1;
+  repeated string hls = 2;
+  repeated string hls_ll = 3;
+  repeated string mse = 4;
+  repeated string rtsp = 5;
+}
+
+message CalibrationResponse {
+  oneof result {
+    bool success = 1;
+    ErrorInfo error = 2;
+  }
+}
+
+message CalibrationStatus {
+  bool is_calibrating = 1;
+  int32 calibrating_servo_id = 2;
 }
