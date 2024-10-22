@@ -4,29 +4,23 @@ import time
 import os
 import sys
 
-# Connect to PyBullet physics server
 if p.connect(p.GUI) < 0:
     print("Failed to connect to PyBullet GUI")
     sys.exit(1)
 
-# Set gravity
 p.setGravity(0, 0, 0)
 
-# Get the absolute path to the 'urdf' directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 urdf_path = os.path.join(current_dir, 'urdf')
 
-# Set additional search paths
 p.setAdditionalSearchPath(urdf_path)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-# Optional: Load a plane
 try:
     plane_id = p.loadURDF("plane.urdf")
 except p.error:
     print("Warning: Could not load plane.urdf. Continuing without it.")
 
-# Load the robot URDF
 robot_urdf_path = os.path.join(urdf_path, 'robot_fixed.urdf')
 
 if not os.path.exists(robot_urdf_path):
@@ -64,7 +58,7 @@ for i in range(num_joints):
         controllable_joints.append(i)
     print(f"Joint index: {i}, Joint Name: {joint_name}, Type: {joint_type}, Link Name: {link_name}")
 
-# Define link indices for feet
+# define link indices for feet
 right_foot_link_index = link_name_to_index.get("foot_right")
 left_foot_link_index = link_name_to_index.get("foot_left")
 
@@ -76,7 +70,8 @@ if left_foot_link_index is None:
     print("'foot_left' not found in link names")
     sys.exit(1)
 
-# Create sliders for controlling the target positions
+# FIXME: these sliders are not working
+# create sliders for controlling the target positions
 try:
     right_foot_sliders = [
         p.addUserDebugParameter("Right_Foot_X", -1, 1, 0),
@@ -99,9 +94,8 @@ except Exception as e:
     print(f"Failed to create left foot sliders: {e}")
     sys.exit(1)
 
-# Simulation loop
 while p.isConnected():
-    # Read target positions from sliders
+    # read target positions from sliders
     try:
         right_foot_target_pos = [p.readUserDebugParameter(slider) for slider in right_foot_sliders]
     except Exception as e:
@@ -114,15 +108,15 @@ while p.isConnected():
         print(f"Failed to read left foot sliders: {e}")
         sys.exit(1)
 
-    # Compute inverse kinematics for the right foot
+    # compute inverse kinematics for the right foot
     right_foot_joint_angles = p.calculateInverseKinematics(
         robot_id, right_foot_link_index, right_foot_target_pos)
 
-    # Compute inverse kinematics for the left foot
+    # compute inverse kinematics for the left foot
     left_foot_joint_angles = p.calculateInverseKinematics(
         robot_id, left_foot_link_index, left_foot_target_pos)
 
-    # Apply joint angles to the robot
+    # apply joint angles to the robot
     for i, joint_index in enumerate(controllable_joints):
         if i < len(right_foot_joint_angles):
             p.setJointMotorControl2(robot_id, joint_index, p.POSITION_CONTROL, right_foot_joint_angles[i])
@@ -132,6 +126,6 @@ while p.isConnected():
         else:
             break
 
-    # Step the simulation
+    # step the simulation
     p.stepSimulation()
     time.sleep(1./240.)
