@@ -9,12 +9,6 @@ from typing import List, Tuple, Dict
 def initialize_pybullet(gui: bool = True) -> int:
     """
     Initialize PyBullet simulation.
-
-    Args:
-        gui (bool): Whether to use GUI or DIRECT mode.
-
-    Returns:
-        int: The client ID of the simulation.
     """
     if gui:
         client_id = p.connect(p.GUI)
@@ -191,30 +185,17 @@ def get_target_positions(param_ids: Dict[str, List[int]]) -> Dict[str, List[floa
         Dict[str, List[float]]: Current target positions for each link
     """
     targets = {}
-    for link, ids in param_ids.items():
-        targets[link] = [
-            p.readUserDebugParameter(ids[0]),
-            p.readUserDebugParameter(ids[1]),
-            p.readUserDebugParameter(ids[2])
-        ]
-    return targets
-
-def visualize_targets(targets: Dict[str, List[float]], point_ids: Dict[str, int]) -> Dict[str, int]:
-    """
-    Visualize target positions with red dots.
-    
-    Args:
-        targets (Dict[str, List[float]]): Target positions for each link
-        point_ids (Dict[str, int]): Existing debug point IDs
-        
-    Returns:
-        Dict[str, int]: Updated debug point IDs
-    """
-    for link, pos in targets.items():
-        if link in point_ids:
-            p.removeUserDebugItem(point_ids[link])
-        point_ids[link] = p.addUserDebugPoints([pos], [[1, 0, 0]], pointSize=6)  # Remove the [0]
-    return point_ids
+    try:
+        for link, ids in param_ids.items():
+            targets[link] = [
+                p.readUserDebugParameter(ids[0]),
+                p.readUserDebugParameter(ids[1]),
+                p.readUserDebugParameter(ids[2])
+            ]
+        return targets
+    except p.error:
+        print("\nSimulation closed by user. Exiting...")
+        sys.exit(0)
 
 def main():
     # initialize simulation
@@ -238,24 +219,18 @@ def main():
     start_orientation = p.getQuaternionFromEuler([0, 0, 0])
     robot_id = load_robot(robot_urdf_path, start_pos, start_orientation)
 
-    # get robot joint and link info
     controllable_joints, link_name_to_index = get_robot_joints(robot_id)
 
-    # Create GUI parameters instead of hard-coded targets
     param_ids = create_position_parameters()
-    point_ids = {}  # Store debug point IDs
 
     # simulation loop
     while p.isConnected():
-        # Get current target positions from GUI
         targets = get_target_positions(param_ids)
         
-        # Visualize target positions
-        point_ids = visualize_targets(targets, point_ids)
-        
-        # move robot to target positions
         goto_position(robot_id, targets, link_name_to_index, controllable_joints)
+
         p.stepSimulation()
+
         time.sleep(1./240.)
 
 if __name__ == "__main__":
