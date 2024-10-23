@@ -61,6 +61,7 @@ void generate_mac_addresses(const unsigned char *efuse_data, unsigned char *mac1
 }
 
 int main() {
+    printf("Reading efuse data...\n");
     int fd = open(EFUSE_DEVICE, O_RDONLY);
     if (fd < 0) {
         perror("Failed to open efuse device");
@@ -82,15 +83,36 @@ int main() {
         efuse_data[i*4 + 2] = (value >> 8) & 0xFF;
         efuse_data[i*4 + 3] = value & 0xFF;
     }
+    printf("Read efuse data: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X\n",
+           efuse_data[0], efuse_data[1], efuse_data[2], efuse_data[3], efuse_data[4], efuse_data[5],
+           efuse_data[6], efuse_data[7], efuse_data[8], efuse_data[9], efuse_data[10], efuse_data[11],
+           efuse_data[12], efuse_data[13], efuse_data[14], efuse_data[15]);
 
     close(fd);
 
+    printf("Generating MAC addresses...\n");
     unsigned char mac1[MAC_SIZE], mac2[MAC_SIZE];
     generate_mac_addresses(efuse_data, mac1, mac2);
 
     printf("Generated MAC addresses based on efuse data:\n");
     printf("MAC1: %02X:%02X:%02X:%02X:%02X:%02X\n", mac1[0], mac1[1], mac1[2], mac1[3], mac1[4], mac1[5]);
     printf("MAC2: %02X:%02X:%02X:%02X:%02X:%02X\n", mac2[0], mac2[1], mac2[2], mac2[3], mac2[4], mac2[5]);
+
+    // Write MAC addresses to files
+    FILE *fp1 = fopen("/tmp/mac1", "w");
+    FILE *fp2 = fopen("/tmp/mac2", "w");
+    if (fp1 == NULL || fp2 == NULL) {
+        perror("Failed to open output files");
+        return 1;
+    }
+
+    fprintf(fp1, "%02X:%02X:%02X:%02X:%02X:%02X\n", mac1[0], mac1[1], mac1[2], mac1[3], mac1[4], mac1[5]);
+    fprintf(fp2, "%02X:%02X:%02X:%02X:%02X:%02X\n", mac2[0], mac2[1], mac2[2], mac2[3], mac2[4], mac2[5]);
+
+    fclose(fp1);
+    fclose(fp2);
+
+    printf("MAC addresses written to /tmp/mac1 and /tmp/mac2\n");
 
     return 0;
 }
