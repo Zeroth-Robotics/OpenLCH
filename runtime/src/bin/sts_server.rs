@@ -12,6 +12,7 @@ use regex::Regex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::task;
 use std::time::Duration;
+use std::env;
 
 pub mod servo_control {
     tonic::include_proto!("hal_pb");
@@ -229,6 +230,8 @@ impl StsServoControl {
     fn start_process(process_name: &str, args: &[&str]) -> Result<(), std::io::Error> {
         Command::new(process_name)
             .args(args)
+            .env("LD_LIBRARY_PATH", "/mnt/system/lib:/mnt/system/usr/lib")
+            .env("PATH", "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/mnt/system/usr/bin:/mnt/system/usr/sbin")
             .spawn()?;
         Ok(())
     }
