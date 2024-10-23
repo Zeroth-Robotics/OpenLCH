@@ -57,3 +57,6 @@ models/*_artifacts/
 
 # gitlab-ci-local
 .gitlab-ci-local/
+
+# pycache
+__pycache__/
