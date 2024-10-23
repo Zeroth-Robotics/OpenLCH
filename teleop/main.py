@@ -117,17 +117,21 @@ def goto_position(robot_id: int, targets: Dict[str, List[float]], link_name_to_i
         link_name_to_index (Dict[str, int]): Mapping from link names to indices.
         controllable_joints (List[int]): List of controllable joint indices.
     """
-    print("\nAttempting to move to targets:")
     print("-" * 50)
     # store joint angles for each target
     target_joint_angles = {}
 
     # calculate joint angles for each target
     for link_name, target_pos in targets.items():
-        print(f"\nProcessing target for {link_name} -> {target_pos}")
+        print(f"\n[INFO] Target Position for: {link_name} -> {target_pos}")
+        link_index = link_name_to_index.get(link_name)
+        if link_index is not None:
+            current_pos = p.getLinkState(robot_id, link_index)[0]
+            print(f"[INFO] Current Position for: {link_name} -> {current_pos}")
+        
         joint_angles = calculate_inverse_kinematics(robot_id, link_name, target_pos, link_name_to_index)
         if joint_angles:
-            print(f"Calculated joint angles: {joint_angles}")
+            # print(f"\n[INFO] Calculated joint angles: {joint_angles}")
             target_joint_angles[link_name] = joint_angles
         else:
             print(f"Failed to calculate joint angles for {link_name}")
@@ -141,10 +145,10 @@ def goto_position(robot_id: int, targets: Dict[str, List[float]], link_name_to_i
                 joint_angles[i] += angles[i]
         joint_angles = [angle / len(target_joint_angles) for angle in joint_angles]
 
-        print("\nApplying joint angles:")
+        # print("\nApplying joint angles:")
         # apply the joint angles
         for i, joint_index in enumerate(controllable_joints):
-            print(f"Setting joint {joint_index} to {joint_angles[i]}")
+            # print(f"Setting joint {joint_index} to {joint_angles[i]}")
             p.setJointMotorControl2(
                 robot_id, joint_index, p.POSITION_CONTROL, targetPosition=joint_angles[i])
     else:
