@@ -33,7 +33,7 @@
       <origin xyz="0.0006379977765356807 0.0037125891477163145 -0.0018039549717621631" rpy="0 0 0" />
     </inertial>
   </link>
-  <joint name="right_shoulder_pitch" type="fixed">
+  <joint name="right_shoulder_pitch" type="revolute">
     <origin xyz="-0.07813646375169968 -0.0003355559182753147 0.04305328991827533" rpy="1.5707963 2.220446049250313e-16 1.5707963" />
     <parent link="Torso" />
     <child link="shoulder_yaw_right" />
@@ -62,7 +62,7 @@
       <origin xyz="-0.00037600968 -0.0036566476 -0.017432914" rpy="0 0 0" />
     </inertial>
   </link>
-  <joint name="left_shoulder_pitch" type="fixed">
+  <joint name="left_shoulder_pitch" type="revolute">
     <origin xyz="0.0781635406483003 -0.0003355560817246521 0.04305329008172466" rpy="-1.5707963071795865 0.0 1.5707963000000003" />
     <parent link="Torso" />
     <child link="shoulder_yaw_left" />
@@ -91,7 +91,7 @@
       <origin xyz="-0.00037590896 0.0036565205 -0.017432695" rpy="0 0 0" />
     </inertial>
   </link>
-  <joint name="right_shoulder_yaw" type="fixed">
+  <joint name="right_shoulder_yaw" type="revolute">
     <origin xyz="-0.018825 -0.01629921 -0.03" rpy="3.1415927 -1.5707963 0" />
     <parent link="shoulder_yaw_right" />
     <child link="right_shoulder_yaw_motor" />
@@ -178,7 +178,7 @@
       <origin xyz="-0.007776157110492239 0.010188687432665504 0.015271760814946028" rpy="0 0 0" />
     </inertial>
   </link>
-  <joint name="left_shoulder_yaw" type="fixed">
+  <joint name="left_shoulder_yaw" type="revolute">
     <origin xyz="-0.018825 0.01629921 -0.03" rpy="3.1415927 1.5707963 0" />
     <parent link="shoulder_yaw_left" />
     <child link="left_shoulder_yaw_motor" />
@@ -265,7 +265,7 @@
       <origin xyz="-5.2212826152564546e-05 0.04271835909112089 0.027962565619545642" rpy="0 0 0" />
     </inertial>
   </link>
-  <joint name="right_elbow_yaw" type="fixed">
+  <joint name="right_elbow_yaw" type="revolute">
     <origin xyz="-0.03000311610855749 0.06434189253104221 0.00025000101875458525" rpy="8.847213864293657e-08 -1.9613800805728943e-08 0.4363323099999996" />
     <parent link="right_shoulder_yaw_motor" />
     <child link="Left_Hand" />
@@ -294,7 +294,7 @@
       <origin xyz="0.0011184952 0.046132358 0.018254412" rpy="0 0 0" />
     </inertial>
   </link>
-  <joint name="left_elbow_yaw" type="fixed">
+  <joint name="left_elbow_yaw" type="revolute">
     <origin xyz="0.03000311710160605 -0.06434189183411612 -0.0002500013458960012" rpy="-3.141592607179586 -2.220446049250313e-16 0.43633231000000006" />
     <parent link="left_shoulder_yaw_motor" />
     <child link="hand_right" />
