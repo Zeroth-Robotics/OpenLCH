@@ -1,9 +1,0 @@
-openlch
-matplotlib
-numpy
-torch
-onnx
-onnxruntime
-onnxscript
-matplotlib
-PyQt5
