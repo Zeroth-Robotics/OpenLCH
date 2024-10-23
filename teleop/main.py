@@ -154,6 +154,68 @@ def goto_position(robot_id: int, targets: Dict[str, List[float]], link_name_to_i
     else:
         print("No valid targets provided.")
 
+def create_position_parameters() -> Dict[str, List[int]]:
+    """
+    Create GUI parameters for target positions.
+    
+    Returns:
+        Dict[str, List[int]]: Dictionary mapping link names to their parameter IDs
+    """
+    param_ids = {}
+    
+    # Define the links and their default positions
+    links = {
+        'Left_Hand': [-0.15, 0.05, 0.4],
+        'hand_right': [0.15, 0.05, 0.4],
+        'foot_left': [0.1, -0.1, 0.3],
+        'foot_right': [-0.1, -0.1, 0.3]
+    }
+    
+    for link, default_pos in links.items():
+        param_ids[link] = [
+            p.addUserDebugParameter(f"{link}_x", -1, 1, default_pos[0]),
+            p.addUserDebugParameter(f"{link}_y", -1, 1, default_pos[1]),
+            p.addUserDebugParameter(f"{link}_z", 0, 1, default_pos[2])
+        ]
+    
+    return param_ids
+
+def get_target_positions(param_ids: Dict[str, List[int]]) -> Dict[str, List[float]]:
+    """
+    Get current target positions from GUI parameters.
+    
+    Args:
+        param_ids (Dict[str, List[int]]): Dictionary mapping link names to their parameter IDs
+        
+    Returns:
+        Dict[str, List[float]]: Current target positions for each link
+    """
+    targets = {}
+    for link, ids in param_ids.items():
+        targets[link] = [
+            p.readUserDebugParameter(ids[0]),
+            p.readUserDebugParameter(ids[1]),
+            p.readUserDebugParameter(ids[2])
+        ]
+    return targets
+
+def visualize_targets(targets: Dict[str, List[float]], point_ids: Dict[str, int]) -> Dict[str, int]:
+    """
+    Visualize target positions with red dots.
+    
+    Args:
+        targets (Dict[str, List[float]]): Target positions for each link
+        point_ids (Dict[str, int]): Existing debug point IDs
+        
+    Returns:
+        Dict[str, int]: Updated debug point IDs
+    """
+    for link, pos in targets.items():
+        if link in point_ids:
+            p.removeUserDebugItem(point_ids[link])
+        point_ids[link] = p.addUserDebugPoints([pos], [[1, 0, 0]], pointSize=6)  # Remove the [0]
+    return point_ids
+
 def main():
     # initialize simulation
     client_id = initialize_pybullet(gui=True)
@@ -179,31 +241,18 @@ def main():
     # get robot joint and link info
     controllable_joints, link_name_to_index = get_robot_joints(robot_id)
 
-    # define target positions with correct link names
-    targets = {
-        'foot_right': [-0.1, -0.1, 0.3],
-        'foot_left': [0.1, -0.1, 0.3],
-        'Left_Hand': [-0.15, 0.05, 0.4],  
-        'hand_right': [0.15, 0.05, 0.4],  
-    }
-
-    print("\nTarget Positions:")
-    print("-" * 50)
-    for link, pos in targets.items():
-        print(f"{link}: {pos}")
-
-    # visualize target positions
-    for pos in targets.values():
-        sphere_visual = p.createVisualShape(shapeType=p.GEOM_SPHERE, radius=0.01, rgbaColor=[1, 0, 0, 1])
-        p.createMultiBody(
-            baseMass=0,
-            baseCollisionShapeIndex=-1,
-            baseVisualShapeIndex=sphere_visual,
-            basePosition=pos
-        )
+    # Create GUI parameters instead of hard-coded targets
+    param_ids = create_position_parameters()
+    point_ids = {}  # Store debug point IDs
 
     # simulation loop
     while p.isConnected():
+        # Get current target positions from GUI
+        targets = get_target_positions(param_ids)
+        
+        # Visualize target positions
+        point_ids = visualize_targets(targets, point_ids)
+        
         # move robot to target positions
         goto_position(robot_id, targets, link_name_to_index, controllable_joints)
         p.stepSimulation()
