@@ -454,12 +454,12 @@ network={{
 
     async fn start_video_stream(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
         if !Self::is_process_running("cvi_camera") {
-            Self::start_process("cvi_camera", &[])
+            Self::start_process("/usr/local/bin/cvi_camera", &[])
                 .map_err(|e| Status::internal(format!("Failed to start cvi_camera: {}", e)))?;
         }
 
         if !Self::is_process_running("RTSPtoWeb") {
-            Self::start_process("RTSPtoWeb", &["-config", "/etc/rtsp2web.json"])
+            Self::start_process("/usr/local/bin/RTSPtoWeb", &["-config", "/etc/rtsp2web.json"])
                 .map_err(|e| Status::internal(format!("Failed to start RTSPtoWeb: {}", e)))?;
         }
 
