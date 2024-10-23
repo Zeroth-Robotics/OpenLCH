@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::net::IpAddr;
 use regex::Regex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -211,6 +211,32 @@ impl StsServoControl {
         servo.write(servo_id, ServoRegister::LockMark, &[1])
             .map_err(|e| Status::internal(format!("Failed to lock EEPROM: {}", e)))?;
 
+        Ok(())
+    }
+
+    fn is_process_running(process_name: &str) -> bool {
+        Command::new("ps")
+            .args(&["-A"])
+            .stdout(Stdio::piped())
+            .spawn()
+            .and_then(|child| {
+                let output = child.wait_with_output()?;
+                Ok(String::from_utf8_lossy(&output.stdout).contains(process_name))
+            })
+            .unwrap_or(false)
+    }
+
+    fn start_process(process_name: &str, args: &[&str]) -> Result<(), std::io::Error> {
+        Command::new(process_name)
+            .args(args)
+            .spawn()?;
+        Ok(())
+    }
+
+    fn stop_process(process_name: &str) -> Result<(), std::io::Error> {
+        Command::new("killall")
+            .arg(process_name)
+            .status()?;
         Ok(())
     }
 }
@@ -427,12 +453,30 @@ network={{
     }
 
     async fn start_video_stream(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
-        // Stub implementation
+        if !Self::is_process_running("cvi_camera") {
+            Self::start_process("cvi_camera", &[])
+                .map_err(|e| Status::internal(format!("Failed to start cvi_camera: {}", e)))?;
+        }
+
+        if !Self::is_process_running("RTSPtoWeb") {
+            Self::start_process("RTSPtoWeb", &["-config", "/etc/rtsp2web.json"])
+                .map_err(|e| Status::internal(format!("Failed to start RTSPtoWeb: {}", e)))?;
+        }
+
         Ok(Response::new(Empty {}))
     }
 
     async fn stop_video_stream(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
-        // Stub implementation
+        if Self::is_process_running("cvi_camera") {
+            Self::stop_process("cvi_camera")
+                .map_err(|e| Status::internal(format!("Failed to stop cvi_camera: {}", e)))?;
+        }
+
+        if Self::is_process_running("RTSPtoWeb") {
+            Self::stop_process("RTSPtoWeb")
+                .map_err(|e| Status::internal(format!("Failed to stop RTSPtoWeb: {}", e)))?;
+        }
+
         Ok(Response::new(Empty {}))
     }
 
