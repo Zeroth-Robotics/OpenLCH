@@ -3,6 +3,7 @@
 Run:
     python inference/main.py --model_path sim/examples/standing_micro.onnx
 
+    (from repo root)
 TODO:
     - connect this with the sim2sim config
     - add sim2real
@@ -16,7 +17,7 @@ from collections import deque
 import numpy as np
 import onnxruntime as ort
 
-MOCK = True
+MOCK = False 
 if not MOCK:
     from openlch import HAL
 else:
@@ -83,32 +84,27 @@ class cmd:
     dyaw = 0.0
 
 
-def get_velocities(hal : HAL) -> list:
+def get_servo_states(hal: HAL) -> tuple[list, list]:
     if MOCK:
-        return [0 for _ in range(10)]
-    velocities = hal.servo.get_velocities()
-    velocities = [vel for _, vel in velocities[:10]]
-    return velocities
-
-
-def get_servo_positions(hal: HAL) -> list:
-    if MOCK:
-        return [0 for _ in range(10)]
+        return [0 for _ in range(10)], [0 for _ in range(10)]
+    
     servo_positions = hal.servo.get_positions()
-    positions = [pos for _, pos in servo_positions[:10]]
+    positions = [pos for _, pos, _ in servo_positions[:10]] 
+    velocities = [vel for _, _, vel in servo_positions[:10]]
     print(f"[INFO]: GET servo positions: {positions}")
-    return positions
+    return positions, velocities
 
 
-def set_servo_positions(positions : list, hal : HAL) -> None:
-    print(f"[INFO]: SET servo positions: {positions}")
+def set_servo_positions(positions: list, hal: HAL) -> None:
+    positions_deg = [math.degrees(pos) for pos in positions]
+    print(f"[INFO]: SET servo positions (deg): {positions_deg}")
     if MOCK:
         return
-    servo_positions = [(i, pos) for i, pos in enumerate(positions[:10])]
+    servo_positions = [(i + 1, pos) for i, pos in enumerate(positions_deg[:10])]
     hal.servo.set_positions(servo_positions)
 
 
-def inference(policy : ort.InferenceSession, hal : HAL, cfg : Sim2simCfg) -> None:
+def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
     print(f"[INFO]: Inference starting...")
 
     default = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.double)
@@ -128,11 +124,8 @@ def inference(policy : ort.InferenceSession, hal : HAL, cfg : Sim2simCfg) -> Non
         loop_start_time = time.time()
 
         # get current positions
-        current_positions = get_servo_positions(hal)
+        current_positions, current_velocities = get_servo_states(hal)
         current_positions_np = np.array(current_positions, dtype=np.float32)
-
-        # compute velocity
-        current_velocities = get_velocities(hal)
         current_velocities_np = np.array(current_velocities, dtype=np.float32)
 
         # IMU mock
@@ -180,6 +173,16 @@ def inference(policy : ort.InferenceSession, hal : HAL, cfg : Sim2simCfg) -> Non
         print("Sleep time: ", sleep_time)
 
 
+def initialize(hal: HAL) -> None:
+
+    hal.servo.scan()
+
+    # set torque values
+    hal.servo.set_torque_enable([(i, True) for i in range(1, 17)])
+    time.sleep(1)
+    hal.servo.set_torque([(i, 40.0) for i in range(1, 17)])
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--embodiment", type=str, default="stompypro")
@@ -187,6 +190,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     hal = HAL() if not MOCK else None
+
+    if not MOCK:
+        initialize(hal)
 
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
