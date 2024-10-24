@@ -1,6 +1,6 @@
 [submodule "sim"]
 	path = sim
-	url = https://github.com/Zeroth-Robotics/sim.git
+	url = git@github.com:Zeroth-Robotics/sim.git
 [submodule "runtime/firmware/tpu-sdk-sg200x"]
 	path = runtime/firmware/tpu-sdk-sg200x
 	url = https://github.com/milkv-duo/tpu-sdk-sg200x.git
