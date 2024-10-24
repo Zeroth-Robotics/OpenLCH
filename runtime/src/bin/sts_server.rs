@@ -19,8 +19,8 @@ pub mod servo_control {
 }
 
 use servo_control::servo_control_server::{ServoControl, ServoControlServer};
-use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection, ServoRegister};
-use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus};
+use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection, ServoRegister, TorqueMode};
+use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus, TorqueSettings, TorqueEnableSettings};
 
 #[derive(Debug)]
 pub struct StsServoControl {
@@ -260,6 +260,12 @@ impl ServoControl for StsServoControl {
                 .map(|(id, info)| servo_control::JointPosition {
                     id: (id + 1) as i32, // Add 1 to make IDs start from 1
                     position: Servo::raw_to_degrees(info.current_location as u16),
+                    speed: {
+                        let speed_raw = info.current_speed as u16;
+                        let speed_magnitude = speed_raw & 0x7FFF; // Remove 15th bit
+                        let speed_sign = if speed_raw & 0x8000 != 0 { -1.0 } else { 1.0 };
+                        speed_sign * (speed_magnitude as f32 * 360.0 / 4096.0)
+                    },
                 })
                 .collect(),
         };
@@ -361,12 +367,18 @@ network={{
         let min_position = Servo::raw_to_degrees(min_position as u16);
         let max_position = Servo::raw_to_degrees(max_position as u16);
         
+        // Handle speed conversion
+        let speed_raw = servo_info.current_speed as u16;
+        let speed_magnitude = speed_raw & 0x7FFF; // Remove 15th bit
+        let speed_sign = if speed_raw & 0x8000 != 0 { -1.0 } else { 1.0 };
+        let speed = speed_sign * (speed_magnitude as f32 * 360.0 / 4096.0);
+
         let info = ServoInfo {
             id: id as i32,
             temperature: servo_info.current_temperature as f32,
             current: servo_info.current_current as f32,
             voltage: ((servo_info.current_voltage as f32 / 10.0) * 10.0).round() / 10.0,
-            speed: servo_info.current_speed as f32 / 4096.0 * 360.0,
+            speed,
             current_position: Servo::raw_to_degrees(servo_info.current_location as u16),
             min_position: min_position as f32,
             max_position: max_position as f32,
@@ -523,6 +535,36 @@ network={{
             is_calibrating: calibrating_servo.is_some(),
             calibrating_servo_id: calibrating_servo.unwrap_or(0) as i32,
         }))
+    }
+
+    async fn set_torque(&self, request: Request<TorqueSettings>) -> Result<Response<Empty>, Status> {
+        let torque_settings = request.into_inner();
+        let servo = self.servo.lock().await;
+
+        for setting in torque_settings.settings {
+            let torque_value = (setting.torque * 10.0) as u16; // Convert 0-100% to 0-1000
+            servo.write_servo_memory(setting.id as u8, ServoRegister::TorqueLimit, torque_value)
+                .map_err(|e| Status::internal(format!("Failed to set torque for servo {}: {}", setting.id, e)))?;
+        }
+
+        Ok(Response::new(Empty {}))
+    }
+
+    async fn set_torque_enable(&self, request: Request<TorqueEnableSettings>) -> Result<Response<Empty>, Status> {
+        let torque_enable_settings = request.into_inner();
+        let servo = self.servo.lock().await;
+
+        for setting in torque_enable_settings.settings {
+            let torque_mode = if setting.enable {
+                TorqueMode::Enabled
+            } else {
+                TorqueMode::Disabled
+            };
+            servo.set_torque_mode(setting.id as u8, torque_mode)
+                .map_err(|e| Status::internal(format!("Failed to set torque enable for servo {}: {}", setting.id, e)))?;
+        }
+
+        Ok(Response::new(Empty {}))
     }
 }
 
