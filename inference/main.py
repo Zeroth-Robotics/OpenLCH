@@ -110,17 +110,33 @@ def get_servo_states(hal: HAL) -> tuple[list, list]:
     servo_positions = hal.servo.get_positions()
     positions = [pos for _, pos, _ in servo_positions[:10]] 
     velocities = [vel for _, _, vel in servo_positions[:10]]
-    print(f"[INFO]: GET servo positions: {positions}")
+
+    positions = [math.radians(pos) for pos in positions]
+
+    positions.reverse()
+    velocities.reverse()
+    
+    print(f"[INFO]: GET servo positions (rad): {positions}")
     return positions, velocities
 
 
 def set_servo_positions(positions: list, hal: HAL) -> None:
+
+    print(f"[INFO]: SET servo positions (rad): {positions}")
+
     positions_deg = [math.degrees(pos) for pos in positions]
+
     print(f"[INFO]: SET servo positions (deg): {positions_deg}")
     if MOCK:
         return
     
     positions_deg.reverse()
+
+    # apply offsets
+    # positions_deg[8] += 45.0   # servo 9 offset
+    # positions_deg[3] += -45.0  # servo 4 offset
+    # positions_deg[12] += 20.0  # servo 13 offset
+    # positions_deg[15] += -20.0 # servo 16 offset
     
     servo_positions = [(i + 1, pos) for i, pos in enumerate(positions_deg[:10])]
     hal.servo.set_positions(servo_positions)
@@ -238,7 +254,7 @@ if __name__ == "__main__":
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
 
-    # inference(policy, hal, cfg)
+    inference(policy, hal, cfg)
 
 
 
