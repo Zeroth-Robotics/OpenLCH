@@ -196,13 +196,32 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
 
 
 def initialize(hal: HAL) -> None:
-
     hal.servo.scan()
 
     # set torque values
     hal.servo.set_torque_enable([(i, True) for i in range(1, 17)])
     time.sleep(1)
     hal.servo.set_torque([(i, 40.0) for i in range(1, 17)])
+    time.sleep(1)
+
+    # set all servos to 0, except 9 (-45°) and 4 (+45°)
+    print("Setting servo positions...")
+    servo_positions = [(i, 0.0) for i in range(1, 17)]
+    # hips offet
+    servo_positions[8] = (9, 45.0)  # servo 9 to 45 degrees
+    servo_positions[3] = (4, -45.0)   # servo 4 to -45 degrees
+    # arms offset
+    servo_positions[12] = (13, 20.0)  # servo 13 to 20 degrees
+    servo_positions[15] = (16, -20.0)  # servo 16 to -20 degrees
+
+    print(f"[INFO]: Setting servo positions: {servo_positions}")
+    hal.servo.set_positions(servo_positions)
+    time.sleep(3)
+
+    print("Starting inference in...")
+    for i in range(3, 0, -1):
+        print(f"{i}...")
+        time.sleep(1)
 
 
 if __name__ == "__main__":
@@ -219,5 +238,7 @@ if __name__ == "__main__":
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
 
-    inference(policy, hal, cfg)
+    # inference(policy, hal, cfg)
+
+
 
