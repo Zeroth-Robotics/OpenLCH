@@ -13,15 +13,34 @@ import argparse
 import math
 import time
 from collections import deque
-
 import numpy as np
 import onnxruntime as ort
 
 MOCK = False 
+
 if not MOCK:
     from openlch import HAL
 else:
     HAL = None
+
+
+
+# class LeftLeg(Node):
+#     hip_pitch = "L_hip_y" 10
+#     hip_yaw = "L_hip_x"  9
+#     hip_roll = "L_hip_z" 8
+#     knee_pitch = "L_knee" 7           
+#     ankle_pitch = "L_ankle_y" 6
+
+
+# class RightLeg(Node):      
+#     hip_pitch = "R_hip_y" 5                  
+#     hip_yaw = "R_hip_x" 4 
+#     hip_roll = "R_hip_z" 3 
+#     knee_pitch = "R_knee" 2 
+#     ankle_pitch = "R_ankle_y" 1
+
+
 
 
 class Sim2simCfg:
@@ -100,6 +119,9 @@ def set_servo_positions(positions: list, hal: HAL) -> None:
     print(f"[INFO]: SET servo positions (deg): {positions_deg}")
     if MOCK:
         return
+    
+    positions_deg.reverse()
+    
     servo_positions = [(i + 1, pos) for i, pos in enumerate(positions_deg[:10])]
     hal.servo.set_positions(servo_positions)
 
