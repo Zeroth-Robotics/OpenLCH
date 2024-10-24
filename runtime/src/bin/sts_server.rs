@@ -12,6 +12,7 @@ use regex::Regex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::task;
 use std::time::Duration;
+use std::env;
 
 pub mod servo_control {
     tonic::include_proto!("hal_pb");
@@ -229,6 +230,8 @@ impl StsServoControl {
     fn start_process(process_name: &str, args: &[&str]) -> Result<(), std::io::Error> {
         Command::new(process_name)
             .args(args)
+            .env("LD_LIBRARY_PATH", "/mnt/system/lib:/mnt/system/usr/lib")
+            .env("PATH", "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/mnt/system/usr/bin:/mnt/system/usr/sbin")
             .spawn()?;
         Ok(())
     }
@@ -454,12 +457,12 @@ network={{
 
     async fn start_video_stream(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
         if !Self::is_process_running("cvi_camera") {
-            Self::start_process("cvi_camera", &[])
+            Self::start_process("/usr/local/bin/cvi_camera", &[])
                 .map_err(|e| Status::internal(format!("Failed to start cvi_camera: {}", e)))?;
         }
 
         if !Self::is_process_running("RTSPtoWeb") {
-            Self::start_process("RTSPtoWeb", &["-config", "/etc/rtsp2web.json"])
+            Self::start_process("/usr/local/bin/RTSPtoWeb", &["-config", "/etc/rtsp2web.json"])
                 .map_err(|e| Status::internal(format!("Failed to start RTSPtoWeb: {}", e)))?;
         }
 
