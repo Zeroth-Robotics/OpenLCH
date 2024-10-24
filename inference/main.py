@@ -2,6 +2,11 @@
 
 Run:
     python inference/main.py --model_path sim/examples/standing_micro.onnx
+
+TODO:
+    - connect this with the sim2sim config
+    - add sim2real
+    - add real2sim
 """
 import argparse
 import math
@@ -11,13 +16,65 @@ from collections import deque
 import numpy as np
 import onnxruntime as ort
 
-from sim.sim2sim import Sim2simCfg
-
 MOCK = True
 if not MOCK:
     from openlch import HAL
 else:
     HAL = None
+
+
+class Sim2simCfg:
+    def __init__(
+        self,
+        num_actions=10,
+        frame_stack=15,
+        c_frame_stack=3,
+        sim_duration=60.0,
+        stiffness=5.0,
+        damping=0.3,
+        effort=1.0,
+        dt=0.001,
+        decimation=10,
+        cycle_time=0.4,
+        tau_factor=3,
+        lin_vel=2.0,
+        ang_vel=1.0,
+        dof_pos=1.0,
+        dof_vel=0.05,
+        clip_observations=18.0,
+        clip_actions=18.0,
+        action_scale=0.25,
+    ):
+
+        self.num_actions = num_actions
+
+        self.frame_stack = frame_stack
+        self.c_frame_stack = c_frame_stack
+        self.num_single_obs = 11 + self.num_actions * self.c_frame_stack
+        self.num_observations = int(self.frame_stack * self.num_single_obs)
+
+        self.sim_duration = sim_duration
+        self.dt = dt
+        self.decimation = decimation
+
+        self.cycle_time = cycle_time
+
+        self.tau_factor = tau_factor
+        self.tau_limit = (
+            np.array([effort] * self.num_actions) * self.tau_factor
+        )
+        self.kps = np.array([stiffness] * self.num_actions)
+        self.kds = np.array([damping] * self.num_actions)
+
+        self.lin_vel = lin_vel
+        self.ang_vel = ang_vel
+        self.dof_pos = dof_pos
+        self.dof_vel = dof_vel
+
+        self.clip_observations = clip_observations
+        self.clip_actions = clip_actions
+
+        self.action_scale = action_scale
 
 
 class cmd:
@@ -132,7 +189,7 @@ if __name__ == "__main__":
     hal = HAL() if not MOCK else None
 
     policy = ort.InferenceSession(args.model_path)
-    cfg = Sim2simCfg(args.embodiment)
+    cfg = Sim2simCfg()
 
     inference(policy, hal, cfg)
 
