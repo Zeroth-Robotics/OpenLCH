@@ -1,16 +1,17 @@
 """ Inference script for running the model on the robot
 
-python inference/main.py --model_path path/to/model.onnx
+Run:
+    python inference/main.py --model_path sim/examples/standing_micro.onnx
 """
 import argparse
+import math
+import time
+from collections import deque
+
 import numpy as np
 import onnxruntime as ort
 
-from sim.sim2sim import Sim2simCfg, get_policy_output
-import time
-from collections import deque
-import math
-
+from sim.sim2sim import Sim2simCfg
 
 MOCK = True
 if not MOCK:
@@ -50,7 +51,7 @@ def set_servo_positions(positions : list, hal : HAL) -> None:
     hal.servo.set_positions(servo_positions)
 
 
-def inference(session : ort.InferenceSession, hal : HAL, cfg : Sim2simCfg) -> None:
+def inference(policy : ort.InferenceSession, hal : HAL, cfg : Sim2simCfg) -> None:
     print(f"[INFO]: Inference starting...")
 
     default = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.double)
@@ -103,7 +104,8 @@ def inference(session : ort.InferenceSession, hal : HAL, cfg : Sim2simCfg) -> No
         for i in range(cfg.frame_stack):
             policy_input[0, i * cfg.num_single_obs : (i + 1) * cfg.num_single_obs] = hist_obs[i][0, :]
 
-        action[:] = get_policy_output(policy, policy_input)
+        ort_inputs = {policy.get_inputs()[0].name: policy_input}
+        action[:] = policy.run(None, ort_inputs)[0][0]
 
         action = np.clip(action, -cfg.clip_actions, cfg.clip_actions)
         target_q = action * cfg.action_scale
@@ -130,7 +132,6 @@ if __name__ == "__main__":
     hal = HAL() if not MOCK else None
 
     policy = ort.InferenceSession(args.model_path)
-
     cfg = Sim2simCfg(args.embodiment)
 
     inference(policy, hal, cfg)
