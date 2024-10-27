@@ -2015,8 +2015,8 @@ dependencies = [
 
 [[package]]
 name = "tonic"
-version = "0.12.3"
-source = "git+https://github.com/hatomist/tonic-milkv.git#8aa1c2914c49ad15c5b91b1a66f965defdcea2af"
+version = "0.13.0"
+source = "git+https://github.com/hyperium/tonic.git#eaa81dd40212a78b2f7c1136d251b789d0cfb088"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -2044,8 +2044,8 @@ dependencies = [
 
 [[package]]
 name = "tonic-build"
-version = "0.12.3"
-source = "git+https://github.com/hatomist/tonic-milkv.git#8aa1c2914c49ad15c5b91b1a66f965defdcea2af"
+version = "0.13.0"
+source = "git+https://github.com/hyperium/tonic.git#eaa81dd40212a78b2f7c1136d251b789d0cfb088"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -2057,8 +2057,8 @@ dependencies = [
 
 [[package]]
 name = "tonic-web"
-version = "0.12.3"
-source = "git+https://github.com/hatomist/tonic-milkv.git#8aa1c2914c49ad15c5b91b1a66f965defdcea2af"
+version = "0.13.0"
+source = "git+https://github.com/hyperium/tonic.git#eaa81dd40212a78b2f7c1136d251b789d0cfb088"
 dependencies = [
  "base64",
  "bytes",
