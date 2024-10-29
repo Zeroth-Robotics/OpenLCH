@@ -256,21 +256,34 @@ impl IMU {
     }
 
     pub fn read_data(&mut self) -> Result<IMUData, Box<dyn Error>> {
-        let mut buffer = [0u8; 24];
-        self.i2c.read(&mut buffer)?;
+        let mut data1 = [0u8; 13];
+        let mut data2 = [0u8; 13];
 
-        let mut values = [0f32; 6];
-        for i in 0..6 {
-            values[i] = f32::from_le_bytes(buffer[i*4..(i+1)*4].try_into().unwrap());
-        }
+        // Read first set of data
+        self.i2c.read(&mut data1)?;
+        
+        // Read second set of data
+        self.i2c.read(&mut data2)?;
+
+        let (acc_data, gyro_data) = match (data1[0], data2[0]) {
+            (1, 2) => (&data1, &data2),
+            (2, 1) => (&data2, &data1),
+            _ => return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Invalid data types received",
+            ))),
+        };
+
+        let acc_values = Self::unpack_values(&acc_data[1..13])?;
+        let gyro_values = Self::unpack_values(&gyro_data[1..13])?;
 
         Ok(IMUData {
-            acc_x: values[0],
-            acc_y: values[1],
-            acc_z: values[2],
-            gyro_x: values[3],
-            gyro_y: values[4],
-            gyro_z: values[5],
+            acc_x: acc_values[0],
+            acc_y: acc_values[1],
+            acc_z: acc_values[2],
+            gyro_x: gyro_values[0],
+            gyro_y: gyro_values[1],
+            gyro_z: gyro_values[2],
         })
     }
 }
