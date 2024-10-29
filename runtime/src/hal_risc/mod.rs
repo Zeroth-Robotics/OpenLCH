@@ -286,4 +286,12 @@ impl IMU {
             gyro_z: gyro_values[2],
         })
     }
+
+    fn unpack_values(data: &[u8]) -> Result<[f32; 3], Box<dyn Error>> {
+        let mut values = [0.0f32; 3];
+        for i in 0..3 {
+            values[i] = f32::from_le_bytes(data[i*4..(i+1)*4].try_into()?);
+        }
+        Ok(values)
+    }
 }
