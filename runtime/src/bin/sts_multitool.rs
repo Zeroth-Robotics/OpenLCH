@@ -270,21 +270,13 @@ fn main() -> Result<()> {
                     });
 
                     // Check servo responsiveness every 10th update
-                    if update_count % 10 == 0 {
+                    if update_count % 50 == 0 {
                         let servo_id = i as u8 + 1;
                         let mut is_responsive = match servo_clone_for_scan.scan(servo_id) {
                             Ok(true) => true,
                             Ok(false) => false,
                             Err(_) => false,
                         };
-                        if !is_responsive {
-                            // retry
-                            is_responsive = match servo_clone_for_scan.scan(servo_id) {
-                                Ok(true) => true,
-                                Ok(false) => false,
-                                Err(_) => false,
-                            };
-                        }
                         
                         let mut unresponsive_servos = UNRESPONSIVE_SERVOS.get().unwrap().lock().unwrap();
                         unresponsive_servos[i] = !is_responsive;
@@ -356,7 +348,7 @@ fn main() -> Result<()> {
         }
 
         // Reset update count to avoid potential overflow
-        if update_count >= 100 {
+        if update_count >= 1000 {
             update_count = 0;
         }
     });
