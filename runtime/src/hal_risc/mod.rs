@@ -4,6 +4,8 @@ use std::error::Error;
 use i2cdev::linux::LinuxI2CDevice;
 use i2cdev::core::I2CDevice;
 use crate::hal::{ServoInfo, ServoData, ServoMultipleWriteCommand, ServoMode, ServoDirection, ServoRegister, MemoryLockState, TorqueMode, IMUData, MAX_SERVOS};
+use std::sync::{Arc, Mutex};
+use std::fmt;
 
 #[link(name = "sts3215")]
 extern "C" {
@@ -244,34 +246,30 @@ impl Drop for Servo {
     }
 }
 
-
 pub struct IMU {
-    i2c: LinuxI2CDevice,
+    i2c: Arc<Mutex<LinuxI2CDevice>>,
 }
 
 impl IMU {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self> {
         let i2c = LinuxI2CDevice::new("/dev/i2c-1", 0x50)?;
-        Ok(IMU { i2c })
+        Ok(IMU { i2c: Arc::new(Mutex::new(i2c)) })
     }
 
-    pub fn read_data(&mut self) -> Result<IMUData, Box<dyn Error>> {
+    pub fn read_data(&self) -> Result<IMUData> {
         let mut data1 = [0u8; 13];
         let mut data2 = [0u8; 13];
 
-        // Read first set of data
-        self.i2c.read(&mut data1)?;
-        
-        // Read second set of data
-        self.i2c.read(&mut data2)?;
+        {
+            let mut i2c = self.i2c.lock().unwrap();
+            i2c.read(&mut data1)?;
+            i2c.read(&mut data2)?;
+        }
 
         let (acc_data, gyro_data) = match (data1[0], data2[0]) {
             (1, 2) => (&data1, &data2),
             (2, 1) => (&data2, &data1),
-            _ => return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Invalid data types received",
-            ))),
+            _ => return Err(anyhow::anyhow!("Invalid data types received")),
         };
 
         let acc_values = Self::unpack_values(&acc_data[1..13])?;
@@ -287,11 +285,19 @@ impl IMU {
         })
     }
 
-    fn unpack_values(data: &[u8]) -> Result<[f32; 3], Box<dyn Error>> {
+    fn unpack_values(data: &[u8]) -> Result<[f32; 3]> {
         let mut values = [0.0f32; 3];
         for i in 0..3 {
             values[i] = f32::from_le_bytes(data[i*4..(i+1)*4].try_into()?);
         }
         Ok(values)
+    }
+}
+
+impl fmt::Debug for IMU {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IMU")
+         .field("i2c", &"LinuxI2CDevice")
+         .finish()
     }
 }

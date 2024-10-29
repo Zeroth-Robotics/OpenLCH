@@ -20,8 +20,7 @@ pub mod servo_control {
 }
 
 use servo_control::servo_control_server::{ServoControl, ServoControlServer};
-use runtime::hal::{Servo, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection, ServoRegister, TorqueMode};
-use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus, TorqueSettings, TorqueEnableSettings};
+use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus, TorqueSettings, TorqueEnableSettings, ImuData, Vector3};
 
 #[derive(Debug)]
 pub struct StsServoControl {
@@ -38,6 +37,7 @@ impl StsServoControl {
         let imu = IMU::new()?;
         servo.enable_readout()?;
         let initial_data = servo.read_continuous()?;
+        
         Ok(Self {
             servo: Arc::new(Mutex::new(servo)),
             imu: Arc::new(Mutex::new(imu)),
