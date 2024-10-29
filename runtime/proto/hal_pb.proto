@@ -17,6 +17,7 @@ service ServoControl {
   rpc GetCalibrationStatus (Empty) returns (CalibrationStatus);
   rpc SetTorque (TorqueSettings) returns (Empty);
   rpc SetTorqueEnable (TorqueEnableSettings) returns (Empty);
+  rpc GetImuData (Empty) returns (ImuData);
 }
 
 message Empty {}
@@ -115,4 +116,15 @@ message TorqueEnableSettings {
 message TorqueEnableSetting {
   int32 id = 1;
   bool enable = 2;
+}
+
+message ImuData {
+  Vector3 gyro = 1;     // Angular velocity in degrees per second (dps)
+  Vector3 accel = 2;    // Linear acceleration in milli-g (mg)
+}
+
+message Vector3 {
+  float x = 1;
+  float y = 2;
+  float z = 3;
 }

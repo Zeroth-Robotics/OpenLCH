@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::task;
 use std::time::Duration;
 use std::env;
+use runtime::hal::{Servo, IMU, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection, ServoRegister, TorqueMode};
 
 pub mod servo_control {
     tonic::include_proto!("hal_pb");
@@ -25,6 +26,7 @@ use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, 
 #[derive(Debug)]
 pub struct StsServoControl {
     servo: Arc<Mutex<Servo>>,
+    imu: Arc<Mutex<IMU>>,
     last_positions: Arc<Mutex<ServoData>>,
     calibrating_servo: Arc<Mutex<Option<u8>>>,
     calibration_running: Arc<AtomicBool>,
@@ -33,10 +35,12 @@ pub struct StsServoControl {
 impl StsServoControl {
     pub fn new() -> Result<Self> {
         let servo = Servo::new()?;
+        let imu = IMU::new()?;
         servo.enable_readout()?;
         let initial_data = servo.read_continuous()?;
         Ok(Self {
             servo: Arc::new(Mutex::new(servo)),
+            imu: Arc::new(Mutex::new(imu)),
             last_positions: Arc::new(Mutex::new(initial_data)),
             calibrating_servo: Arc::new(Mutex::new(None)),
             calibration_running: Arc::new(AtomicBool::new(false)),
@@ -565,6 +569,26 @@ network={{
         }
 
         Ok(Response::new(Empty {}))
+    }
+
+    async fn get_imu_data(&self, _request: Request<Empty>) -> Result<Response<ImuData>, Status> {
+        let mut imu = self.imu.lock().await;
+        
+        let imu_data = imu.read_data()
+            .map_err(|e| Status::internal(format!("Failed to read IMU data: {}", e)))?;
+
+        Ok(Response::new(ImuData {
+            gyro: Some(Vector3 {
+                x: imu_data.gyro_x,
+                y: imu_data.gyro_y,
+                z: imu_data.gyro_z,
+            }),
+            accel: Some(Vector3 {
+                x: imu_data.acc_x,
+                y: imu_data.acc_y,
+                z: imu_data.acc_z,
+            }),
+        }))
     }
 }
 
