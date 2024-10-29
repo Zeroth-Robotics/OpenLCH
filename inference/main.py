@@ -39,7 +39,6 @@ else:
 #     ankle_pitch = "R_ankle_y" 1
 
 
-
 class Sim2simCfg:
     def __init__(
         self,
@@ -229,6 +228,7 @@ def initialize(hal: HAL) -> None:
     servo_positions[15] = (16, -20.0)  # servo 16 to -20 degrees
 
     print(f"[INFO]: Setting servo positions: {servo_positions}")
+    hal.servo.set_positions(servo_positions)
     hal.servo.set_positions(servo_positions)
     time.sleep(3)
 
