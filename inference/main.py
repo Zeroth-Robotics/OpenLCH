@@ -1,5 +1,4 @@
 """ Inference script for running the model on the robot
-
 Run:
     python inference/main.py --model_path sim/examples/standing_micro.onnx
 
@@ -24,7 +23,6 @@ else:
     HAL = None
 
 
-
 # class LeftLeg(Node):
 #     hip_pitch = "L_hip_y" 10
 #     hip_yaw = "L_hip_x"  9
@@ -42,7 +40,6 @@ else:
 
 
 
-
 class Sim2simCfg:
     def __init__(
         self,
@@ -54,7 +51,7 @@ class Sim2simCfg:
         damping=0.3,
         effort=1.0,
         dt=0.001,
-        decimation=10,
+        decimation=20,
         cycle_time=0.4,
         tau_factor=3,
         lin_vel=2.0,
@@ -155,6 +152,7 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
 
 
     target_frequency = 1 / (cfg.dt * cfg.decimation)  # 100 Hz
+    print(target_frequency)
     target_loop_time = 1.0 / target_frequency  # 4 ms
 
     while True:
@@ -217,7 +215,7 @@ def initialize(hal: HAL) -> None:
     # set torque values
     hal.servo.set_torque_enable([(i, True) for i in range(1, 17)])
     time.sleep(1)
-    hal.servo.set_torque([(i, 40.0) for i in range(1, 17)])
+    hal.servo.set_torque([(i, 30.0) for i in range(1, 17)])
     time.sleep(1)
 
     # set all servos to 0, except 9 (-45°) and 4 (+45°)
@@ -254,6 +252,7 @@ if __name__ == "__main__":
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
 
+    # TODO: set inference speed as 50 HZ 
     inference(policy, hal, cfg)
 
 
