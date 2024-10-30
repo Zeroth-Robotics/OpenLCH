@@ -257,23 +257,24 @@ impl IMU {
     }
 
     pub fn read_data(&self) -> Result<IMUData> {
-        let mut data1 = [0u8; 13];
-        let mut data2 = [0u8; 13];
+        let mut data = [0u8; 25];
 
         {
             let mut i2c = self.i2c.lock().unwrap();
-            i2c.read(&mut data1)?;
-            i2c.read(&mut data2)?;
+            let bytes = i2c.smbus_read_i2c_block_data(0x00, 25)?;  // Read 25 bytes starting from register 0x00
+            data.copy_from_slice(&bytes);
         }
 
-        let (acc_data, gyro_data) = match (data1[0], data2[0]) {
-            (1, 2) => (&data1, &data2),
-            (2, 1) => (&data2, &data1),
-            _ => return Err(anyhow::anyhow!("Invalid data types received")),
-        };
+        // Verify header
+        if data[0] != 3 {
+            return Err(anyhow::anyhow!("Invalid header received: {}", data[0]));
+        }
 
-        let acc_values = Self::unpack_values(&acc_data[1..13])?;
-        let gyro_values = Self::unpack_values(&gyro_data[1..13])?;
+        // Read accelerometer data (bytes 1-12)
+        let acc_values = Self::unpack_values(&data[1..13])?;
+        
+        // Read gyroscope data (bytes 13-24)
+        let gyro_values = Self::unpack_values(&data[13..25])?;
 
         Ok(IMUData {
             acc_x: acc_values[0],
