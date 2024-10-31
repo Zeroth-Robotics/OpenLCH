@@ -158,8 +158,16 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
     print(f"Target frequency: {target_frequency} Hz")
     target_loop_time = 1.0 / target_frequency
 
+    last_time = time.time()  # Add this line to track cycle time
+
     while True:
         loop_start_time = time.time()
+
+        current_time = time.time()
+        cycle_time = current_time - last_time
+        actual_frequency = 1.0 / cycle_time if cycle_time > 0 else 0
+        print(f"Actual frequency: {actual_frequency:.2f} Hz (cycle time: {cycle_time*1000:.2f} ms)")
+        last_time = current_time
 
         get_servo_states(hal)
 
