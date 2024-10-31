@@ -17,7 +17,7 @@ import numpy as np
 import onnxruntime as ort
 import paho.mqtt.client as mqtt
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 MOCK = False 
 
@@ -197,7 +197,7 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
         # Publish data to MQTT if enabled
         if cfg.mqtt_enabled:
             mqtt_data = {
-                "time": datetime.now(datetime.timezone.utc).isoformat() + "Z",
+                "time": datetime.now(timezone.utc).isoformat(),
                 "servo_positions": {
                     str(joint.servo_id): math.degrees(joint.current_position)
                     for joint in joints
