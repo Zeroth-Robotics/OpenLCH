@@ -15,6 +15,7 @@ from collections import deque
 from typing import List
 import numpy as np
 import onnxruntime as ort
+import multiprocessing as mp
 
 MOCK = False 
 
@@ -116,6 +117,7 @@ def get_servo_states(hal: HAL) -> None:
             joint.current_velocity = 0.0
         return
     
+    # Placeholder for actual servo state retrieval
     servo_positions = hal.servo.get_positions() 
     servo_positions_dict = {id_: (pos, vel) for id_, pos, vel in servo_positions}
     
@@ -137,7 +139,7 @@ def set_servo_positions(hal: HAL) -> None:
         desired_pos_deg += joint.offset_deg
         positions_deg.append((joint.servo_id, desired_pos_deg))
 
-    print(f"[INFO]: SET servo positions (deg): {positions_deg}")
+    # print(f"[INFO]: SET servo positions (deg): {positions_deg}")
 
     if MOCK:
         return
@@ -145,7 +147,7 @@ def set_servo_positions(hal: HAL) -> None:
     hal.servo.set_positions(positions_deg)
 
 
-def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
+def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queue: mp.Queue) -> None:
     print(f"[INFO]: Inference starting...")
 
     action = np.zeros((cfg.num_actions), dtype=np.double)
@@ -155,10 +157,10 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
         hist_obs.append(np.zeros([1, cfg.num_single_obs], dtype=np.double))
 
     target_frequency = 1 / (cfg.dt * cfg.decimation)  # e.g., 50 Hz
-    print(f"Target frequency: {target_frequency} Hz")
+    # print(f"Target frequency: {target_frequency} Hz")
     target_loop_time = 1.0 / target_frequency
 
-    last_time = time.time()  # Add this line to track cycle time
+    last_time = time.time()  # Track cycle time
 
     while True:
         loop_start_time = time.time()
@@ -166,7 +168,7 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
         current_time = time.time()
         cycle_time = current_time - last_time
         actual_frequency = 1.0 / cycle_time if cycle_time > 0 else 0
-        print(f"Actual frequency: {actual_frequency:.2f} Hz (cycle time: {cycle_time*1000:.2f} ms)")
+        # print(f"Actual frequency: {actual_frequency:.2f} Hz (cycle time: {cycle_time*1000:.2f} ms)")
         last_time = current_time
 
         get_servo_states(hal)
@@ -218,10 +220,29 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
         loop_duration = loop_end_time - loop_start_time
         sleep_time = max(0, target_loop_time - loop_duration)
 
+        # Send data to dashboard via multiprocessing Queue
+        try:
+            # Send inference speed data
+            data_queue.put(('frequency', (current_time, actual_frequency)))
+
+            # Send positions data
+            current_positions = [joint.current_position for joint in joints]
+            desired_positions = [joint.desired_position for joint in joints]
+            data_queue.put(('positions', (current_time, current_positions, desired_positions)))
+
+            # Send velocities data
+            current_velocities = [joint.current_velocity for joint in joints]
+            data_queue.put(('velocities', (current_time, current_velocities)))
+        except Exception as e:
+            print(f"Exception in sending data: {e}")
+
         time.sleep(sleep_time)
 
 
 def initialize(hal: HAL) -> None:
+    if MOCK:
+        return
+
     hal.servo.scan()
 
     hal.servo.set_torque_enable([(joint.servo_id, True) for joint in joints])
@@ -255,7 +276,12 @@ if __name__ == "__main__":
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
 
-    inference(policy, hal, cfg)
+    # Start the dashboard process and get the data queue
+    from dashboard import run_dashboard
+    data_queue = run_dashboard()
+
+    # Start the inference loop
+    inference(policy, hal, cfg, data_queue)
 
 
 
