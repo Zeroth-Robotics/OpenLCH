@@ -16,6 +16,8 @@ from typing import List
 import numpy as np
 import onnxruntime as ort
 import multiprocessing as mp
+from ahrs.filters import Madgwick
+from ahrs.common import orientation
 
 MOCK = False 
 
@@ -111,13 +113,16 @@ joints = [
 
 
 def get_servo_states(hal: HAL) -> None:
+    """
+    input -> get servo states (degrees)
+    output -> current positions (radians)
+    """
     if MOCK:
         for joint in joints:
             joint.current_position = 0.0
             joint.current_velocity = 0.0
         return
     
-    # Placeholder for actual servo state retrieval
     servo_positions = hal.servo.get_positions() 
     servo_positions_dict = {id_: (pos, vel) for id_, pos, vel in servo_positions}
     
@@ -132,14 +137,16 @@ def get_servo_states(hal: HAL) -> None:
 
 
 def set_servo_positions(hal: HAL) -> None:
+    """
+    input -> desired positions (radians)
+    output -> set servo positions (degrees)
+    """
     positions_deg = []
     for joint in joints:
-        # convert from radians to degrees
+        # Convert from radians to degrees and apply offset
         desired_pos_deg = math.degrees(joint.desired_position)
         desired_pos_deg += joint.offset_deg
         positions_deg.append((joint.servo_id, desired_pos_deg))
-
-    # print(f"[INFO]: SET servo positions (deg): {positions_deg}")
 
     if MOCK:
         return
@@ -147,7 +154,57 @@ def set_servo_positions(hal: HAL) -> None:
     hal.servo.set_positions(positions_deg)
 
 
-def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queue: mp.Queue) -> None:
+def init_madgwick():
+    # Initialize Madgwick filter with increased beta for accelerometer weight
+    return Madgwick(frequency=100.0, beta=0.7)
+
+
+def imu_data_to_numpy(imu_data):
+    """
+    Converts IMU data to numpy arrays for gyro and accelerometer.
+    """
+    gyro = imu_data['gyro']
+    accel = imu_data['accel']
+    # Convert to proper units: gyro to rad/s, accel to g
+    gyro_array = np.array([gyro['x'], gyro['y'], gyro['z']]) * np.pi / 180.0  # deg/s to rad/s
+    accel_array = np.array([accel['x'], accel['y'], accel['z']]) / 1000.0     # mg to g
+    return gyro_array, accel_array
+
+
+class IMUHandler:
+    def __init__(self, imu, madgwick_filter):
+        self.imu = imu
+        self.madgwick = madgwick_filter
+        self.Q = np.array([1.0, 0.0, 0.0, 0.0])  # Initial quaternion
+        self.gyro_bias = np.zeros(3)             # For storing gyro bias
+
+    def calibrate_gyro(self, samples=100):
+        """
+        Calibrates the gyro bias by averaging over a number of samples.
+        """
+        print("Calibrating gyro, keep IMU still...")
+        bias_sum = np.zeros(3)
+        for _ in range(samples):
+            imu_data = self.imu.get_data()
+            gyro, _ = imu_data_to_numpy(imu_data)
+            bias_sum += gyro
+            time.sleep(0.02)
+        self.gyro_bias = bias_sum / samples
+        print(f"Gyro bias: X={self.gyro_bias[0]:.3f}, Y={self.gyro_bias[1]:.3f}, Z={self.gyro_bias[2]:.3f} rad/s")
+
+    def get_orientation(self):
+        """
+        Retrieves the current orientation using the Madgwick filter.
+        """
+        imu_data = self.imu.get_data()
+        gyro, accel = imu_data_to_numpy(imu_data)
+        gyro -= self.gyro_bias
+        self.Q = self.madgwick.updateIMU(self.Q, gyr=gyro, acc=accel)
+        euler_angles = np.degrees(orientation.q2euler(self.Q))
+        return gyro, euler_angles  # gyro in rad/s, euler_angles in degrees
+
+
+def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queue: mp.Queue, imu_handler: 'IMUHandler') -> None:
     print(f"[INFO]: Inference starting...")
 
     action = np.zeros((cfg.num_actions), dtype=np.double)
@@ -157,7 +214,6 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         hist_obs.append(np.zeros([1, cfg.num_single_obs], dtype=np.double))
 
     target_frequency = 1 / (cfg.dt * cfg.decimation)  # e.g., 50 Hz
-    # print(f"Target frequency: {target_frequency} Hz")
     target_loop_time = 1.0 / target_frequency
 
     last_time = time.time()  # Track cycle time
@@ -168,7 +224,6 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         current_time = time.time()
         cycle_time = current_time - last_time
         actual_frequency = 1.0 / cycle_time if cycle_time > 0 else 0
-        # print(f"Actual frequency: {actual_frequency:.2f} Hz (cycle time: {cycle_time*1000:.2f} ms)")
         last_time = current_time
 
         get_servo_states(hal)
@@ -176,11 +231,11 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         current_positions_np = np.array([joint.current_position for joint in joints], dtype=np.float32)
         current_velocities_np = np.array([joint.current_velocity for joint in joints], dtype=np.float32)
 
-        # Mock IMU data
-        # FIXME
-        omega = np.zeros(3, dtype=np.float32)
-        eu_ang = np.zeros(3, dtype=np.float32)  
-
+        # Get IMU data
+        gyro, euler_angles = imu_handler.get_orientation()
+        omega = gyro.astype(np.float32) 
+        eu_ang = np.radians(euler_angles).astype(np.float32) 
+        
         obs = np.zeros([1, cfg.num_single_obs], dtype=np.float32)
 
         t = loop_start_time
@@ -189,7 +244,7 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         obs[0, 2] = cmd.vx * cfg.lin_vel
         obs[0, 3] = cmd.vy * cfg.lin_vel
         obs[0, 4] = cmd.dyaw * cfg.ang_vel
-        obs[0, 5 : (cfg.num_actions + 5)] = (current_positions_np) * cfg.dof_pos 
+        obs[0, 5 : (cfg.num_actions + 5)] = current_positions_np * cfg.dof_pos
         obs[0, (cfg.num_actions + 5) : (2 * cfg.num_actions + 5)] = current_velocities_np * cfg.dof_vel
         obs[0, (2 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5)] = action
         obs[0, (3 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5) + 3] = omega
@@ -220,18 +275,15 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         loop_duration = loop_end_time - loop_start_time
         sleep_time = max(0, target_loop_time - loop_duration)
 
-        # Send data to dashboard via multiprocessing Queue
+        # ===== SEND DATA TO DASHBOARD =====
         try:
-            # Send inference speed data
             data_queue.put(('frequency', (current_time, actual_frequency)))
 
-            # Send positions data
-            current_positions = [joint.current_position for joint in joints]
-            desired_positions = [joint.desired_position for joint in joints]
+            current_positions = [joint.current_position for joint in joints]  # in radians
+            desired_positions = [joint.desired_position for joint in joints]  # in radians
             data_queue.put(('positions', (current_time, current_positions, desired_positions)))
 
-            # Send velocities data
-            current_velocities = [joint.current_velocity for joint in joints]
+            current_velocities = [joint.current_velocity for joint in joints]  # in radians/s
             data_queue.put(('velocities', (current_time, current_velocities)))
         except Exception as e:
             print(f"Exception in sending data: {e}")
@@ -266,6 +318,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--embodiment", type=str, default="stompymicro")
     parser.add_argument("--model_path", type=str, required=True, help="examples/standing_micro.onnx")
+    parser.add_argument('--no-calibration', action='store_true', help='Disable gyro bias calibration')
     args = parser.parse_args()
 
     hal = HAL() if not MOCK else None
@@ -276,12 +329,20 @@ if __name__ == "__main__":
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
 
+    # Initialize IMU and Madgwick filter
+    imu = hal.imu if not MOCK else None
+    madgwick_filter = init_madgwick()
+    imu_handler = IMUHandler(imu, madgwick_filter)
+
+    if not args.no_calibration and not MOCK:
+        imu_handler.calibrate_gyro()
+
     # Start the dashboard process and get the data queue
     from dashboard import run_dashboard
     data_queue = run_dashboard()
 
     # Start the inference loop
-    inference(policy, hal, cfg, data_queue)
+    inference(policy, hal, cfg, data_queue, imu_handler)
 
 
 

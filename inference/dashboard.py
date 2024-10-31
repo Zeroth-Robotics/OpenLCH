@@ -38,11 +38,13 @@ def plot_dashboard(data_queue: mp.Queue):
     line_freq, = ax_freq.plot([], [], label='Actual Frequency')
     ax_freq.legend()
 
-    # Graph 2: Joint Positions
+    # Graph 2: Joint Positions with dual y-axes
     ax_pos = fig_pos.add_subplot(111)
+    ax_pos_deg = ax_pos.twinx()  # Create twin axis for degrees
     ax_pos.set_title('Joint Positions Over Time')
     ax_pos.set_xlabel('Time (s)')
     ax_pos.set_ylabel('Position (rad)')
+    ax_pos_deg.set_ylabel('Position (deg)')
     lines_positions = []
     for i in range(num_joints):
         color = joint_colors(i)
@@ -51,17 +53,22 @@ def plot_dashboard(data_queue: mp.Queue):
         lines_positions.append((line_pos, line_desired_pos))
     ax_pos.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
 
-    # Graph 3: Joint Velocities
+    # Graph 3: Joint Velocities with dual y-axes
     ax_vel = fig_vel.add_subplot(111)
+    ax_vel_deg = ax_vel.twinx()  # Create twin axis for degrees/s
     ax_vel.set_title('Joint Velocities Over Time')
     ax_vel.set_xlabel('Time (s)')
     ax_vel.set_ylabel('Velocity (rad/s)')
+    ax_vel_deg.set_ylabel('Velocity (deg/s)')
     lines_velocities = []
     for i in range(num_joints):
         color = joint_colors(i)
         line_vel, = ax_vel.plot([], [], label=f"{joint_names[i]}", color=color)
         lines_velocities.append(line_vel)
     ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+
+    def rad2deg(rad):
+        return rad * 180.0 / np.pi
 
     def update(frame):
         current_time = time.time()
@@ -113,33 +120,71 @@ def plot_dashboard(data_queue: mp.Queue):
         # Update positions plot
         if position_time and positions and desired_positions:
             ax_pos.clear()
+            ax_pos_deg.clear()
             ax_pos.set_title('Joint Positions Over Time')
             ax_pos.set_xlabel('Time (s)')
             ax_pos.set_ylabel('Position (rad)')
+            ax_pos_deg.set_ylabel('Position (deg)')
+            
+            # Store y limits for synchronizing axes
+            y_min_rad = float('inf')
+            y_max_rad = float('-inf')
+            
             for i in range(num_joints):
                 color = joint_colors(i)
                 joint_actual_positions = [pos[i] for pos in positions]
                 joint_desired_positions = [dpos[i] for dpos in desired_positions]
+                
+                # Update y limits
+                y_min_rad = min(y_min_rad, min(joint_actual_positions + joint_desired_positions))
+                y_max_rad = max(y_max_rad, max(joint_actual_positions + joint_desired_positions))
+                
                 ax_pos.plot(position_time, joint_actual_positions, 
                           label=f"{joint_names[i]} Actual", color=color)
                 ax_pos.plot(position_time, joint_desired_positions, 
                           linestyle='--', label=f"{joint_names[i]} Desired", color=color)
-            ax_pos.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+            
+            # Set limits and ticks for both axes
             ax_pos.set_xlim(current_time - max_time_window, current_time)
+            ax_pos.set_ylim(y_min_rad, y_max_rad)
+            ax_pos_deg.set_ylim(rad2deg(y_min_rad), rad2deg(y_max_rad))
+            
+            # Add grid
+            ax_pos.grid(True, alpha=0.3)
+            ax_pos.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
 
         # Update velocities plot
         if velocity_time and velocities:
             ax_vel.clear()
+            ax_vel_deg.clear()
             ax_vel.set_title('Joint Velocities Over Time')
             ax_vel.set_xlabel('Time (s)')
             ax_vel.set_ylabel('Velocity (rad/s)')
+            ax_vel_deg.set_ylabel('Velocity (deg/s)')
+            
+            # Store y limits for synchronizing axes
+            y_min_rad = float('inf')
+            y_max_rad = float('-inf')
+            
             for i in range(num_joints):
                 color = joint_colors(i)
                 joint_velocities = [vel[i] for vel in velocities]
+                
+                # Update y limits
+                y_min_rad = min(y_min_rad, min(joint_velocities))
+                y_max_rad = max(y_max_rad, max(joint_velocities))
+                
                 ax_vel.plot(velocity_time, joint_velocities, 
                           label=f"{joint_names[i]}", color=color)
-            ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+            
+            # Set limits and ticks for both axes
             ax_vel.set_xlim(current_time - max_time_window, current_time)
+            ax_vel.set_ylim(y_min_rad, y_max_rad)
+            ax_vel_deg.set_ylim(rad2deg(y_min_rad), rad2deg(y_max_rad))
+            
+            # Add grid
+            ax_vel.grid(True, alpha=0.3)
+            ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
 
         # Adjust layouts
         fig_freq.tight_layout()
