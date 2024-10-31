@@ -15,6 +15,9 @@ from collections import deque
 from typing import List
 import numpy as np
 import onnxruntime as ort
+import paho.mqtt.client as mqtt
+import json
+from datetime import datetime
 
 MOCK = False 
 
@@ -56,6 +59,9 @@ class Sim2simCfg:
         clip_observations=18.0,
         clip_actions=18.0,
         action_scale=0.25,
+        mqtt_enabled=True,
+        mqtt_host="localhost",
+        mqtt_port=1883,
     ):
 
         self.num_actions = num_actions
@@ -87,6 +93,10 @@ class Sim2simCfg:
         self.clip_actions = clip_actions
 
         self.action_scale = action_scale
+
+        self.mqtt_enabled = mqtt_enabled
+        self.mqtt_host = mqtt_host
+        self.mqtt_port = mqtt_port
 
 
 class cmd:
@@ -148,6 +158,11 @@ def set_servo_positions(hal: HAL) -> None:
 def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
     print(f"[INFO]: Inference starting...")
 
+    if cfg.mqtt_enabled:
+        mqtt_client = mqtt.Client()
+        mqtt_client.connect(cfg.mqtt_host, cfg.mqtt_port, 60)
+        print(f"[INFO]: Connected to MQTT broker at {cfg.mqtt_host}:{cfg.mqtt_port}")
+
     action = np.zeros((cfg.num_actions), dtype=np.double)
 
     hist_obs = deque()
@@ -178,6 +193,30 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg) -> None:
         # FIXME
         omega = np.zeros(3, dtype=np.float32)
         eu_ang = np.zeros(3, dtype=np.float32)  
+
+        # Publish data to MQTT if enabled
+        if cfg.mqtt_enabled:
+            mqtt_data = {
+                "time": datetime.now(datetime.timezone.utc).isoformat() + "Z",
+                "servo_positions": {
+                    str(joint.servo_id): math.degrees(joint.current_position)
+                    for joint in joints
+                },
+                "servo_velocities": {
+                    str(joint.servo_id): math.degrees(joint.current_velocity)
+                    for joint in joints
+                },
+                "imu": {
+                    "gyro": {"x": float(omega[0]), "y": float(omega[1]), "z": float(omega[2])},
+                    "euler": {"x": float(eu_ang[0]), "y": float(eu_ang[1]), "z": float(eu_ang[2])},
+                    "accel": {  # Mock accelerometer data
+                        "x": np.random.uniform(-2, 2),
+                        "y": np.random.uniform(-2, 2),
+                        "z": np.random.uniform(9.5, 10.5)  # Roughly 1G + noise
+                    }
+                }
+            }
+            mqtt_client.publish("robot/control", json.dumps(mqtt_data))
 
         obs = np.zeros([1, cfg.num_single_obs], dtype=np.float32)
 
