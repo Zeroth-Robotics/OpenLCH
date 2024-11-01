@@ -100,12 +100,12 @@ class cmd:
 
 joints = [
     JointData(name="left_hip_pitch", policy_index=0, servo_id=10, offset_deg=0.0),
-    JointData(name="left_hip_yaw", policy_index=1, servo_id=9, offset_deg=0.0),
+    JointData(name="left_hip_yaw", policy_index=1, servo_id=9, offset_deg=45.0),
     JointData(name="left_hip_roll", policy_index=2, servo_id=8, offset_deg=0.0),
     JointData(name="left_knee_pitch", policy_index=3, servo_id=7, offset_deg=0.0),
     JointData(name="left_ankle_pitch", policy_index=4, servo_id=6, offset_deg=0.0),
     JointData(name="right_hip_pitch", policy_index=5, servo_id=5, offset_deg=0.0),
-    JointData(name="right_hip_yaw", policy_index=6, servo_id=4, offset_deg=0.0),
+    JointData(name="right_hip_yaw", policy_index=6, servo_id=4, offset_deg=-45.0),
     JointData(name="right_hip_roll", policy_index=7, servo_id=3, offset_deg=0.0),
     JointData(name="right_knee_pitch", policy_index=8, servo_id=2, offset_deg=0.0),
     JointData(name="right_ankle_pitch", policy_index=9, servo_id=1, offset_deg=0.0),
@@ -138,14 +138,13 @@ def get_servo_states(hal: HAL) -> None:
 
 def set_servo_positions(hal: HAL) -> None:
     """
-    input -> desired positions (radians)
-    output -> set servo positions (degrees)
+    Input: desired positions (radians)
+    Output: set servo positions (degrees), applying offsets
     """
     positions_deg = []
     for joint in joints:
         # Convert from radians to degrees and apply offset
-        desired_pos_deg = math.degrees(joint.desired_position)
-        desired_pos_deg += joint.offset_deg
+        desired_pos_deg = math.degrees(joint.desired_position) + joint.offset_deg
         positions_deg.append((joint.servo_id, desired_pos_deg))
 
     if MOCK:
@@ -256,11 +255,10 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         gyro, accel, euler_angles, quaternions = imu_handler.get_orientation()
 
         # FIXME
-        # omega = gyro.astype(np.float32) 
-        # eu_ang = np.radians(euler_angles).astype(np.float32) 
-       
         omega = np.zeros(3, dtype=np.float32)
         eu_ang = np.zeros(3, dtype=np.float32)
+        # omega = gyro.astype(np.float32)
+        # eu_ang = np.radians(euler_angles).astype(np.float32)
 
         obs = np.zeros([1, cfg.num_single_obs], dtype=np.float32)
 
@@ -306,7 +304,7 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
             data_queue.put(('frequency', (current_time, actual_frequency)))
 
             current_positions = [joint.current_position for joint in joints]  # in radians
-            desired_positions = [joint.desired_position for joint in joints]  # in radians
+            desired_positions = [joint.desired_position + math.radians(joint.offset_deg) for joint in joints]  # in radians
             data_queue.put(('positions', (current_time, current_positions, desired_positions)))
 
             current_velocities = [joint.current_velocity for joint in joints]  # in radians/s
@@ -332,7 +330,7 @@ def initialize(hal: HAL) -> None:
     time.sleep(1)
 
     for joint in joints:
-        joint.desired_position = 0.0  # in radians
+        joint.desired_position = 0.0
 
     set_servo_positions(hal)
     time.sleep(3)
@@ -357,6 +355,7 @@ if __name__ == "__main__":
 
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
+
 
     # Initialize IMU and Madgwick filter
     imu = hal.imu if not MOCK else None

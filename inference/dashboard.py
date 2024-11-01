@@ -184,32 +184,26 @@ def plot_dashboard(data_queue: mp.Queue):
             ax_pos.set_ylabel('Position (rad)')
             ax_pos_deg.set_ylabel('Position (deg)')
             
-            # Store y limits for synchronizing axes
-            y_min_rad = float('inf')
-            y_max_rad = float('-inf')
+            # Set fixed y-axis limits instead of calculating from data
+            y_min_deg = -100
+            y_max_deg = 100
+            y_min_rad = np.deg2rad(y_min_deg)  # Convert to radians
+            y_max_rad = np.deg2rad(y_max_deg)  # Convert to radians
             
             for i in range(num_joints):
                 color = joint_colors(i)
                 joint_actual_positions = [pos[i] for pos in positions]
                 joint_desired_positions = [dpos[i] for dpos in desired_positions]
                 
-                # Update y limits
-                y_min_rad = min(y_min_rad, min(joint_actual_positions + joint_desired_positions))
-                y_max_rad = max(y_max_rad, max(joint_actual_positions + joint_desired_positions))
-                
                 ax_pos.plot(position_time, joint_actual_positions, 
                           label=f"{joint_names[i]} Actual", color=color)
                 ax_pos.plot(position_time, joint_desired_positions, 
                           linestyle='--', label=f"{joint_names[i]} Desired", color=color)
             
-            # Set limits and ticks for both axes
+            # Set fixed limits for both axes
             ax_pos.set_xlim(current_time - max_time_window, current_time)
             ax_pos.set_ylim(y_min_rad, y_max_rad)
-            ax_pos_deg.set_ylim(rad2deg(y_min_rad), rad2deg(y_max_rad))
-            
-            # Add grid
-            ax_pos.grid(True, alpha=0.3)
-            ax_pos.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+            ax_pos_deg.set_ylim(y_min_deg, y_max_deg)
 
         # Update velocities plot
         if velocity_time and velocities:
