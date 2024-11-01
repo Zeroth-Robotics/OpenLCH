@@ -18,6 +18,11 @@ service ServoControl {
   rpc SetTorque (TorqueSettings) returns (Empty);
   rpc SetTorqueEnable (TorqueEnableSettings) returns (Empty);
   rpc GetImuData (Empty) returns (ImuData);
+  rpc UploadAudio (stream AudioChunk) returns (UploadResponse);
+  rpc PlayAudio (PlayRequest) returns (Empty);
+  rpc StartRecording (RecordingConfig) returns (Empty);
+  rpc StopRecording (Empty) returns (Empty);
+  rpc GetRecordedAudio (Empty) returns (stream AudioChunk);
 }
 
 message Empty {}
@@ -127,4 +132,29 @@ message Vector3 {
   float x = 1;
   float y = 2;
   float z = 3;
+}
+
+message AudioChunk {
+  bytes data = 1;
+  string format = 2;  // e.g., "wav", "mp3"
+  int64 timestamp = 3;
+}
+
+message UploadResponse {
+  string audio_id = 1;
+  oneof result {
+    bool success = 2;
+    ErrorInfo error = 3;
+  }
+}
+
+message PlayRequest {
+  string audio_id = 1;
+  float volume = 2;  // 0.0 to 1.0
+}
+
+message RecordingConfig {
+  int32 sample_rate = 1;  // e.g., 44100, 48000
+  string format = 2;      // e.g., "wav"
+  int32 channels = 3;     // e.g., 1 for mono, 2 for stereo
 }

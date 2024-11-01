@@ -14,13 +14,21 @@ use tokio::task;
 use std::time::Duration;
 use std::env;
 use runtime::hal::{Servo, IMU, MAX_SERVOS, ServoMultipleWriteCommand, ServoData, ServoMode, ServoDirection, ServoRegister, TorqueMode};
+use std::collections::HashMap;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+use tokio::fs;
+use std::path::PathBuf;
+use std::pin::Pin;
+use chrono::prelude::*;
+use tokio_stream::{self, StreamExt, Stream};
 
 pub mod servo_control {
     tonic::include_proto!("hal_pb");
 }
 
 use servo_control::servo_control_server::{ServoControl, ServoControlServer};
-use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus, TorqueSettings, TorqueEnableSettings, ImuData, Vector3};
+use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus, TorqueSettings, TorqueEnableSettings, ImuData, Vector3, AudioChunk, UploadResponse, PlayRequest, RecordingConfig};
 
 #[derive(Debug)]
 pub struct StsServoControl {
@@ -29,6 +37,8 @@ pub struct StsServoControl {
     last_positions: Arc<Mutex<ServoData>>,
     calibrating_servo: Arc<Mutex<Option<u8>>>,
     calibration_running: Arc<AtomicBool>,
+    audio_files: Arc<RwLock<HashMap<String, PathBuf>>>,
+    recording_running: Arc<AtomicBool>,
 }
 
 impl StsServoControl {
@@ -44,6 +54,8 @@ impl StsServoControl {
             last_positions: Arc::new(Mutex::new(initial_data)),
             calibrating_servo: Arc::new(Mutex::new(None)),
             calibration_running: Arc::new(AtomicBool::new(false)),
+            audio_files: Arc::new(RwLock::new(HashMap::new())),
+            recording_running: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -241,9 +253,42 @@ impl StsServoControl {
     }
 
     fn stop_process(process_name: &str) -> Result<(), std::io::Error> {
-        Command::new("killall")
-            .arg(process_name)
+        Command::new("pkill")
+            .args(&["-SIGINT", process_name])  // Send SIGINT (Ctrl+C) signal
             .status()?;
+        Ok(())
+    }
+
+    async fn save_audio_chunk(audio_id: &str, data: &[u8]) -> Result<PathBuf, Status> {
+        let audio_dir = PathBuf::from("/tmp/audio");
+        fs::create_dir_all(&audio_dir).await
+            .map_err(|e| Status::internal(format!("Failed to create audio directory: {}", e)))?;
+
+        let file_path = audio_dir.join(format!("{}.wav", audio_id));
+        fs::write(&file_path, data).await
+            .map_err(|e| Status::internal(format!("Failed to write audio file: {}", e)))?;
+
+        Ok(file_path)
+    }
+
+    fn play_audio(file_path: &Path, volume: f32) -> Result<(), Status> {
+        let _volume_db = (20.0 * volume.log10()).round() as i32;
+        // let volume_arg = if volume_db <= -144 {
+        //     "-M".to_string()  // Mute
+        // } else {
+        //     format!("-v {}", volume_db)
+        // };
+
+        Command::new("tinyplay")
+            .args(&[
+                file_path.to_str().unwrap(),
+                "-D", "1",
+                "-c", "1",
+            ])
+            // .arg(&volume_arg)
+            .status()
+            .map_err(|e| Status::internal(format!("Failed to play audio: {}", e)))?;
+
         Ok(())
     }
 }
@@ -589,6 +634,140 @@ network={{
                 z: imu_data.acc_z,
             }),
         }))
+    }
+
+    async fn upload_audio(&self, request: Request<tonic::Streaming<AudioChunk>>) -> Result<Response<UploadResponse>, Status> {
+        let mut stream = request.into_inner();
+        let audio_id = format!("audio_{}", chrono::Utc::now().timestamp_nanos());
+        let mut all_data = Vec::new();
+        
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| Status::internal(format!("Failed to receive chunk: {}", e)))?;
+            all_data.extend(chunk.data);
+        }
+
+        let file_path = Self::save_audio_chunk(&audio_id, &all_data).await?;
+        
+        {
+            let mut audio_files = self.audio_files.write().await;
+            audio_files.insert(audio_id.clone(), file_path);
+        }
+
+        Ok(Response::new(UploadResponse {
+            audio_id,
+            result: Some(servo_control::upload_response::Result::Success(true)),
+        }))
+    }
+
+    async fn play_audio(&self, request: Request<PlayRequest>) -> Result<Response<Empty>, Status> {
+        let play_request = request.into_inner();
+        let audio_files = self.audio_files.read().await;
+        
+        let file_path = audio_files.get(&play_request.audio_id)
+            .ok_or_else(|| Status::not_found("Audio file not found"))?;
+
+        Self::play_audio(file_path, play_request.volume)?;
+        
+        Ok(Response::new(Empty {}))
+    }
+
+    async fn start_recording(&self, request: Request<RecordingConfig>) -> Result<Response<Empty>, Status> {
+        if self.recording_running.load(Ordering::SeqCst) {
+            return Err(Status::already_exists("Recording is already in progress"));
+        }
+
+        let config = request.into_inner();
+        let recording_running = self.recording_running.clone();
+        
+        // Create output directory if it doesn't exist
+        tokio::fs::create_dir_all("/tmp/audio").await
+            .map_err(|e| Status::internal(format!("Failed to create audio directory: {}", e)))?;
+
+        recording_running.store(true, Ordering::SeqCst);
+        
+        tokio::spawn(async move {
+            let channels = config.channels.to_string();
+            let sample_rate = config.sample_rate.to_string();
+            
+            let mut child = match Command::new("tinycap")
+                .args(&[
+                    "/tmp/audio/recording.wav",
+                    "-D", "0",
+                    "-c", &channels,
+                    "-r", &sample_rate,
+                    "-b", "16",
+                ])
+                .spawn() {
+                    Ok(child) => child,
+                    Err(e) => {
+                        eprintln!("Failed to start recording: {}", e);
+                        recording_running.store(false, Ordering::SeqCst);
+                        return;
+                    }
+                };
+
+            while recording_running.load(Ordering::SeqCst) {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+
+            // Send SIGINT to the process
+            #[cfg(unix)]
+            {
+                use nix::sys::signal::{self, Signal};
+                use nix::unistd::Pid;
+                signal::kill(Pid::from_raw(child.id() as i32), Signal::SIGINT).unwrap();
+            }
+
+            // Wait for the process to finish
+            let _ = child.wait();
+        });
+
+        Ok(Response::new(Empty {}))
+    }
+
+    async fn stop_recording(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
+        if !self.recording_running.load(Ordering::SeqCst) {
+            return Err(Status::not_found("No recording in progress"));
+        }
+
+        self.recording_running.store(false, Ordering::SeqCst);
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        Ok(Response::new(Empty {}))
+    }
+
+    type GetRecordedAudioStream = Pin<Box<dyn Stream<Item = Result<AudioChunk, Status>> + Send + 'static>>;
+
+    async fn get_recorded_audio(&self, _request: Request<Empty>) -> Result<Response<Self::GetRecordedAudioStream>, Status> {
+        let recording_path = PathBuf::from("/tmp/audio/recording.wav");
+        
+        if !recording_path.exists() {
+            return Err(Status::not_found("No recording found"));
+        }
+
+        let data = fs::read(&recording_path).await
+            .map_err(|e| Status::internal(format!("Failed to read recording: {}", e)))?;
+
+        let (tx, rx) = tokio::sync::mpsc::channel(32);
+        
+        tokio::spawn(async move {
+            const CHUNK_SIZE: usize = 32 * 1024; // 32KB chunks
+            
+            for chunk in data.chunks(CHUNK_SIZE) {
+                let audio_chunk = AudioChunk {
+                    data: chunk.to_vec(),
+                    format: "wav".to_string(),
+                    timestamp: chrono::Utc::now().timestamp_millis(),
+                };
+                
+                if tx.send(Ok(audio_chunk)).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        let stream = tokio_stream::wrappers::ReceiverStream::new(rx);
+        Ok(Response::new(Box::pin(stream) as Self::GetRecordedAudioStream))
     }
 }
 
