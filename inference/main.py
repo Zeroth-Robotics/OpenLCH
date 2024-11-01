@@ -1,6 +1,6 @@
 """ Inference script for running the model on the robot
 Run:
-    python inference/main.py --model_path sim/examples/standing_micro.onnx
+    python inference/main.py --model_path sim/examples/standing_micro.onnx --no-calibration
 
     (from repo root)
 TODO:
@@ -201,7 +201,7 @@ class IMUHandler:
         gyro -= self.gyro_bias
         self.Q = self.madgwick.updateIMU(self.Q, gyr=gyro, acc=accel)
         euler_angles = np.degrees(orientation.q2euler(self.Q))
-        return gyro, euler_angles  # gyro in rad/s, euler_angles in degrees
+        return gyro, accel, euler_angles, self.Q  # gyro in rad/s, accel in g, euler_angles in degrees, quaternion
 
 
 def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queue: mp.Queue, imu_handler: 'IMUHandler') -> None:
@@ -231,11 +231,15 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         current_positions_np = np.array([joint.current_position for joint in joints], dtype=np.float32)
         current_velocities_np = np.array([joint.current_velocity for joint in joints], dtype=np.float32)
 
-        # Get IMU data
-        gyro, euler_angles = imu_handler.get_orientation()
-        omega = gyro.astype(np.float32) 
-        eu_ang = np.radians(euler_angles).astype(np.float32) 
-        
+        gyro, accel, euler_angles, quaternions = imu_handler.get_orientation()
+
+        # FIXME
+        # omega = gyro.astype(np.float32) 
+        # eu_ang = np.radians(euler_angles).astype(np.float32) 
+       
+        omega = np.zeros(3, dtype=np.float32)
+        eu_ang = np.zeros(3, dtype=np.float32)
+
         obs = np.zeros([1, cfg.num_single_obs], dtype=np.float32)
 
         t = loop_start_time
@@ -285,6 +289,9 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
 
             current_velocities = [joint.current_velocity for joint in joints]  # in radians/s
             data_queue.put(('velocities', (current_time, current_velocities)))
+
+            data_queue.put(('imu', (current_time, gyro.tolist(), accel.tolist(), euler_angles.tolist(), quaternions.tolist())))
+
         except Exception as e:
             print(f"Exception in sending data: {e}")
 

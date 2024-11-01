@@ -24,10 +24,18 @@ def plot_dashboard(data_queue: mp.Queue):
     velocity_time = []
     velocities = []
 
-    # Create three separate figures
+    # IMU data storage
+    imu_time = []
+    euler_data = [[], [], []]      # For Roll, Pitch, Yaw
+    gyro_data = [[], [], []]       # For Gyro X, Y, Z
+    accel_data = [[], [], []]      # For Accel X, Y, Z
+    quat_data = [[], [], [], []]   # For q0, q1, q2, q3
+
+    # Create figures
     fig_freq = plt.figure(figsize=(12, 3))
     fig_pos = plt.figure(figsize=(12, 6))
     fig_vel = plt.figure(figsize=(12, 6))
+    fig_imu, (ax_euler, ax_raw, ax_quat) = plt.subplots(1, 3, figsize=(20, 5))
 
     # Graph 1: Inference speed
     ax_freq = fig_freq.add_subplot(111)
@@ -48,9 +56,9 @@ def plot_dashboard(data_queue: mp.Queue):
     lines_positions = []
     for i in range(num_joints):
         color = joint_colors(i)
-        line_pos, = ax_pos.plot([], [], label=f"{joint_names[i]} Actual", color=color)
-        line_desired_pos, = ax_pos.plot([], [], linestyle='--', label=f"{joint_names[i]} Desired", color=color)
-        lines_positions.append((line_pos, line_desired_pos))
+        ax_pos.plot([], [], label=f"{joint_names[i]} Actual", color=color)
+        ax_pos.plot([], [], linestyle='--', label=f"{joint_names[i]} Desired", color=color)
+
     ax_pos.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
 
     # Graph 3: Joint Velocities with dual y-axes
@@ -60,12 +68,35 @@ def plot_dashboard(data_queue: mp.Queue):
     ax_vel.set_xlabel('Time (s)')
     ax_vel.set_ylabel('Velocity (rad/s)')
     ax_vel_deg.set_ylabel('Velocity (deg/s)')
-    lines_velocities = []
     for i in range(num_joints):
         color = joint_colors(i)
-        line_vel, = ax_vel.plot([], [], label=f"{joint_names[i]}", color=color)
-        lines_velocities.append(line_vel)
+        ax_vel.plot([], [], label=f"{joint_names[i]}", color=color)
     ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+
+    # IMU Plots
+    # Euler angles plot
+    lines_euler = [ax_euler.plot([], [], label=angle)[0] for angle in ['Roll', 'Pitch', 'Yaw']]
+    ax_euler.legend()
+    ax_euler.set_ylim(-180, 180)
+    ax_euler.set_xlabel('Time (s)')
+    ax_euler.set_ylabel('Angle (degrees)')
+    ax_euler.set_title('Euler Angles')
+
+    # Raw IMU data plot
+    lines_gyro = [ax_raw.plot([], [], label=f'Gyro {axis}')[0] for axis in ['X', 'Y', 'Z']]
+    lines_accel = [ax_raw.plot([], [], '--', label=f'Accel {axis}')[0] for axis in ['X', 'Y', 'Z']]
+    ax_raw.legend()
+    ax_raw.set_xlabel('Time (s)')
+    ax_raw.set_ylabel('Value')
+    ax_raw.set_title('Raw IMU Data')
+
+    # Quaternion plot
+    lines_quat = [ax_quat.plot([], [], label=f'q{i}')[0] for i in range(4)]
+    ax_quat.legend()
+    ax_quat.set_ylim(-1.1, 1.1)
+    ax_quat.set_xlabel('Time (s)')
+    ax_quat.set_ylabel('Value')
+    ax_quat.set_title('Quaternions')
 
     def rad2deg(rad):
         return rad * 180.0 / np.pi
@@ -84,6 +115,7 @@ def plot_dashboard(data_queue: mp.Queue):
         prune_data(time_data, freq_data)
         prune_data(position_time, positions, desired_positions)
         prune_data(velocity_time, velocities)
+        prune_data(imu_time, *gyro_data, *accel_data, *euler_data, *quat_data)
 
         # Get new data from queue
         while not data_queue.empty():
@@ -102,6 +134,21 @@ def plot_dashboard(data_queue: mp.Queue):
                     t, vel = data
                     velocity_time.append(t)
                     velocities.append(vel)
+                elif data_type == 'imu':
+                    t, gyro_list, accel_list, euler_list, quat_list = data
+                    imu_time.append(t)
+                    # Append gyro data
+                    for i in range(3):
+                        gyro_data[i].append(gyro_list[i])
+                    # Append accel data
+                    for i in range(3):
+                        accel_data[i].append(accel_list[i])
+                    # Append euler angles data
+                    for i in range(3):
+                        euler_data[i].append(euler_list[i])
+                    # Append quaternion data
+                    for i in range(4):
+                        quat_data[i].append(quat_list[i])
             except Exception as e:
                 print(f"Error processing queue data: {e}")
 
@@ -186,10 +233,46 @@ def plot_dashboard(data_queue: mp.Queue):
             ax_vel.grid(True, alpha=0.3)
             ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
 
+        # Update IMU plots
+        if imu_time:
+            # Update Euler angles plot
+            ax_euler.clear()
+            ax_euler.set_title('Euler Angles')
+            ax_euler.set_xlabel('Time (s)')
+            ax_euler.set_ylabel('Angle (degrees)')
+            ax_euler.set_ylim(-180, 180)
+            for i in range(3):
+                ax_euler.plot(imu_time, euler_data[i], label=['Roll', 'Pitch', 'Yaw'][i])
+            ax_euler.legend()
+            ax_euler.set_xlim(current_time - max_time_window, current_time)
+
+            # Update raw IMU data plot
+            ax_raw.clear()
+            ax_raw.set_title('Raw IMU Data')
+            ax_raw.set_xlabel('Time (s)')
+            ax_raw.set_ylabel('Value')
+            for i in range(3):
+                ax_raw.plot(imu_time, gyro_data[i], label=f'Gyro {["X","Y","Z"][i]}')
+                ax_raw.plot(imu_time, accel_data[i], linestyle='--', label=f'Accel {["X","Y","Z"][i]}')
+            ax_raw.legend()
+            ax_raw.set_xlim(current_time - max_time_window, current_time)
+
+            # Update quaternions plot
+            ax_quat.clear()
+            ax_quat.set_title('Quaternions')
+            ax_quat.set_xlabel('Time (s)')
+            ax_quat.set_ylabel('Value')
+            ax_quat.set_ylim(-1.1, 1.1)
+            for i in range(4):
+                ax_quat.plot(imu_time, quat_data[i], label=f'q{i}')
+            ax_quat.legend()
+            ax_quat.set_xlim(current_time - max_time_window, current_time)
+
         # Adjust layouts
         fig_freq.tight_layout()
         fig_pos.tight_layout()
         fig_vel.tight_layout()
+        fig_imu.tight_layout()
 
         # Add padding for legends
         fig_pos.subplots_adjust(right=0.85)
@@ -199,6 +282,7 @@ def plot_dashboard(data_queue: mp.Queue):
     ani_freq = animation.FuncAnimation(fig_freq, update, interval=100)
     ani_pos = animation.FuncAnimation(fig_pos, update, interval=100)
     ani_vel = animation.FuncAnimation(fig_vel, update, interval=100)
+    ani_imu = animation.FuncAnimation(fig_imu, update, interval=100)
 
     plt.show()
 
