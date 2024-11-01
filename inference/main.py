@@ -175,22 +175,44 @@ class IMUHandler:
     def __init__(self, imu, madgwick_filter):
         self.imu = imu
         self.madgwick = madgwick_filter
-        self.Q = np.array([1.0, 0.0, 0.0, 0.0])  # Initial quaternion
-        self.gyro_bias = np.zeros(3)             # For storing gyro bias
+        self.Q = np.array([1.0, 0.0, 0.0, 0.0])  
+        self.gyro_bias = np.zeros(3)
 
     def calibrate_gyro(self, samples=100):
         """
         Calibrates the gyro bias by averaging over a number of samples.
+        Also initializes the orientation using initial accelerometer readings.
         """
-        print("Calibrating gyro, keep IMU still...")
+        print("Calibrating gyro and initializing orientation, keep IMU still...")
         bias_sum = np.zeros(3)
+        accel_sum = np.zeros(3)
+        
         for _ in range(samples):
             imu_data = self.imu.get_data()
-            gyro, _ = imu_data_to_numpy(imu_data)
+            gyro, accel = imu_data_to_numpy(imu_data)
             bias_sum += gyro
+            accel_sum += accel
             time.sleep(0.02)
+        
         self.gyro_bias = bias_sum / samples
-        print(f"Gyro bias: X={self.gyro_bias[0]:.3f}, Y={self.gyro_bias[1]:.3f}, Z={self.gyro_bias[2]:.3f} rad/s")
+        
+        avg_accel = accel_sum / samples
+        avg_accel = avg_accel / np.linalg.norm(avg_accel)
+        
+        roll = np.arctan2(avg_accel[1], avg_accel[2])
+        pitch = np.arctan2(-avg_accel[0], np.sqrt(avg_accel[1]**2 + avg_accel[2]**2))
+        
+        cr, cp = np.cos(roll/2), np.cos(pitch/2)
+        sr, sp = np.sin(roll/2), np.sin(pitch/2)
+        
+        self.Q = np.array([
+            cr * cp,                 # w
+            sr * cp,                 # x
+            cr * sp,                 # y
+            -sr * sp                 # z
+        ])
+        
+        print(f"Initial roll: {np.degrees(roll):.1f}, pitch: {np.degrees(pitch):.1f}")
 
     def get_orientation(self):
         """

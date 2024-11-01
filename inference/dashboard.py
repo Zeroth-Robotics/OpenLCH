@@ -1,3 +1,4 @@
+import os
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -14,8 +15,8 @@ def plot_dashboard(data_queue: mp.Queue):
     num_joints = len(joint_names)
     joint_colors = plt.cm.get_cmap('tab10', num_joints)
 
-    # Initialize data storage with 1-second window
-    max_time_window = 1.0
+    # Initialize data storage with 5-second window
+    max_time_window = 5.0  # Changed from 1.0 to 5.0
     time_data = []
     freq_data = []
     position_time = []
@@ -30,6 +31,14 @@ def plot_dashboard(data_queue: mp.Queue):
     gyro_data = [[], [], []]       # For Gyro X, Y, Z
     accel_data = [[], [], []]      # For Accel X, Y, Z
     quat_data = [[], [], [], []]   # For q0, q1, q2, q3
+
+    # Directory to save snapshots
+    snapshots_dir = os.path.join(os.getcwd(), 'inference/experiments')
+    if not os.path.exists(snapshots_dir):
+        os.makedirs(snapshots_dir)
+
+    # Time of the last snapshot
+    last_snapshot_time = time.time()
 
     # Create figures
     fig_freq = plt.figure(figsize=(12, 3))
@@ -89,6 +98,7 @@ def plot_dashboard(data_queue: mp.Queue):
     ax_raw.set_xlabel('Time (s)')
     ax_raw.set_ylabel('Value')
     ax_raw.set_title('Raw IMU Data')
+    ax_raw.set_ylim(-2, 2)  # Gyro in rad/s, Accel in g
 
     # Quaternion plot
     lines_quat = [ax_quat.plot([], [], label=f'q{i}')[0] for i in range(4)]
@@ -102,6 +112,7 @@ def plot_dashboard(data_queue: mp.Queue):
         return rad * 180.0 / np.pi
 
     def update(frame):
+        nonlocal last_snapshot_time  # Added to modify the variable within the function
         current_time = time.time()
 
         # Remove old data outside the time window
@@ -250,12 +261,14 @@ def plot_dashboard(data_queue: mp.Queue):
             ax_raw.clear()
             ax_raw.set_title('Raw IMU Data')
             ax_raw.set_xlabel('Time (s)')
-            ax_raw.set_ylabel('Value')
+            ax_raw.set_ylabel('Value (rad/s or g)')
+            ax_raw.set_ylim(-2, 2)  # Fixed y-axis limits
             for i in range(3):
                 ax_raw.plot(imu_time, gyro_data[i], label=f'Gyro {["X","Y","Z"][i]}')
                 ax_raw.plot(imu_time, accel_data[i], linestyle='--', label=f'Accel {["X","Y","Z"][i]}')
             ax_raw.legend()
             ax_raw.set_xlim(current_time - max_time_window, current_time)
+            ax_raw.grid(True, alpha=0.3)  # Optional: add grid for better readability
 
             # Update quaternions plot
             ax_quat.clear()
@@ -277,6 +290,27 @@ def plot_dashboard(data_queue: mp.Queue):
         # Add padding for legends
         fig_pos.subplots_adjust(right=0.85)
         fig_vel.subplots_adjust(right=0.85)
+
+        # Snapshot functionality
+        if current_time - last_snapshot_time >= 5.0:  # Every 5 seconds
+            # Remove previous images
+            for filename in os.listdir(snapshots_dir):
+                file_path = os.path.join(snapshots_dir, filename)
+                try:
+                    if os.path.isfile(file_path):
+                        os.unlink(file_path)
+                except Exception as e:
+                    print(f"Error deleting file {file_path}: {e}")
+
+            # Save new snapshots
+            timestamp = int(current_time)
+            fig_freq.savefig(os.path.join(snapshots_dir, f'freq_{timestamp}.png'))
+            fig_pos.savefig(os.path.join(snapshots_dir, f'pos_{timestamp}.png'))
+            fig_vel.savefig(os.path.join(snapshots_dir, f'vel_{timestamp}.png'))
+            fig_imu.savefig(os.path.join(snapshots_dir, f'imu_{timestamp}.png'))
+
+            # Update the last snapshot time
+            last_snapshot_time = current_time
 
     # Create animations for each figure
     ani_freq = animation.FuncAnimation(fig_freq, update, interval=100)
