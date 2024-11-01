@@ -100,12 +100,12 @@ class cmd:
 
 joints = [
     JointData(name="left_hip_pitch", policy_index=0, servo_id=10, offset_deg=0.0),
-    JointData(name="left_hip_yaw", policy_index=1, servo_id=9, offset_deg=45.0),
+    JointData(name="left_hip_yaw", policy_index=1, servo_id=9, offset_deg=0.0),
     JointData(name="left_hip_roll", policy_index=2, servo_id=8, offset_deg=0.0),
     JointData(name="left_knee_pitch", policy_index=3, servo_id=7, offset_deg=0.0),
     JointData(name="left_ankle_pitch", policy_index=4, servo_id=6, offset_deg=0.0),
     JointData(name="right_hip_pitch", policy_index=5, servo_id=5, offset_deg=0.0),
-    JointData(name="right_hip_yaw", policy_index=6, servo_id=4, offset_deg=-45.0),
+    JointData(name="right_hip_yaw", policy_index=6, servo_id=4, offset_deg=0.0),
     JointData(name="right_hip_roll", policy_index=7, servo_id=3, offset_deg=0.0),
     JointData(name="right_knee_pitch", policy_index=8, servo_id=2, offset_deg=0.0),
     JointData(name="right_ankle_pitch", policy_index=9, servo_id=1, offset_deg=0.0),
