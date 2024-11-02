@@ -1,3 +1,5 @@
+"""Plotting module for real-time dashboard visualization."""
+
 import os
 import multiprocessing as mp
 import matplotlib.pyplot as plt
@@ -313,12 +315,3 @@ def plot_dashboard(data_queue: mp.Queue):
     ani_imu = animation.FuncAnimation(fig_imu, update, interval=100)
 
     plt.show()
-
-def run_dashboard():
-    data_queue = mp.Queue()
-    plot_process = mp.Process(target=plot_dashboard, args=(data_queue,))
-    plot_process.start()
-    return data_queue
-
-if __name__ == '__main__':
-    run_dashboard()
