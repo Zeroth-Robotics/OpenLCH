@@ -6,6 +6,7 @@ use i2cdev::core::I2CDevice;
 use crate::hal::{ServoInfo, ServoData, ServoMultipleWriteCommand, ServoMode, ServoDirection, ServoRegister, MemoryLockState, TorqueMode, IMUData, MAX_SERVOS};
 use std::sync::{Arc, Mutex};
 use std::fmt;
+use crate::hal_risc::qmi8658::QMI8658;
 
 #[link(name = "sts3215")]
 extern "C" {
@@ -247,58 +248,41 @@ impl Drop for Servo {
 }
 
 pub struct IMU {
-    i2c: Arc<Mutex<LinuxI2CDevice>>,
+    qmi: Arc<Mutex<QMI8658>>,
 }
 
 impl IMU {
     pub fn new() -> Result<Self> {
-        let i2c = LinuxI2CDevice::new("/dev/i2c-1", 0x50)?;
-        Ok(IMU { i2c: Arc::new(Mutex::new(i2c)) })
-    }
-
-    pub fn read_data(&self) -> Result<IMUData> {
-        let mut data = [0u8; 25];
-
-        {
-            let mut i2c = self.i2c.lock().unwrap();
-            let bytes = i2c.smbus_read_i2c_block_data(0x00, 25)?;  // Read 25 bytes starting from register 0x00
-            data.copy_from_slice(&bytes);
-        }
-
-        // Verify header
-        if data[0] != 3 {
-            return Err(anyhow::anyhow!("Invalid header received: {}", data[0]));
-        }
-
-        // Read accelerometer data (bytes 1-12)
-        let acc_values = Self::unpack_values(&data[1..13])?;
-        
-        // Read gyroscope data (bytes 13-24)
-        let gyro_values = Self::unpack_values(&data[13..25])?;
-
-        Ok(IMUData {
-            acc_x: acc_values[0],
-            acc_y: acc_values[1],
-            acc_z: acc_values[2],
-            gyro_x: gyro_values[0],
-            gyro_y: gyro_values[1],
-            gyro_z: gyro_values[2],
+        let qmi = QMI8658::new("/dev/i2c-1")
+            .map_err(|e| anyhow::anyhow!("Failed to initialize QMI8658: {}", e))?;
+            
+        Ok(IMU {
+            qmi: Arc::new(Mutex::new(qmi))
         })
     }
 
-    fn unpack_values(data: &[u8]) -> Result<[f32; 3]> {
-        let mut values = [0.0f32; 3];
-        for i in 0..3 {
-            values[i] = f32::from_le_bytes(data[i*4..(i+1)*4].try_into()?);
-        }
-        Ok(values)
+    pub fn read_data(&self) -> Result<IMUData> {
+        let mut qmi = self.qmi.lock().unwrap();
+        let data = qmi.read_data()
+            .map_err(|e| anyhow::anyhow!("Failed to read QMI8658 data: {}", e))?;
+
+        Ok(IMUData {
+            acc_x: data.acc_x,
+            acc_y: data.acc_y,
+            acc_z: data.acc_z,
+            gyro_x: data.gyro_x,
+            gyro_y: data.gyro_y,
+            gyro_z: data.gyro_z,
+        })
     }
 }
 
 impl fmt::Debug for IMU {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("IMU")
-         .field("i2c", &"LinuxI2CDevice")
+         .field("qmi", &"QMI8658")
          .finish()
     }
 }
+
+mod qmi8658;
