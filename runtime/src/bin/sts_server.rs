@@ -28,7 +28,7 @@ pub mod servo_control {
 }
 
 use servo_control::servo_control_server::{ServoControl, ServoControlServer};
-use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus, TorqueSettings, TorqueEnableSettings, ImuData, Vector3, AudioChunk, UploadResponse, PlayRequest, RecordingConfig};
+use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, ServoIds, IdChange, ChangeIdResponse, ServoInfoResponse, servo_info_response, change_id_response, VideoStreamUrls, CalibrationResponse, CalibrationStatus, TorqueSettings, TorqueEnableSettings, ImuData, Vector3, AudioChunk, UploadResponse, PlayRequest, RecordingConfig, CalibrationRequest};
 
 #[derive(Debug)]
 pub struct StsServoControl {
@@ -470,8 +470,15 @@ network={{
         }
     }
 
-    async fn start_calibration(&self, request: Request<ServoId>) -> Result<Response<CalibrationResponse>, Status> {
-        let servo_id = request.into_inner().id as u8;
+    async fn start_calibration(
+        &self,
+        request: Request<CalibrationRequest>
+    ) -> Result<Response<CalibrationResponse>, Status> {
+        let request = request.into_inner();
+        let servo_id = request.servo_id as u8;
+        let calibration_speed = request.calibration_speed;
+        let current_threshold = request.current_threshold;
+        
         let mut calibrating_servo = self.calibrating_servo.lock().await;
 
         if calibrating_servo.is_some() {
@@ -487,9 +494,7 @@ network={{
         self.calibration_running.store(true, Ordering::SeqCst);
         
         // Start calibration in a separate task
-        let calibration_speed = 300; // You may want to make this configurable
-        let current_threshold = 600.0; // You may want to make this configurable
-        self.calibrate_servo(servo_id, calibration_speed, current_threshold).await?;
+        self.calibrate_servo(servo_id, calibration_speed as u16, current_threshold).await?;
 
         Ok(Response::new(CalibrationResponse {
             result: Some(servo_control::calibration_response::Result::Success(true)),
@@ -768,6 +773,38 @@ network={{
 
         let stream = tokio_stream::wrappers::ReceiverStream::new(rx);
         Ok(Response::new(Box::pin(stream) as Self::GetRecordedAudioStream))
+    }
+
+    async fn enable_movement(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
+        let servo = self.servo.lock().await;
+        servo.enable_movement()
+            .map_err(|e| Status::internal(format!("Failed to enable movement: {}", e)))?;
+
+        Ok(Response::new(Empty {}))
+    }
+
+    async fn disable_movement(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
+        let servo = self.servo.lock().await;
+        servo.disable_movement()
+            .map_err(|e| Status::internal(format!("Failed to disable movement: {}", e)))?;
+
+        Ok(Response::new(Empty {}))
+    }
+
+    async fn set_position(&self, request: Request<servo_control::JointPosition>) -> Result<Response<Empty>, Status> {
+        let position = request.into_inner();
+        let servo = self.servo.lock().await;
+        
+        // Convert degrees to raw value
+        let raw_position = Servo::degrees_to_raw(position.position);
+        
+        // Convert speed to raw value (assuming speed is in degrees/second)
+        let speed = (position.speed.abs() * 4096.0 / 360.0) as u16;
+
+        servo.move_servo(position.id as u8, raw_position as i16, 0, speed)
+            .map_err(|e| Status::internal(format!("Failed to set position: {}", e)))?;
+
+        Ok(Response::new(Empty {}))
     }
 }
 

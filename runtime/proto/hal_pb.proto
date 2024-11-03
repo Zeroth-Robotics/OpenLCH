@@ -5,11 +5,14 @@ package hal_pb;
 service ServoControl {
   rpc GetPositions (Empty) returns (JointPositions);
   rpc SetPositions (JointPositions) returns (Empty);
+  rpc EnableMovement (Empty) returns (Empty);
+  rpc DisableMovement (Empty) returns (Empty);
+  rpc SetPosition (JointPosition) returns (Empty);
   rpc SetWifiInfo (WifiCredentials) returns (Empty);
   rpc GetServoInfo (ServoId) returns (ServoInfoResponse);
   rpc Scan (Empty) returns (ServoIds);
   rpc ChangeId (IdChange) returns (ChangeIdResponse);
-  rpc StartCalibration (ServoId) returns (CalibrationResponse);
+  rpc StartCalibration (CalibrationRequest) returns (CalibrationResponse);
   rpc CancelCalibration (ServoId) returns (CalibrationResponse);
   rpc StartVideoStream (Empty) returns (Empty);
   rpc StopVideoStream (Empty) returns (Empty);
@@ -157,4 +160,10 @@ message RecordingConfig {
   int32 sample_rate = 1;  // e.g., 44100, 48000
   string format = 2;      // e.g., "wav"
   int32 channels = 3;     // e.g., 1 for mono, 2 for stereo
+}
+
+message CalibrationRequest {
+  int32 servo_id = 1;
+  int32 calibration_speed = 2;
+  float current_threshold = 3;
 }
