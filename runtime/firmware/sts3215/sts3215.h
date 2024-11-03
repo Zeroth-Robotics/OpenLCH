@@ -61,6 +61,12 @@ int enable_servo_readout();
 // Disable servo readout
 int disable_servo_readout();
 
+// Enable servo movement
+int enable_servo_movement();
+
+// Disable servo movement
+int disable_servo_movement();
+
 // Set servo mode
 int set_servo_mode(uint8_t id, uint8_t mode);
 

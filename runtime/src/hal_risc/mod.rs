@@ -17,6 +17,8 @@ extern "C" {
     fn servo_move(id: c_uchar, position: c_short, time: c_ushort, speed: c_ushort) -> c_int;
     fn enable_servo_readout() -> c_int;
     fn disable_servo_readout() -> c_int;
+    fn enable_servo_movement() -> c_int;
+    fn disable_servo_movement() -> c_int;
     fn set_servo_mode(id: c_uchar, mode: c_uchar) -> c_int;
     fn set_servo_speed(id: c_uchar, speed: c_ushort, direction: c_int) -> c_int;
     fn servo_read_info(id: c_uchar, info: *mut ServoInfo) -> c_int;
@@ -77,6 +79,22 @@ impl Servo {
         let result = unsafe { disable_servo_readout() };
         if result != 0 {
             anyhow::bail!("Failed to disable servo readout");
+        }
+        Ok(())
+    }
+
+    pub fn enable_movement(&self) -> Result<()> {
+        let result = unsafe { enable_servo_movement() };
+        if result != 0 {
+            anyhow::bail!("Failed to enable servo movement");
+        }
+        Ok(())
+    }
+
+    pub fn disable_movement(&self) -> Result<()> {
+        let result = unsafe { disable_servo_movement() };
+        if result != 0 {
+            anyhow::bail!("Failed to disable servo movement");
         }
         Ok(())
     }
