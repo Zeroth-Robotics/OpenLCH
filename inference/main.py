@@ -1,12 +1,6 @@
 """ Inference script for running the model on the robot
 Run:
-    python inference/main.py --model_path sim/examples/standing_micro.onnx
-
-    (from repo root)
-TODO:
-    - connect this with the sim2sim config
-    - add sim2real
-    - add real2sim
+    python inference/main.py --model_path sim/examples/walking_micro.onnx
 """
 import argparse
 import math
