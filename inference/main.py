@@ -25,7 +25,7 @@ class Sim2simCfg:
         damping=0.3,
         effort=1.0,
         dt=0.001,
-        decimation=20,
+        decimation=10,
         cycle_time=0.4,
         tau_factor=3,
         lin_vel=2.0,
@@ -69,7 +69,7 @@ class Sim2simCfg:
 
 
 class cmd:
-    vx = 0.0
+    vx = 0.2
     vy = 0.0
     dyaw = 0.0
 
@@ -83,12 +83,12 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
     for _ in range(cfg.frame_stack):
         hist_obs.append(np.zeros([1, cfg.num_single_obs], dtype=np.double))
 
-    target_frequency = 1 / (cfg.dt * cfg.decimation)  # e.g., 50 Hz
+    target_frequency = 1 / (cfg.dt * cfg.decimation)  # e.g., 100 Hz
     # print(f"Target frequency: {target_frequency} Hz")
     target_loop_time = 1.0 / target_frequency
 
     last_time = time.time()  # Track cycle time
-
+    t = time.start_time() # start from 0 in ms
     while True:
         loop_start_time = time.time()
 
@@ -110,7 +110,6 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
 
         obs = np.zeros([1, cfg.num_single_obs], dtype=np.float32)
 
-        t = loop_start_time
         obs[0, 0] = math.sin(2 * math.pi * t / cfg.cycle_time)
         obs[0, 1] = math.cos(2 * math.pi * t / cfg.cycle_time)
         obs[0, 2] = cmd.vx * cfg.lin_vel
