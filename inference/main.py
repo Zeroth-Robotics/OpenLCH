@@ -1,12 +1,6 @@
 """ Inference script for running the model on the robot
 Run:
     python inference/main.py --model_path sim/examples/walking_micro.onnx
-
-    (from repo root)
-TODO:
-    - connect this with the sim2sim config
-    - add sim2real
-    - add real2sim
 """
 import argparse
 import math
@@ -16,24 +10,8 @@ from typing import List
 import numpy as np
 import onnxruntime as ort
 import multiprocessing as mp
-
-MOCK = False 
-
-if not MOCK:
-    from openlch import HAL
-else:
-    HAL = None
-
-
-class JointData:
-    def __init__(self, name: str, policy_index: int, servo_id: int, offset_deg: float = 0.0):
-        self.name = name
-        self.policy_index = policy_index
-        self.servo_id = servo_id
-        self.current_position = 0.0      # in radians
-        self.desired_position = 0.0      # in radians
-        self.current_velocity = 0.0      # in radians/s
-        self.offset_deg = offset_deg     # in degrees
+from robot import Robot
+from dashboard import run_dashboard
 
 
 class Sim2simCfg:
@@ -96,57 +74,7 @@ class cmd:
     dyaw = 0.0
 
 
-joints = [
-    JointData(name="left_hip_pitch", policy_index=0, servo_id=10, offset_deg=0.0),
-    JointData(name="left_hip_yaw", policy_index=1, servo_id=9, offset_deg=45.0),
-    JointData(name="left_hip_roll", policy_index=2, servo_id=8, offset_deg=0.0),
-    JointData(name="left_knee_pitch", policy_index=3, servo_id=7, offset_deg=0.0),
-    JointData(name="left_ankle_pitch", policy_index=4, servo_id=6, offset_deg=0.0),
-    JointData(name="right_hip_pitch", policy_index=5, servo_id=5, offset_deg=0.0),
-    JointData(name="right_hip_yaw", policy_index=6, servo_id=4, offset_deg=-45.0),
-    JointData(name="right_hip_roll", policy_index=7, servo_id=3, offset_deg=0.0),
-    JointData(name="right_knee_pitch", policy_index=8, servo_id=2, offset_deg=0.0),
-    JointData(name="right_ankle_pitch", policy_index=9, servo_id=1, offset_deg=0.0),
-]
-
-
-def get_servo_states(hal: HAL) -> None:
-    if MOCK:
-        for joint in joints:
-            joint.current_position = 0.0
-            joint.current_velocity = 0.0
-        return
-    
-    # Placeholder for actual servo state retrieval
-    servo_positions = hal.servo.get_positions() 
-    servo_positions_dict = {id_: (pos, vel) for id_, pos, vel in servo_positions}
-    
-    for joint in joints:
-        if joint.servo_id in servo_positions_dict:
-            pos_deg, vel_deg_s = servo_positions_dict[joint.servo_id]
-            joint.current_position = math.radians(pos_deg)
-            joint.current_velocity = math.radians(vel_deg_s)
-        else:
-            joint.current_position = 0.0
-            joint.current_velocity = 0.0
-
-
-def set_servo_positions(hal: HAL) -> None:
-    positions_deg = []
-    for joint in joints:
-        # convert from radians to degrees
-        desired_pos_deg = math.degrees(joint.desired_position) + joint.offset_deg
-        positions_deg.append((joint.servo_id, desired_pos_deg))
-
-    # print(f"[INFO]: SET servo positions (deg): {positions_deg}")
-
-    if MOCK:
-        return
-
-    hal.servo.set_positions(positions_deg)
-
-
-def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queue: mp.Queue) -> None:
+def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_queue: mp.Queue) -> None:
     print(f"[INFO]: Inference starting...")
 
     action = np.zeros((cfg.num_actions), dtype=np.double)
@@ -170,10 +98,10 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         # print(f"Actual frequency: {actual_frequency:.2f} Hz (cycle time: {cycle_time*1000:.2f} ms)")
         last_time = current_time
 
-        get_servo_states(hal)
+        robot.get_servo_states()
 
-        current_positions_np = np.array([joint.current_position for joint in joints], dtype=np.float32)
-        current_velocities_np = np.array([joint.current_velocity for joint in joints], dtype=np.float32)
+        current_positions_np = np.array(robot.get_current_positions(), dtype=np.float32)
+        current_velocities_np = np.array(robot.get_current_velocities(), dtype=np.float32)
 
         # Mock IMU data
         # FIXME
@@ -210,10 +138,9 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
         action = np.clip(action, -cfg.clip_actions, cfg.clip_actions)
         scaled_action = action * cfg.action_scale
 
-        for joint in joints:
-            joint.desired_position = scaled_action[joint.policy_index]
+        robot.set_joint_positions(scaled_action)
 
-        set_servo_positions(hal)
+        robot.set_servo_positions()
 
         loop_end_time = time.time()
         loop_duration = loop_end_time - loop_start_time
@@ -225,42 +152,17 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
             data_queue.put(('frequency', (current_time, actual_frequency)))
 
             # Send positions data
-            current_positions = [joint.current_position for joint in joints]
-            desired_positions = [joint.desired_position + math.radians(joint.offset_deg) for joint in joints]  # in radians
+            current_positions = robot.get_current_positions()
+            desired_positions = [joint.desired_position + math.radians(joint.offset_deg) for joint in robot.joints]  # in radians
             data_queue.put(('positions', (current_time, current_positions, desired_positions)))
 
             # Send velocities data
-            current_velocities = [joint.current_velocity for joint in joints]
+            current_velocities = robot.get_current_velocities()
             data_queue.put(('velocities', (current_time, current_velocities)))
         except Exception as e:
             print(f"Exception in sending data: {e}")
 
         time.sleep(sleep_time)
-
-
-def initialize(hal: HAL) -> None:
-    if MOCK:
-        return
-
-    hal.servo.scan()
-
-    hal.servo.set_torque_enable([(joint.servo_id, True) for joint in joints])
-    time.sleep(1)
-    hal.servo.set_torque([(joint.servo_id, 30.0) for joint in joints])
-    time.sleep(1)
-
-    hal.servo.disable_movement() 
-
-    for joint in joints:
-        joint.desired_position = 0.0  # in radians
-
-    set_servo_positions(hal)
-    time.sleep(3)
-
-    print("Starting inference in...")
-    for i in range(3, 0, -1):
-        print(f"{i}...")
-        time.sleep(0.5)
 
 
 if __name__ == "__main__":
@@ -269,20 +171,15 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, required=True, help="examples/standing_micro.onnx")
     args = parser.parse_args()
 
-    hal = HAL() if not MOCK else None
-
-    if not MOCK:
-        initialize(hal)
+    robot = Robot()
+    robot.initialize()
 
     policy = ort.InferenceSession(args.model_path)
     cfg = Sim2simCfg()
 
-    # Start the dashboard process and get the data queue
-    from dashboard import run_dashboard
     data_queue = run_dashboard()
 
-    # Start the inference loop
-    inference(policy, hal, cfg, data_queue)
+    inference(policy, robot, cfg, data_queue)
 
 
 
