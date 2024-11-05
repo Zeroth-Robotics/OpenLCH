@@ -135,8 +135,7 @@ def set_servo_positions(hal: HAL) -> None:
     positions_deg = []
     for joint in joints:
         # convert from radians to degrees
-        desired_pos_deg = math.degrees(joint.desired_position)
-        desired_pos_deg += joint.offset_deg
+        desired_pos_deg = math.degrees(joint.desired_position) + joint.offset_deg
         positions_deg.append((joint.servo_id, desired_pos_deg))
 
     # print(f"[INFO]: SET servo positions (deg): {positions_deg}")
@@ -227,7 +226,7 @@ def inference(policy: ort.InferenceSession, hal: HAL, cfg: Sim2simCfg, data_queu
 
             # Send positions data
             current_positions = [joint.current_position for joint in joints]
-            desired_positions = [joint.desired_position for joint in joints]
+            desired_positions = [joint.desired_position + math.radians(joint.offset_deg) for joint in joints]  # in radians
             data_queue.put(('positions', (current_time, current_positions, desired_positions)))
 
             # Send velocities data
@@ -250,7 +249,7 @@ def initialize(hal: HAL) -> None:
     hal.servo.set_torque([(joint.servo_id, 30.0) for joint in joints])
     time.sleep(1)
 
-    hal.servo.enable_movement() 
+    hal.servo.disable_movement() 
 
     for joint in joints:
         joint.desired_position = 0.0  # in radians
