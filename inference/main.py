@@ -1,6 +1,12 @@
 """ Inference script for running the model on the robot
 Run:
     python inference/main.py --model_path sim/examples/walking_micro.onnx
+
+    (from repo root)
+TODO:
+    - connect this with the sim2sim config
+    - add sim2real
+    - add real2sim
 """
 import argparse
 import math
@@ -243,6 +249,8 @@ def initialize(hal: HAL) -> None:
     time.sleep(1)
     hal.servo.set_torque([(joint.servo_id, 30.0) for joint in joints])
     time.sleep(1)
+
+    hal.servo.enable_movement() 
 
     for joint in joints:
         joint.desired_position = 0.0  # in radians

@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 import time
+import os
+from datetime import datetime
 
 def plot_dashboard(data_queue: mp.Queue):
     # Joint names and colors
@@ -14,8 +16,12 @@ def plot_dashboard(data_queue: mp.Queue):
     num_joints = len(joint_names)
     joint_colors = plt.cm.get_cmap('tab10', num_joints)
 
-    # Initialize data storage with 1-second window
-    max_time_window = 1.0
+    # Initialize data storage with 5-second window
+    max_time_window = 5.0
+    save_dir = os.path.join(os.path.dirname(__file__), "experiments")
+    os.makedirs(save_dir, exist_ok=True)
+    last_save_time = 0
+    save_interval = 5.0  # Save every 5 seconds
     time_data = []
     freq_data = []
     position_time = []
@@ -23,6 +29,11 @@ def plot_dashboard(data_queue: mp.Queue):
     desired_positions = []
     velocity_time = []
     velocities = []
+
+    # Clear out any existing graphs
+    for file in os.listdir(save_dir):
+        if file.endswith('.png'):
+            os.remove(os.path.join(save_dir, file))
 
     # Create three separate figures
     fig_freq = plt.figure(figsize=(12, 3))
@@ -64,6 +75,7 @@ def plot_dashboard(data_queue: mp.Queue):
     ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
 
     def update(frame):
+        nonlocal last_save_time
         current_time = time.time()
 
         # Remove old data outside the time window
@@ -149,6 +161,23 @@ def plot_dashboard(data_queue: mp.Queue):
         # Add padding for legends
         fig_pos.subplots_adjust(right=0.85)
         fig_vel.subplots_adjust(right=0.85)
+
+        # Add saving logic at the end of update function
+        if current_time - last_save_time >= save_interval:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Remove previous graphs
+            for file in os.listdir(save_dir):
+                if file.endswith('.png'):
+                    os.remove(os.path.join(save_dir, file))
+        
+            # Save new graphs
+            fig_freq.savefig(os.path.join(save_dir, f'frequency_{timestamp}.png'))
+            fig_pos.savefig(os.path.join(save_dir, f'positions_{timestamp}.png'))
+            fig_vel.savefig(os.path.join(save_dir, f'velocities_{timestamp}.png'))
+            
+            last_save_time = current_time
+
 
     # Create animations for each figure
     ani_freq = animation.FuncAnimation(fig_freq, update, interval=100)
