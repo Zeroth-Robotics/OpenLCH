@@ -83,19 +83,21 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
     for _ in range(cfg.frame_stack):
         hist_obs.append(np.zeros([1, cfg.num_single_obs], dtype=np.double))
 
-    target_frequency = 1 / (cfg.dt * cfg.decimation)  # e.g., 100 Hz
+    target_frequency = 1 / (cfg.dt * cfg.decimation)  # e.g., 10 Hz
     # print(f"Target frequency: {target_frequency} Hz")
     target_loop_time = 1.0 / target_frequency
 
     last_time = time.time()  # Track cycle time
-    t = time.start_time() # start from 0 in ms
+    t_start = time.time()  # Start time in seconds
+    t = 0.0  # in seconds
+    
     while True:
         loop_start_time = time.time()
-
+        t = time.time() - t_start  # Calculate elapsed time since start
+        
         current_time = time.time()
         cycle_time = current_time - last_time
         actual_frequency = 1.0 / cycle_time if cycle_time > 0 else 0
-        # print(f"Actual frequency: {actual_frequency:.2f} Hz (cycle time: {cycle_time*1000:.2f} ms)")
         last_time = current_time
 
         robot.get_servo_states()
@@ -125,6 +127,8 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
         hist_obs.append(obs)
         hist_obs.popleft()
 
+        breakpoint()
+        
         policy_input = np.zeros([1, cfg.num_observations], dtype=np.float32)
         for i in range(cfg.frame_stack):
             start = i * cfg.num_single_obs
