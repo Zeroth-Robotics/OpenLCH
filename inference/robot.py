@@ -18,6 +18,7 @@ class Robot:
     def __init__(self):
         self.hal = HAL()
         self.joints = [
+            # LEGS
             JointData(name="left_hip_pitch", policy_index=0, servo_id=10, offset_deg=0.0),
             JointData(name="left_hip_yaw", policy_index=1, servo_id=9, offset_deg=45.0),
             JointData(name="left_hip_roll", policy_index=2, servo_id=8, offset_deg=0.0),
@@ -28,23 +29,49 @@ class Robot:
             JointData(name="right_hip_roll", policy_index=7, servo_id=3, offset_deg=0.0),
             JointData(name="right_knee_pitch", policy_index=8, servo_id=2, offset_deg=0.0),
             JointData(name="right_ankle_pitch", policy_index=9, servo_id=1, offset_deg=0.0),
+            # ARMS
+            JointData(name="left_shoulder_yaw", policy_index=10, servo_id=11, offset_deg=0.0),
+            JointData(name="left_shoulder_pitch", policy_index=11, servo_id=12, offset_deg=0.0),
+            JointData(name="left_elbow_yaw", policy_index=12, servo_id=13, offset_deg=0.0),
+            JointData(name="right_shoulder_yaw", policy_index=13, servo_id=14, offset_deg=0.0),
+            JointData(name="right_shoulder_pitch", policy_index=14, servo_id=15, offset_deg=0.0),
+            JointData(name="right_elbow_yaw", policy_index=15, servo_id=16, offset_deg=0.0),
         ]
 
     def initialize(self):
         """Initialize the robot hardware and set initial positions."""
-        self.hal.servo.scan()
+
+        print("--------------------------------")
+        print("[INFO] Robot initializing...")
+
+        print("[INFO] Initializing joints:")
+        for joint in self.joints:
+            print(f"  - {joint.name} (ID: {joint.servo_id}, Policy Index: {joint.policy_index}, Offset: {joint.offset_deg}°)")
+
+        print("[INFO] Scanning servos...")
+        print(self.hal.servo.scan())
+
+        if len(self.hal.servo.scan()) != len(self.joints):
+            raise RuntimeError("Number of servos does not match number of joints.")
+
+
+        print("[INFO] Setting torque enable to true...")
         self.hal.servo.set_torque_enable([(joint.servo_id, True) for joint in self.joints])
-        time.sleep(1)
+
+
+        print("[INFO] Setting torque to 30.0...")
         self.hal.servo.set_torque([(joint.servo_id, 30.0) for joint in self.joints])
-        time.sleep(1)
-        self.hal.servo.disable_movement()
+
         
-        # Set initial desired positions
+        print("[INFO] Setting initial desired positions to 0.0...")
         for joint in self.joints:
             joint.desired_position = 0.0
         self.set_servo_positions()
-        time.sleep(3)
 
+        print("[INFO] Robot initialized")
+        print("--------------------------------")
+
+        
     def get_servo_states(self):
         """Retrieve current servo positions and velocities."""
         servo_positions = self.hal.servo.get_positions() 
