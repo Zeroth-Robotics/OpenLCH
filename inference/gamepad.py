@@ -42,9 +42,8 @@ def main():
 
     # Retrieve current position of the joint
     robot.get_servo_states()
-    current_position = 0  # Initialize position to 0
-    robot.set_servo_positions_by_name({joint.name: current_position})  # Set the initial position
-    print(f"Joint '{joint.name}' initialized to {math.degrees(current_position):.2f} degrees")
+    current_position = joint.position  
+    print(f"Joint '{joint.name}' current angle is {math.degrees(current_position):.2f} degrees")
 
     # Main control loop
     running = True
@@ -63,10 +62,10 @@ def main():
                     new_joint = prompt_for_joint()
                     if new_joint:
                         joint = new_joint
-                        current_position = 0  # Reset position for new joint
-                        robot.set_servo_positions_by_name({joint.name: current_position})
+                        robot.get_servo_states()
+                        current_position = joint.position  # Get current position of the new joint
                         print(f"Switched to controlling joint '{joint.name}' with servo ID {joint.servo_id}")
-                        print(f"Joint '{joint.name}' initialized to {math.degrees(current_position):.2f} degrees")
+                        print(f"Joint '{joint.name}' current angle is {math.degrees(current_position):.2f} degrees")
 
                 elif event.key == pygame.K_UP:
                     # Increase joint angle by 10 degrees

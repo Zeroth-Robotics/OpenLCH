@@ -8,3 +8,4 @@ onnxscript
 matplotlib
 PyQt5
 ahrs
+pygame
