@@ -2,9 +2,16 @@ import pygame
 import math
 from robot import Robot
 import time
+import logging
+import datetime
+import csv
 
-# Global variable to record joint positions
 joint_positions = {}
+
+log_filename = f"servo_movements_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+csv_file = open(log_filename, 'w', newline='')
+csv_writer = csv.writer(csv_file)
+csv_writer.writerow(['Timestamp', 'Joint Name', 'Servo ID', 'Angle (degrees)'])  # Write header
 
 def main():
     global joint_positions  # Indicate that we're using the global variable
@@ -34,7 +41,6 @@ def main():
     screen = pygame.display.set_mode((400, 300))
     pygame.display.set_caption("Servo Control")
 
-    # Get initial servo states and populate joint_positions
     robot.get_servo_states()
     for joint in robot.joints:
         joint_positions[joint.name] = joint.current_position
@@ -45,7 +51,6 @@ def main():
 
     print(f"Controlling joint '{joint.name}' with servo ID {joint.servo_id}")
 
-    # Retrieve the current position from joint_positions
     current_position = joint_positions.get(joint.name, joint.current_position)
     print(f"Joint '{joint.name}' current angle is {math.degrees(current_position):.2f} degrees")
 
@@ -76,15 +81,33 @@ def main():
                     # Increase joint angle by 10 degrees
                     current_position += math.radians(10)
                     robot.set_servo_positions_by_name({joint.name: current_position})
-                    joint_positions[joint.name] = current_position  # Update the position in joint_positions
-                    print(f"Joint '{joint.name}' angle increased to {math.degrees(current_position):.2f} degrees")
+                    joint_positions[joint.name] = current_position
+                    angle_degrees = math.degrees(current_position)
+                    print(f"Joint '{joint.name}' angle increased to {angle_degrees:.2f} degrees")
+                    # Replace logging with CSV writing
+                    csv_writer.writerow([
+                        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        joint.name,
+                        joint.servo_id,
+                        f"{angle_degrees:.2f}"
+                    ])
+                    csv_file.flush()  # Ensure data is written immediately
 
                 elif event.key == pygame.K_DOWN:
                     # Decrease joint angle by 10 degrees
                     current_position -= math.radians(10)
                     robot.set_servo_positions_by_name({joint.name: current_position})
-                    joint_positions[joint.name] = current_position  # Update the position in joint_positions
-                    print(f"Joint '{joint.name}' angle decreased to {math.degrees(current_position):.2f} degrees")
+                    joint_positions[joint.name] = current_position
+                    angle_degrees = math.degrees(current_position)
+                    print(f"Joint '{joint.name}' angle decreased to {angle_degrees:.2f} degrees")
+                    # Replace logging with CSV writing
+                    csv_writer.writerow([
+                        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        joint.name,
+                        joint.servo_id,
+                        f"{angle_degrees:.2f}"
+                    ])
+                    csv_file.flush()  # Ensure data is written immediately
 
         try:
             pass
@@ -95,6 +118,7 @@ def main():
     try:
         robot.disable_motors()
         print("Motors disabled")
+        csv_file.close()  # Close the CSV file
     except Exception as e:
         print(f"Error disabling motors: {e}")
     pygame.quit()

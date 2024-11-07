@@ -13,7 +13,6 @@ import multiprocessing as mp
 from robot import Robot
 from dashboard import run_dashboard
 
-
 class Sim2simCfg:
     def __init__(
         self,
