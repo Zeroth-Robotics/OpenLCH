@@ -39,36 +39,27 @@ class Robot:
         ]
 
     def initialize(self):
-        """Initialize the robot hardware and set initial positions."""
-
         print("--------------------------------")
-        print("[INFO] Robot initializing...")
+        print("\n[INFO] Robot initializing...")
 
-        print("[INFO] Initializing joints:")
-        for joint in self.joints:
-            print(f"  - {joint.name} (ID: {joint.servo_id}, Policy Index: {joint.policy_index}, Offset: {joint.offset_deg}°)")
 
-        print("[INFO] Scanning servos...")
+        print("\n[INFO] Scanning servos...")
         print(self.hal.servo.scan())
 
-        if len(self.hal.servo.scan()) != len(self.joints):
-            raise RuntimeError("Number of servos does not match number of joints.")
 
-
-        print("[INFO] Setting torque enable to true...")
+        print("\n[INFO] Setting torque enable to true...")
         self.hal.servo.set_torque_enable([(joint.servo_id, True) for joint in self.joints])
 
 
-        print("[INFO] Setting torque to 30.0...")
+        print("\n[INFO] Setting torque to 30.0...")
         self.hal.servo.set_torque([(joint.servo_id, 30.0) for joint in self.joints])
 
-        
-        print("[INFO] Setting initial desired positions to 0.0...")
+        print("\n[INFO] Setting initial desired positions to 0.0...")
         for joint in self.joints:
             joint.desired_position = 0.0
         self.set_servo_positions()
 
-        print("[INFO] Robot initialized")
+        print("\n[INFO] Robot initialized")
         print("--------------------------------")
 
         
@@ -120,3 +111,7 @@ class Robot:
             List[float]: Current joint velocities in radians per second.
         """
         return [joint.current_velocity for joint in self.joints]
+
+    def disable_motors(self):
+        """Disable all motors."""
+        self.hal.servo.set_torque_enable([(joint.servo_id, False) for joint in self.joints])
