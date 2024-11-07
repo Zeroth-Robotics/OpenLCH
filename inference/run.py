@@ -1,10 +1,11 @@
 from robot import Robot
 import pygame
 import time
+import math
 
 
-def state_sit():
-    print("Sitting")
+
+
 
 
 def state_stand(robot : Robot) -> bool:
@@ -17,14 +18,39 @@ def state_stand(robot : Robot) -> bool:
     
 def state_walk(robot : Robot) -> bool:
     print("Walking")
-    robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    robot.set_servo_positions()
 
     return True
 
 def state_forward_recovery(robot : Robot) -> bool:
     print("Forward recovery")
-    robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    # flat feet
+    robot.set_servo_positions_by_name({
+        "left_ankle_pitch": math.radians(45.0),
+        "right_ankle_pitch": math.radians(45.0)
+    })
+    
+    # on kneess (knee and hip pitch)
+    time.sleep(1)
+    robot.set_servo_positions_by_name({
+        "left_hip_pitch": math.radians(90.0),
+        "right_hip_pitch": math.radians(-90.0),
+        "left_knee_pitch": math.radians(-100.0),
+        "right_knee_pitch": math.radians(100.0),
+        
+    })
+
+    time.sleep(1)
+
+    # shoulder push down (shoulder pitch)
+    robot.set_servo_positions_by_name({
+        "left_shoulder_pitch": math.radians(-45.0),
+        "right_shoulder_pitch": math.radians(-45.0)
+    })
+
+    time.sleep(1)
+
+
 
     return True
 
@@ -36,15 +62,34 @@ def state_backward_recovery(robot : Robot) -> bool:
 
 def state_wave(robot : Robot) -> bool:
     print("Waving")
-    robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    robot.set_servo_positions()
+    
+    initial_positions = {
+        "left_shoulder_yaw": 0.0,
+        "left_shoulder_pitch": 0.0,
+        "left_elbow_yaw": 0.0,
+    }
+    robot.set_servo_positions_by_name(initial_positions)
+    time.sleep(0.5)
+    
+    wave_up_positions = {
+        "left_shoulder_pitch": math.radians(45.0),
+        "left_elbow_yaw": math.radians(-100.0),
+    }
+    robot.set_servo_positions_by_name(wave_up_positions)
+    time.sleep(0.5) 
 
-    robot.set_joint_positions([0.0, 30.0, 30.0, 30.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    robot.set_servo_positions()
-
-    robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    robot.set_servo_positions()
-
+    for _ in range(3):
+        wave_out = {"left_shoulder_yaw": math.radians(15.0)}
+        robot.set_servo_positions_by_name(wave_out)
+        time.sleep(0.3)
+        
+        wave_in = {"left_shoulder_yaw": math.radians(-15.0)}
+        robot.set_servo_positions_by_name(wave_in)
+        time.sleep(0.3)
+    
+    robot.set_servo_positions_by_name(initial_positions)
+    time.sleep(0.5)
+    
     return True
 
 def main():
@@ -68,13 +113,11 @@ def main():
                 if event.key == pygame.K_w:
                     state_walk(robot)
                 elif event.key == pygame.K_SPACE:
-                    state_stand()
+                    state_stand(robot)
                 elif event.key == pygame.K_q:
                     state_wave(robot)
-                elif event.key == pygame.K_e:
-                    state_sit(robot)
                 elif event.key == pygame.K_1:
-                    state_forward_recovery()
+                    state_forward_recovery(robot)
                 elif event.key == pygame.K_2:
                     state_backward_recovery(robot)
                 elif event.key == pygame.K_ESCAPE:

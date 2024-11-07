@@ -38,18 +38,18 @@ class Robot:
             JointData(name="right_elbow_yaw", policy_index=15, servo_id=16, offset_deg=0.0),
         ]
 
+        # Create a dictionary mapping joint names to JointData instances
+        self.joint_dict = {joint.name: joint for joint in self.joints}
+
     def initialize(self):
         print("--------------------------------")
         print("\n[INFO] Robot initializing...")
 
-
         print("\n[INFO] Scanning servos...")
         print(self.hal.servo.scan())
 
-
         print("\n[INFO] Setting torque enable to true...")
         self.hal.servo.set_torque_enable([(joint.servo_id, True) for joint in self.joints])
-
 
         print("\n[INFO] Setting torque to 30.0...")
         self.hal.servo.set_torque([(joint.servo_id, 30.0) for joint in self.joints])
@@ -62,10 +62,9 @@ class Robot:
         print("\n[INFO] Robot initialized")
         print("--------------------------------")
 
-        
     def get_servo_states(self):
         """Retrieve current servo positions and velocities."""
-        servo_positions = self.hal.servo.get_positions() 
+        servo_positions = self.hal.servo.get_positions()
         servo_positions_dict = {id_: (pos, vel) for id_, pos, vel in servo_positions}
 
         for joint in self.joints:
@@ -82,6 +81,23 @@ class Robot:
         for joint in self.joints:
             desired_pos_deg = math.degrees(joint.desired_position) + joint.offset_deg
             positions_deg.append((joint.servo_id, desired_pos_deg))
+        self.hal.servo.set_positions(positions_deg)
+
+    def set_servo_positions_by_name(self, positions):
+        """Set servo positions using joint names.
+
+        Args:
+            positions (dict): Dictionary with joint names as keys and desired positions in radians as values.
+        """
+        positions_deg = []
+        for name, position in positions.items():
+            if name in self.joint_dict:
+                joint = self.joint_dict[name]
+                joint.desired_position = position
+                desired_pos_deg = math.degrees(position) + joint.offset_deg
+                positions_deg.append((joint.servo_id, desired_pos_deg))
+            else:
+                raise ValueError(f"Joint name '{name}' not found.")
         self.hal.servo.set_positions(positions_deg)
 
     def set_joint_positions(self, positions):
