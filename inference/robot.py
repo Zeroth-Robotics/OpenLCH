@@ -30,12 +30,12 @@ class Robot:
             JointData(name="right_knee_pitch", policy_index=8, servo_id=2, offset_deg=0.0),
             JointData(name="right_ankle_pitch", policy_index=9, servo_id=1, offset_deg=0.0),
             # ARMS
-            JointData(name="left_shoulder_yaw", policy_index=10, servo_id=11, offset_deg=0.0),
-            JointData(name="left_shoulder_pitch", policy_index=11, servo_id=12, offset_deg=0.0),
-            JointData(name="left_elbow_yaw", policy_index=12, servo_id=13, offset_deg=0.0),
-            JointData(name="right_shoulder_yaw", policy_index=13, servo_id=14, offset_deg=0.0),
-            JointData(name="right_shoulder_pitch", policy_index=14, servo_id=15, offset_deg=0.0),
-            JointData(name="right_elbow_yaw", policy_index=15, servo_id=16, offset_deg=0.0),
+            JointData(name="right_elbow_yaw", policy_index=10, servo_id=11, offset_deg=0.0),
+            JointData(name="right_shoulder_yaw", policy_index=11, servo_id=12, offset_deg=0.0),
+            JointData(name="right_shoulder_pitch", policy_index=12, servo_id=13, offset_deg=0.0),
+            JointData(name="left_shoulder_pitch", policy_index=13, servo_id=14, offset_deg=0.0),
+            JointData(name="left_shoulder_yaw", policy_index=14, servo_id=15, offset_deg=0.0),
+            JointData(name="left_elbow_yaw", policy_index=15, servo_id=16, offset_deg=0.0),
         ]
 
         # Create a dictionary mapping joint names to JointData instances

@@ -26,8 +26,8 @@ def state_forward_recovery(robot : Robot) -> bool:
 
     # flat feet
     robot.set_servo_positions_by_name({
-        "left_ankle_pitch": math.radians(45.0),
-        "right_ankle_pitch": math.radians(45.0)
+        "left_ankle_pitch": math.radians(-65.0),
+        "right_ankle_pitch": math.radians(65.0)
     })
     
     # on kneess (knee and hip pitch)
@@ -35,17 +35,27 @@ def state_forward_recovery(robot : Robot) -> bool:
     robot.set_servo_positions_by_name({
         "left_hip_pitch": math.radians(90.0),
         "right_hip_pitch": math.radians(-90.0),
+
         "left_knee_pitch": math.radians(-100.0),
         "right_knee_pitch": math.radians(100.0),
-        
     })
 
+    # hands out
     time.sleep(1)
-
-    # shoulder push down (shoulder pitch)
     robot.set_servo_positions_by_name({
-        "left_shoulder_pitch": math.radians(-45.0),
-        "right_shoulder_pitch": math.radians(-45.0)
+        "right_shoulder_yaw": math.radians(-45.0),
+        "left_shoulder_yaw": math.radians(45.0),
+        "left_shoulder_pitch": math.radians(110.0),
+        "right_shoulder_pitch": math.radians(-100.0)
+    })
+
+    # hands in front
+    time.sleep(1)
+    robot.set_servo_positions_by_name({
+        "right_shoulder_yaw": math.radians(45.0),
+        "left_shoulder_yaw": math.radians(-45.0),
+        "left_shoulder_pitch": math.radians(110.0),
+        "right_shoulder_pitch": math.radians(-100.0)
     })
 
     time.sleep(1)
@@ -94,38 +104,61 @@ def state_wave(robot : Robot) -> bool:
 
 def main():
     robot = Robot()
-    robot.initialize()
-    
-    state_stand(robot)
+    try:
+        robot.initialize()
+        state_stand(robot)
 
-    pygame.init()
-    screen = pygame.display.set_mode((400, 300))
-    pygame.display.set_caption("Robot Control")
+        pygame.init()
+        screen = pygame.display.set_mode((400, 300))
+        pygame.display.set_caption("Robot Control")
 
-    print("Press 'w' to walk, 'space' to stand, 'q' to wave, 'e' to sit, '1' to forward recovery, '2' to backward recovery, 'escape' to quit")
-    
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_w:
-                    state_walk(robot)
-                elif event.key == pygame.K_SPACE:
-                    state_stand(robot)
-                elif event.key == pygame.K_q:
-                    state_wave(robot)
-                elif event.key == pygame.K_1:
-                    state_forward_recovery(robot)
-                elif event.key == pygame.K_2:
-                    state_backward_recovery(robot)
-                elif event.key == pygame.K_ESCAPE:
-                    running = False
-    
-    pygame.quit()
+        print("Press 'w' to walk, 'space' to stand, 'q' to wave, 'e' to sit, '1' for forward recovery, '2' for backward recovery, 'escape' to quit")
+        
+        running = True
+        while running:
+            try:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                    elif event.type == pygame.KEYDOWN:
+                        try:
+                            if event.key == pygame.K_w:
+                                state_walk(robot)
+                            elif event.key == pygame.K_SPACE:
+                                state_stand(robot)
+                            elif event.key == pygame.K_q:
+                                state_wave(robot)
+                            elif event.key == pygame.K_1:
+                                state_forward_recovery(robot)
+                            elif event.key == pygame.K_2:
+                                state_backward_recovery(robot)
+                            elif event.key == pygame.K_ESCAPE:
+                                running = False
+                        except Exception as e:
+                            print(f"Error during state execution: {e}")
+            except KeyboardInterrupt:
+                print("\nCtrl+C detected, shutting down gracefully...")
+                break
+                        
+    except Exception as e:
+        print(f"Error during robot operation: {e}")
+    except KeyboardInterrupt:
+        print("\nCtrl+C detected, shutting down gracefully...")
+        try:
+            robot.disable_motors()
+            print("Motors disabled")
+        except:
+            print("Error disabling motors")
+    finally:
+        try:
+            robot.disable_motors()
+            print("Motors disabled")
+        except:
+            print("Error disabling motors")
+        pygame.quit()
 
-main()
+if __name__ == "__main__":
+    main()
 
 
 
