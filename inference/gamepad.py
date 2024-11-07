@@ -5,10 +5,14 @@ import time
 import logging
 import datetime
 import csv
+import os
 
 joint_positions = {}
 
-log_filename = f"servo_movements_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+log_filename = os.path.join('logs', f"servo_movements_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
 csv_file = open(log_filename, 'w', newline='')
 csv_writer = csv.writer(csv_file)
 csv_writer.writerow(['Timestamp', 'Joint Name', 'Servo ID', 'Angle (degrees)'])  # Write header
