@@ -18,7 +18,7 @@ def plot_dashboard(data_queue: mp.Queue):
 
     # Initialize data storage with 5-second window
     max_time_window = 5.0
-    save_dir = os.path.join(os.path.dirname(__file__), "experiments")
+    save_dir = os.path.join(os.path.dirname(__file__), "logs")
     os.makedirs(save_dir, exist_ok=True)
     last_save_time = 0
     save_interval = 5.0  # Save every 5 seconds

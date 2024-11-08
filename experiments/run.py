@@ -2,6 +2,11 @@ from robot import Robot
 import pygame
 import time
 import math
+import threading
+import multiprocessing as mp
+import onnxruntime as ort
+from model import inference
+import os
 
 
 def state_stand(robot : Robot) -> bool:
@@ -14,6 +19,17 @@ def state_stand(robot : Robot) -> bool:
 
 def state_walk(robot : Robot) -> bool:
     print("Walking")
+
+    model_path = '../sim/sim/example/walking/walking_micro.onnx'
+    if not os.path.isfile(model_path):
+        print(f"Model file not found at {model_path}")
+        return False
+    policy = ort.InferenceSession(model_path)
+
+    data_queue = mp.Queue()
+
+    inference_thread = threading.Thread(target=inference, args=(policy, robot, data_queue))
+    inference_thread.start()
 
     return True
 

@@ -1,7 +1,7 @@
 import math
 from openlch import HAL
 import time
-
+import subprocess
 
 class JointData:
     def __init__(self, name: str, policy_index: int, servo_id: int, offset_deg: float = 0.0):
@@ -45,6 +45,18 @@ class Robot:
         print("--------------------------------")
         print("\n[INFO] Robot initializing...")
 
+        print("\n[INFO] Checking connection to robot...")
+        try:
+            ping_result = subprocess.run(['ping', '-c', '1', '192.168.42.1'], 
+                                       stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.DEVNULL)
+            if ping_result.returncode != 0:
+                raise RuntimeError("Could not ping robot at 192.168.42.1")
+            print("[INFO] Successfully pinged robot")
+        except Exception as e:
+            print(f"[ERROR] Failed to connect to robot: {str(e)}")
+            raise
+
         print("\n[INFO] Scanning servos...")
         print(self.hal.servo.scan())
 
@@ -54,7 +66,7 @@ class Robot:
         print("\n[INFO] Setting torque to 30.0...")
         self.hal.servo.set_torque([(joint.servo_id, 30.0) for joint in self.joints])
 
-        print("\n[INFO] Setting initial desired positions to 0.0...")
+        print("\n[INFO] Setting initial positions to 0.0...")
         for joint in self.joints:
             joint.desired_position = 0.0
         self.set_servo_positions()

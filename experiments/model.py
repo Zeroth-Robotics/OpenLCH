@@ -11,7 +11,7 @@ import numpy as np
 import onnxruntime as ort
 import multiprocessing as mp
 from robot import Robot
-from dashboard import run_dashboard
+from experiments.plot import run_dashboard
 
 class Sim2simCfg:
     def __init__(
@@ -73,8 +73,17 @@ class cmd:
     dyaw = 0.0
 
 
-def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_queue: mp.Queue) -> None:
-    print(f"[INFO]: Inference starting...")
+def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) -> None:
+    cfg = Sim2simCfg()
+    
+    print(f"[INFO]: Starting ONNX model inference...")
+
+    print("\n Model inference configuration parameters:\n")
+    print("{:<25} {:<15}".format('Parameter', 'Value'))
+    print("-" * 40)
+    for attr, value in vars(cfg).items():
+        print("{:<25} {:<15}".format(attr, value))
+    print()
 
     action = np.zeros((cfg.num_actions), dtype=np.double)
 
@@ -185,11 +194,10 @@ if __name__ == "__main__":
     robot.initialize()
 
     policy = ort.InferenceSession(args.model_path)
-    cfg = Sim2simCfg()
 
     data_queue = run_dashboard()
 
-    inference(policy, robot, cfg, data_queue)
+    inference(policy, robot, data_queue)
 
 
 
