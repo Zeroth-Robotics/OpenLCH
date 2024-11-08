@@ -80,6 +80,10 @@ impl StsServoControl {
 
         task::spawn(async move {
             let servo = servo.lock().await;
+
+            servo.disable_movement().unwrap();
+
+
             servo.disable_readout().unwrap();
             servo.set_mode(servo_id, ServoMode::ConstantSpeed).unwrap();
 
@@ -398,7 +402,7 @@ network={{
         let servo = self.servo.lock().await;
         let mut ids = Vec::new();
         
-        for id in 0..MAX_SERVOS as u8 {
+        for id in 0..100 as u8 {
             if servo.scan(id).map_err(|e| Status::internal(e.to_string()))? {
                 ids.push(id as u32);
             }
@@ -478,7 +482,7 @@ network={{
         let servo_id = request.servo_id as u8;
         let calibration_speed = request.calibration_speed;
         let current_threshold = request.current_threshold;
-        
+
         let mut calibrating_servo = self.calibrating_servo.lock().await;
 
         if calibrating_servo.is_some() {
@@ -780,6 +784,9 @@ network={{
 
     async fn enable_movement(&self, _request: Request<Empty>) -> Result<Response<Empty>, Status> {
         let servo = self.servo.lock().await;
+        if self.calibration_running.load(Ordering::SeqCst) {
+            return Err(Status::internal("Calibration is running, cannot enable movement"));
+        }   
         servo.enable_movement()
             .map_err(|e| Status::internal(format!("Failed to enable movement: {}", e)))?;
 
