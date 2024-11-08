@@ -109,7 +109,7 @@ class Robot:
         """Sets initial positions for all joints to 0 degrees."""
         logger.info("Setting initial positions to 0.0 degrees.")
         positions = {joint.name: 0.0 for joint in self.joints}
-        self.set_servo_positions(positions)
+        self.set_desired_positions(positions)
 
     def get_feedback_positions(self) -> Dict[str, float]:
         """Gets feedback positions from the servos.
@@ -151,7 +151,7 @@ class Robot:
                 feedback_velocities[joint.name] = None  # Or handle as appropriate
         return feedback_velocities
 
-    def set_servo_positions(self, positions: Dict[str, float]) -> None:
+    def set_desired_positions(self, positions: Dict[str, float]) -> None:
         """Sets desired positions for specified joints directly to the servos.
 
         Args:

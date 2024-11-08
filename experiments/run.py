@@ -14,7 +14,7 @@ def state_stand(robot: Robot) -> bool:
     robot.set_joint_positions(
         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     )
-    robot.set_servo_positions()
+    robot.set_desired_positions()
 
     return True
 
