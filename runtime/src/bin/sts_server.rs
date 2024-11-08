@@ -454,9 +454,13 @@ network={{
                 })),
             }));
         }
-        
-        // Change the ID
+
+        // Change the ID    
+        servo.write(id_change.old_id as u8, ServoRegister::LockMark, &[0])
+            .map_err(|e| Status::internal(e.to_string()))?;
         servo.write(id_change.old_id as u8, runtime::hal::ServoRegister::ID, &[id_change.new_id as u8])
+            .map_err(|e| Status::internal(e.to_string()))?;
+        servo.write(id_change.old_id as u8, ServoRegister::LockMark, &[1])
             .map_err(|e| Status::internal(e.to_string()))?;
         
         // Verify the change
