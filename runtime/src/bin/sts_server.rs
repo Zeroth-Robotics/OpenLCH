@@ -33,7 +33,7 @@ use servo_control::{Empty, JointPositions, WifiCredentials, ServoId, ServoInfo, 
 #[derive(Debug)]
 pub struct StsServoControl {
     servo: Arc<Mutex<Servo>>,
-    imu: Arc<Mutex<IMU>>,
+    imu: Arc<Mutex<Option<IMU>>>,
     last_positions: Arc<Mutex<ServoData>>,
     calibrating_servo: Arc<Mutex<Option<u8>>>,
     calibration_running: Arc<AtomicBool>,
@@ -44,7 +44,7 @@ pub struct StsServoControl {
 impl StsServoControl {
     pub fn new() -> Result<Self> {
         let servo = Servo::new()?;
-        let imu = IMU::new()?;
+        let imu = IMU::new().ok();
         servo.enable_readout()?;
         let initial_data = servo.read_continuous()?;
         
@@ -624,8 +624,11 @@ network={{
     async fn get_imu_data(&self, _request: Request<Empty>) -> Result<Response<ImuData>, Status> {
         let mut imu = self.imu.lock().await;
         
-        let imu_data = imu.read_data()
-            .map_err(|e| Status::internal(format!("Failed to read IMU data: {}", e)))?;
+        let imu_data = match imu.as_mut() {
+            Some(imu) => imu.read_data()
+                .map_err(|e| Status::internal(format!("Failed to read IMU data: {}", e)))?,
+            None => return Err(Status::unavailable("IMU is not available")),
+        };
 
         Ok(Response::new(ImuData {
             gyro: Some(Vector3 {
