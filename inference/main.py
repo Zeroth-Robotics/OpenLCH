@@ -83,17 +83,16 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
         hist_obs.append(np.zeros([1, cfg.num_single_obs], dtype=np.double))
 
     target_frequency = 1 / (cfg.dt * cfg.decimation)  # e.g., 10 Hz
-    # print(f"Target frequency: {target_frequency} Hz")
     target_loop_time = 1.0 / target_frequency
 
     last_time = time.time()  # Track cycle time
     t_start = time.time()  # Start time in seconds
     t = 0.0  # in seconds
-    
+
     while True:
         loop_start_time = time.time()
         t = time.time() - t_start  # Calculate elapsed time since start
-        
+
         current_time = time.time()
         cycle_time = current_time - last_time
         actual_frequency = 1.0 / cycle_time if cycle_time > 0 else 0
@@ -101,13 +100,17 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
 
         robot.get_servo_states()
 
+        # Get current positions and velocities
         current_positions_np = np.array(robot.get_current_positions(), dtype=np.float32)
         current_velocities_np = np.array(robot.get_current_velocities(), dtype=np.float32)
 
+        # Use only leg joints for policy input
+        positions_leg = current_positions_np[:cfg.num_actions]
+        velocities_leg = current_velocities_np[:cfg.num_actions]
+
         # Mock IMU data
-        # FIXME
         omega = np.zeros(3, dtype=np.float32)
-        eu_ang = np.zeros(3, dtype=np.float32)  
+        eu_ang = np.zeros(3, dtype=np.float32)
 
         obs = np.zeros([1, cfg.num_single_obs], dtype=np.float32)
 
@@ -116,8 +119,8 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
         obs[0, 2] = cmd.vx * cfg.lin_vel
         obs[0, 3] = cmd.vy * cfg.lin_vel
         obs[0, 4] = cmd.dyaw * cfg.ang_vel
-        obs[0, 5 : (cfg.num_actions + 5)] = (current_positions_np) * cfg.dof_pos 
-        obs[0, (cfg.num_actions + 5) : (2 * cfg.num_actions + 5)] = current_velocities_np * cfg.dof_vel
+        obs[0, 5 : (cfg.num_actions + 5)] = positions_leg * cfg.dof_pos
+        obs[0, (cfg.num_actions + 5) : (2 * cfg.num_actions + 5)] = velocities_leg * cfg.dof_vel
         obs[0, (2 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5)] = action
         obs[0, (3 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5) + 3] = omega
         obs[0, (3 * cfg.num_actions + 5) + 3 : (3 * cfg.num_actions + 5) + 2 * 3] = eu_ang
@@ -126,22 +129,24 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
         hist_obs.append(obs)
         hist_obs.popleft()
 
-        breakpoint()
-        
+        # Prepare policy input
         policy_input = np.zeros([1, cfg.num_observations], dtype=np.float32)
         for i in range(cfg.frame_stack):
             start = i * cfg.num_single_obs
             end = (i + 1) * cfg.num_single_obs
             policy_input[0, start:end] = hist_obs[i][0, :]
 
+        # Run policy inference
         ort_inputs = {policy.get_inputs()[0].name: policy_input}
         action[:] = policy.run(None, ort_inputs)[0][0]
 
         action = np.clip(action, -cfg.clip_actions, cfg.clip_actions)
         scaled_action = action * cfg.action_scale
 
-        robot.set_joint_positions(scaled_action)
+        full_action = np.zeros(len(robot.joints), dtype=np.float32)
+        full_action[:cfg.num_actions] = scaled_action  # Leg actions
 
+        robot.set_joint_positions(full_action)
         robot.set_servo_positions()
 
         loop_end_time = time.time()
@@ -155,7 +160,10 @@ def inference(policy: ort.InferenceSession, robot: Robot, cfg: Sim2simCfg, data_
 
             # Send positions data
             current_positions = robot.get_current_positions()
-            desired_positions = [joint.desired_position + math.radians(joint.offset_deg) for joint in robot.joints]  # in radians
+            desired_positions = [
+                joint.desired_position + math.radians(joint.offset_deg)
+                for joint in robot.joints
+            ]  # in radians
             data_queue.put(('positions', (current_time, current_positions, desired_positions)))
 
             # Send velocities data

@@ -4,10 +4,6 @@ import time
 import math
 
 
-
-
-
-
 def state_stand(robot : Robot) -> bool:
     print("Standing")
     robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
@@ -15,7 +11,7 @@ def state_stand(robot : Robot) -> bool:
 
     return True
 
-    
+
 def state_walk(robot : Robot) -> bool:
     print("Walking")
 
@@ -23,83 +19,6 @@ def state_walk(robot : Robot) -> bool:
 
 def state_forward_recovery(robot : Robot) -> bool:
     print("Forward recovery")
-
-    """
-    
-    
-    
-    """
-
-
-
-    # # flat feet
-    # robot.set_servo_positions_by_name({
-    #     "left_ankle_pitch": math.radians(-80.0),
-    #     "right_ankle_pitch": math.radians(80.0)
-    # })
-    
-    # # on kneess (knee and hip pitch)
-    # time.sleep(1)
-    # robot.set_servo_positions_by_name({
-    #     "left_hip_pitch": math.radians(100.0),
-    #     "right_hip_pitch": math.radians(-100.0),
-
-    #     "left_knee_pitch": math.radians(-90.0),
-    #     "right_knee_pitch": math.radians(90.0),
-    # })
-
-    # # hands out
-    # time.sleep(1)
-    # robot.set_servo_positions_by_name({
-    #     "right_shoulder_yaw": math.radians(-45.0),
-    #     "left_shoulder_yaw": math.radians(45.0),
-    #     "left_shoulder_pitch": math.radians(110.0),
-    #     "right_shoulder_pitch": math.radians(-100.0)
-    # })
-
-    # # hands in front
-    # time.sleep(1)
-    # robot.set_servo_positions_by_name({
-    #     "right_shoulder_yaw": math.radians(45.0),
-    #     "left_shoulder_yaw": math.radians(-45.0),
-    #     "left_shoulder_pitch": math.radians(110.0),
-    #     "right_shoulder_pitch": math.radians(-100.0)
-    # })
-
-    # # hips back
-    # time.sleep(3)
-
-    # robot.set_servo_positions_by_name({
-    #     "right_shoulder_yaw": math.radians(80.0),
-    #     "left_shoulder_yaw": math.radians(-80.0), 
-
-    #     "left_knee_pitch": math.radians(-45.0),
-    #     "right_knee_pitch": math.radians(45.0),
-
-    #     "left_ankle_pitch": math.radians(0.0),
-    #     "right_ankle_pitch": math.radians(0.0)
-    # })
-
-    # time.sleep(1)
-
-    # robot.set_servo_positions_by_name({
-    #     "right_shoulder_yaw": math.radians(60.0),
-    #     "left_shoulder_yaw": math.radians(-60.0), 
-
-    #     "left_knee_pitch": math.radians(90.0),
-    #     "right_knee_pitch": math.radians(-90.0),
-
-    #     "left_ankle_pitch": math.radians(0.0),
-    #     "right_ankle_pitch": math.radians(0.0) 
-    # })
-
-    # time.sleep(1)
-
-
-    # robot.set_servo_positions_by_name({
-    #     "left_knee_pitch": math.radians(-90.0),
-    #     "right_knee_pitch": math.radians(90.0),
-    # })
 
     return True
 
