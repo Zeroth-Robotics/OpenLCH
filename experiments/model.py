@@ -1,17 +1,18 @@
-""" Inference script for running the model on the robot
+"""Inference script for running the model on the robot
 Run:
     python inference/main.py --model_path sim/examples/walking_micro.onnx
 """
+
 import argparse
 import math
 import time
 from collections import deque
-from typing import List
 import numpy as np
 import onnxruntime as ort
 import multiprocessing as mp
 from robot import Robot
 from experiments.plot import run_dashboard
+
 
 class Sim2simCfg:
     def __init__(
@@ -35,7 +36,6 @@ class Sim2simCfg:
         clip_actions=18.0,
         action_scale=0.25,
     ):
-
         self.num_actions = num_actions
 
         self.frame_stack = frame_stack
@@ -50,9 +50,7 @@ class Sim2simCfg:
         self.cycle_time = cycle_time
 
         self.tau_factor = tau_factor
-        self.tau_limit = (
-            np.array([effort] * self.num_actions) * self.tau_factor
-        )
+        self.tau_limit = np.array([effort] * self.num_actions) * self.tau_factor
         self.kps = np.array([stiffness] * self.num_actions)
         self.kds = np.array([damping] * self.num_actions)
 
@@ -75,11 +73,11 @@ class cmd:
 
 def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) -> None:
     cfg = Sim2simCfg()
-    
-    print(f"[INFO]: Starting ONNX model inference...")
+
+    print("[INFO]: Starting ONNX model inference...")
 
     print("\n Model inference configuration parameters:\n")
-    print("{:<25} {:<15}".format('Parameter', 'Value'))
+    print("{:<25} {:<15}".format("Parameter", "Value"))
     print("-" * 40)
     for attr, value in vars(cfg).items():
         print("{:<25} {:<15}".format(attr, value))
@@ -111,11 +109,13 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
 
         # Get current positions and velocities
         current_positions_np = np.array(robot.get_current_positions(), dtype=np.float32)
-        current_velocities_np = np.array(robot.get_current_velocities(), dtype=np.float32)
+        current_velocities_np = np.array(
+            robot.get_current_velocities(), dtype=np.float32
+        )
 
         # Use only leg joints for policy input
-        positions_leg = current_positions_np[:cfg.num_actions]
-        velocities_leg = current_velocities_np[:cfg.num_actions]
+        positions_leg = current_positions_np[: cfg.num_actions]
+        velocities_leg = current_velocities_np[: cfg.num_actions]
 
         # Mock IMU data
         omega = np.zeros(3, dtype=np.float32)
@@ -129,10 +129,14 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         obs[0, 3] = cmd.vy * cfg.lin_vel
         obs[0, 4] = cmd.dyaw * cfg.ang_vel
         obs[0, 5 : (cfg.num_actions + 5)] = positions_leg * cfg.dof_pos
-        obs[0, (cfg.num_actions + 5) : (2 * cfg.num_actions + 5)] = velocities_leg * cfg.dof_vel
+        obs[0, (cfg.num_actions + 5) : (2 * cfg.num_actions + 5)] = (
+            velocities_leg * cfg.dof_vel
+        )
         obs[0, (2 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5)] = action
         obs[0, (3 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5) + 3] = omega
-        obs[0, (3 * cfg.num_actions + 5) + 3 : (3 * cfg.num_actions + 5) + 2 * 3] = eu_ang
+        obs[0, (3 * cfg.num_actions + 5) + 3 : (3 * cfg.num_actions + 5) + 2 * 3] = (
+            eu_ang
+        )
         obs = np.clip(obs, -cfg.clip_observations, cfg.clip_observations)
 
         hist_obs.append(obs)
@@ -153,7 +157,7 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         scaled_action = action * cfg.action_scale
 
         full_action = np.zeros(len(robot.joints), dtype=np.float32)
-        full_action[:cfg.num_actions] = scaled_action  # Leg actions
+        full_action[: cfg.num_actions] = scaled_action  # Leg actions
 
         robot.set_joint_positions(full_action)
         robot.set_servo_positions()
@@ -165,7 +169,7 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         # Send data to dashboard via multiprocessing Queue
         try:
             # Send inference speed data
-            data_queue.put(('frequency', (current_time, actual_frequency)))
+            data_queue.put(("frequency", (current_time, actual_frequency)))
 
             # Send positions data
             current_positions = robot.get_current_positions()
@@ -173,11 +177,13 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
                 joint.desired_position + math.radians(joint.offset_deg)
                 for joint in robot.joints
             ]  # in radians
-            data_queue.put(('positions', (current_time, current_positions, desired_positions)))
+            data_queue.put(
+                ("positions", (current_time, current_positions, desired_positions))
+            )
 
             # Send velocities data
             current_velocities = robot.get_current_velocities()
-            data_queue.put(('velocities', (current_time, current_velocities)))
+            data_queue.put(("velocities", (current_time, current_velocities)))
         except Exception as e:
             print(f"Exception in sending data: {e}")
 
@@ -187,7 +193,9 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--embodiment", type=str, default="stompymicro")
-    parser.add_argument("--model_path", type=str, required=True, help="examples/standing_micro.onnx")
+    parser.add_argument(
+        "--model_path", type=str, required=True, help="examples/standing_micro.onnx"
+    )
     args = parser.parse_args()
 
     robot = Robot()
@@ -198,6 +206,3 @@ if __name__ == "__main__":
     data_queue = run_dashboard()
 
     inference(policy, robot, data_queue)
-
-
-

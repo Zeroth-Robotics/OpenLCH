@@ -1,20 +1,27 @@
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import numpy as np
 import time
 import os
 from datetime import datetime
 
+
 def plot_dashboard(data_queue: mp.Queue):
     # Joint names and colors
     joint_names = [
-        "left_hip_pitch", "left_hip_yaw", "left_hip_roll", "left_knee_pitch",
-        "left_ankle_pitch", "right_hip_pitch", "right_hip_yaw", "right_hip_roll",
-        "right_knee_pitch", "right_ankle_pitch"
+        "left_hip_pitch",
+        "left_hip_yaw",
+        "left_hip_roll",
+        "left_knee_pitch",
+        "left_ankle_pitch",
+        "right_hip_pitch",
+        "right_hip_yaw",
+        "right_hip_roll",
+        "right_knee_pitch",
+        "right_ankle_pitch",
     ]
     num_joints = len(joint_names)
-    joint_colors = plt.cm.get_cmap('tab10', num_joints)
+    joint_colors = plt.cm.get_cmap("tab10", num_joints)
 
     # Initialize data storage with 5-second window
     max_time_window = 5.0
@@ -32,7 +39,7 @@ def plot_dashboard(data_queue: mp.Queue):
 
     # Clear out any existing graphs
     for file in os.listdir(save_dir):
-        if file.endswith('.png'):
+        if file.endswith(".png"):
             os.remove(os.path.join(save_dir, file))
 
     # Create three separate figures
@@ -42,37 +49,39 @@ def plot_dashboard(data_queue: mp.Queue):
 
     # Graph 1: Inference speed
     ax_freq = fig_freq.add_subplot(111)
-    ax_freq.set_title('Inference Speed Over Time')
-    ax_freq.set_xlabel('Time (s)')
-    ax_freq.set_ylabel('Frequency (Hz)')
-    ax_freq.axhline(y=50, color='r', linestyle='--', label='50 Hz Reference')
-    line_freq, = ax_freq.plot([], [], label='Actual Frequency')
+    ax_freq.set_title("Inference Speed Over Time")
+    ax_freq.set_xlabel("Time (s)")
+    ax_freq.set_ylabel("Frequency (Hz)")
+    ax_freq.axhline(y=50, color="r", linestyle="--", label="50 Hz Reference")
+    (line_freq,) = ax_freq.plot([], [], label="Actual Frequency")
     ax_freq.legend()
 
     # Graph 2: Joint Positions
     ax_pos = fig_pos.add_subplot(111)
-    ax_pos.set_title('Joint Positions Over Time')
-    ax_pos.set_xlabel('Time (s)')
-    ax_pos.set_ylabel('Position (rad)')
+    ax_pos.set_title("Joint Positions Over Time")
+    ax_pos.set_xlabel("Time (s)")
+    ax_pos.set_ylabel("Position (rad)")
     lines_positions = []
     for i in range(num_joints):
         color = joint_colors(i)
-        line_pos, = ax_pos.plot([], [], label=f"{joint_names[i]} Actual", color=color)
-        line_desired_pos, = ax_pos.plot([], [], linestyle='--', label=f"{joint_names[i]} Desired", color=color)
+        (line_pos,) = ax_pos.plot([], [], label=f"{joint_names[i]} Actual", color=color)
+        (line_desired_pos,) = ax_pos.plot(
+            [], [], linestyle="--", label=f"{joint_names[i]} Desired", color=color
+        )
         lines_positions.append((line_pos, line_desired_pos))
-    ax_pos.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+    ax_pos.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
 
     # Graph 3: Joint Velocities
     ax_vel = fig_vel.add_subplot(111)
-    ax_vel.set_title('Joint Velocities Over Time')
-    ax_vel.set_xlabel('Time (s)')
-    ax_vel.set_ylabel('Velocity (rad/s)')
+    ax_vel.set_title("Joint Velocities Over Time")
+    ax_vel.set_xlabel("Time (s)")
+    ax_vel.set_ylabel("Velocity (rad/s)")
     lines_velocities = []
     for i in range(num_joints):
         color = joint_colors(i)
-        line_vel, = ax_vel.plot([], [], label=f"{joint_names[i]}", color=color)
+        (line_vel,) = ax_vel.plot([], [], label=f"{joint_names[i]}", color=color)
         lines_velocities.append(line_vel)
-    ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+    ax_vel.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
 
     def update(frame):
         nonlocal last_save_time
@@ -94,16 +103,16 @@ def plot_dashboard(data_queue: mp.Queue):
         while not data_queue.empty():
             try:
                 data_type, data = data_queue.get_nowait()
-                if data_type == 'frequency':
+                if data_type == "frequency":
                     t, freq = data
                     time_data.append(t)
                     freq_data.append(freq)
-                elif data_type == 'positions':
+                elif data_type == "positions":
                     t, pos, desired_pos = data
                     position_time.append(t)
                     positions.append(pos)
                     desired_positions.append(desired_pos)
-                elif data_type == 'velocities':
+                elif data_type == "velocities":
                     t, vel = data
                     velocity_time.append(t)
                     velocities.append(vel)
@@ -113,11 +122,11 @@ def plot_dashboard(data_queue: mp.Queue):
         # Update frequency plot
         if time_data and freq_data:
             ax_freq.clear()
-            ax_freq.set_title('Inference Speed Over Time')
-            ax_freq.set_xlabel('Time (s)')
-            ax_freq.set_ylabel('Frequency (Hz)')
-            ax_freq.axhline(y=50, color='r', linestyle='--', label='50 Hz Reference')
-            ax_freq.plot(time_data, freq_data, label='Actual Frequency')
+            ax_freq.set_title("Inference Speed Over Time")
+            ax_freq.set_xlabel("Time (s)")
+            ax_freq.set_ylabel("Frequency (Hz)")
+            ax_freq.axhline(y=50, color="r", linestyle="--", label="50 Hz Reference")
+            ax_freq.plot(time_data, freq_data, label="Actual Frequency")
             ax_freq.legend()
             ax_freq.set_xlim(current_time - max_time_window, current_time)
             ax_freq.set_ylim(0, 60)  # Fixed y-axis limits for frequency
@@ -125,32 +134,45 @@ def plot_dashboard(data_queue: mp.Queue):
         # Update positions plot
         if position_time and positions and desired_positions:
             ax_pos.clear()
-            ax_pos.set_title('Joint Positions Over Time')
-            ax_pos.set_xlabel('Time (s)')
-            ax_pos.set_ylabel('Position (rad)')
+            ax_pos.set_title("Joint Positions Over Time")
+            ax_pos.set_xlabel("Time (s)")
+            ax_pos.set_ylabel("Position (rad)")
             for i in range(num_joints):
                 color = joint_colors(i)
                 joint_actual_positions = [pos[i] for pos in positions]
                 joint_desired_positions = [dpos[i] for dpos in desired_positions]
-                ax_pos.plot(position_time, joint_actual_positions, 
-                          label=f"{joint_names[i]} Actual", color=color)
-                ax_pos.plot(position_time, joint_desired_positions, 
-                          linestyle='--', label=f"{joint_names[i]} Desired", color=color)
-            ax_pos.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+                ax_pos.plot(
+                    position_time,
+                    joint_actual_positions,
+                    label=f"{joint_names[i]} Actual",
+                    color=color,
+                )
+                ax_pos.plot(
+                    position_time,
+                    joint_desired_positions,
+                    linestyle="--",
+                    label=f"{joint_names[i]} Desired",
+                    color=color,
+                )
+            ax_pos.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
             ax_pos.set_xlim(current_time - max_time_window, current_time)
 
         # Update velocities plot
         if velocity_time and velocities:
             ax_vel.clear()
-            ax_vel.set_title('Joint Velocities Over Time')
-            ax_vel.set_xlabel('Time (s)')
-            ax_vel.set_ylabel('Velocity (rad/s)')
+            ax_vel.set_title("Joint Velocities Over Time")
+            ax_vel.set_xlabel("Time (s)")
+            ax_vel.set_ylabel("Velocity (rad/s)")
             for i in range(num_joints):
                 color = joint_colors(i)
                 joint_velocities = [vel[i] for vel in velocities]
-                ax_vel.plot(velocity_time, joint_velocities, 
-                          label=f"{joint_names[i]}", color=color)
-            ax_vel.legend(loc='center left', bbox_to_anchor=(1.02, 0.5))
+                ax_vel.plot(
+                    velocity_time,
+                    joint_velocities,
+                    label=f"{joint_names[i]}",
+                    color=color,
+                )
+            ax_vel.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
             ax_vel.set_xlim(current_time - max_time_window, current_time)
 
         # Adjust layouts
@@ -165,19 +187,18 @@ def plot_dashboard(data_queue: mp.Queue):
         # Add saving logic at the end of update function
         if current_time - last_save_time >= save_interval:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            
+
             # Remove previous graphs
             for file in os.listdir(save_dir):
-                if file.endswith('.png'):
+                if file.endswith(".png"):
                     os.remove(os.path.join(save_dir, file))
-        
-            # Save new graphs
-            fig_freq.savefig(os.path.join(save_dir, f'frequency_{timestamp}.png'))
-            fig_pos.savefig(os.path.join(save_dir, f'positions_{timestamp}.png'))
-            fig_vel.savefig(os.path.join(save_dir, f'velocities_{timestamp}.png'))
-            
-            last_save_time = current_time
 
+            # Save new graphs
+            fig_freq.savefig(os.path.join(save_dir, f"frequency_{timestamp}.png"))
+            fig_pos.savefig(os.path.join(save_dir, f"positions_{timestamp}.png"))
+            fig_vel.savefig(os.path.join(save_dir, f"velocities_{timestamp}.png"))
+
+            last_save_time = current_time
 
     # Create animations for each figure
     ani_freq = animation.FuncAnimation(fig_freq, update, interval=100)
@@ -186,11 +207,13 @@ def plot_dashboard(data_queue: mp.Queue):
 
     plt.show()
 
+
 def run_dashboard():
     data_queue = mp.Queue()
     plot_process = mp.Process(target=plot_dashboard, args=(data_queue,))
     plot_process.start()
     return data_queue
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run_dashboard()

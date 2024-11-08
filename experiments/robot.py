@@ -1,17 +1,19 @@
 import math
 from openlch import HAL
-import time
 import subprocess
 
+
 class JointData:
-    def __init__(self, name: str, policy_index: int, servo_id: int, offset_deg: float = 0.0):
+    def __init__(
+        self, name: str, policy_index: int, servo_id: int, offset_deg: float = 0.0
+    ):
         self.name = name
         self.policy_index = policy_index
         self.servo_id = servo_id
-        self.current_position = 0.0      # in radians
-        self.desired_position = 0.0      # in radians
-        self.current_velocity = 0.0      # in radians/s
-        self.offset_deg = offset_deg     # in degrees
+        self.current_position = 0.0  # in radians
+        self.desired_position = 0.0  # in radians
+        self.current_velocity = 0.0  # in radians/s
+        self.offset_deg = offset_deg  # in degrees
 
 
 class Robot:
@@ -47,9 +49,11 @@ class Robot:
 
         print("\n[INFO] Checking connection to robot...")
         try:
-            ping_result = subprocess.run(['ping', '-c', '1', '192.168.42.1'], 
-                                       stdout=subprocess.DEVNULL,
-                                       stderr=subprocess.DEVNULL)
+            ping_result = subprocess.run(
+                ["ping", "-c", "1", "192.168.42.1"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             if ping_result.returncode != 0:
                 raise RuntimeError("Could not ping robot at 192.168.42.1")
             print("[INFO] Successfully pinged robot")
@@ -61,7 +65,9 @@ class Robot:
         print(self.hal.servo.scan())
 
         print("\n[INFO] Setting torque enable to true...")
-        self.hal.servo.set_torque_enable([(joint.servo_id, True) for joint in self.joints])
+        self.hal.servo.set_torque_enable(
+            [(joint.servo_id, True) for joint in self.joints]
+        )
 
         print("\n[INFO] Setting torque to 30.0...")
         self.hal.servo.set_torque([(joint.servo_id, 30.0) for joint in self.joints])
@@ -85,7 +91,9 @@ class Robot:
                 joint.current_position = math.radians(pos_deg)
                 joint.current_velocity = math.radians(vel_deg_s)
             else:
-                raise RuntimeError(f"Failed to get state for servo ID {joint.servo_id} ({joint.name})")
+                raise RuntimeError(
+                    f"Failed to get state for servo ID {joint.servo_id} ({joint.name})"
+                )
 
     def set_servo_positions(self):
         """Set servo positions based on desired joint positions."""
@@ -142,4 +150,6 @@ class Robot:
 
     def disable_motors(self):
         """Disable all motors."""
-        self.hal.servo.set_torque_enable([(joint.servo_id, False) for joint in self.joints])
+        self.hal.servo.set_torque_enable(
+            [(joint.servo_id, False) for joint in self.joints]
+        )
