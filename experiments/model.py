@@ -10,8 +10,8 @@ from collections import deque
 import numpy as np
 import onnxruntime as ort
 import multiprocessing as mp
-from robot import Robot
-from experiments.plot import run_dashboard
+from robot import Robot, RobotConfig
+from plot import run_dashboard
 
 
 class Sim2simCfg:
@@ -76,11 +76,14 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
 
     print("[INFO]: Starting ONNX model inference...")
 
-    print("\n Model inference configuration parameters:\n")
+    print("\nModel inference configuration parameters:\n")
     print("{:<25} {:<15}".format("Parameter", "Value"))
     print("-" * 40)
     for attr, value in vars(cfg).items():
-        print("{:<25} {:<15}".format(attr, value))
+        # Convert numpy arrays to lists for printing
+        if isinstance(value, np.ndarray):
+            value = value.tolist()
+        print("{:<25} {:<15}".format(attr, str(value)))
     print()
 
     action = np.zeros((cfg.num_actions), dtype=np.double)
@@ -96,6 +99,9 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
     t_start = time.time()  # Start time in seconds
     t = 0.0  # in seconds
 
+    # Get joint names
+    joint_names = [joint.name for joint in robot.joints]
+
     while True:
         loop_start_time = time.time()
         t = time.time() - t_start  # Calculate elapsed time since start
@@ -105,17 +111,17 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         actual_frequency = 1.0 / cycle_time if cycle_time > 0 else 0
         last_time = current_time
 
-        robot.get_servo_states()
-
         # Get current positions and velocities
-        current_positions_np = np.array(robot.get_current_positions(), dtype=np.float32)
-        current_velocities_np = np.array(
-            robot.get_current_velocities(), dtype=np.float32
-        )
+        feedback_positions = robot.get_feedback_positions()  # Dict[str, float]
+        feedback_velocities = robot.get_feedback_velocities()  # Dict[str, float]
+
+        # Get positions and velocities in order
+        current_positions_np = np.array([feedback_positions[name] for name in joint_names], dtype=np.float32)
+        current_velocities_np = np.array([feedback_velocities[name] for name in joint_names], dtype=np.float32)
 
         # Use only leg joints for policy input
-        positions_leg = current_positions_np[: cfg.num_actions]
-        velocities_leg = current_velocities_np[: cfg.num_actions]
+        positions_leg = current_positions_np[:cfg.num_actions]
+        velocities_leg = current_velocities_np[:cfg.num_actions]
 
         # Mock IMU data
         omega = np.zeros(3, dtype=np.float32)
@@ -128,15 +134,13 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         obs[0, 2] = cmd.vx * cfg.lin_vel
         obs[0, 3] = cmd.vy * cfg.lin_vel
         obs[0, 4] = cmd.dyaw * cfg.ang_vel
-        obs[0, 5 : (cfg.num_actions + 5)] = positions_leg * cfg.dof_pos
-        obs[0, (cfg.num_actions + 5) : (2 * cfg.num_actions + 5)] = (
+        obs[0, 5 : cfg.num_actions + 5] = positions_leg * cfg.dof_pos
+        obs[0, cfg.num_actions + 5 : 2 * cfg.num_actions + 5] = (
             velocities_leg * cfg.dof_vel
         )
-        obs[0, (2 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5)] = action
-        obs[0, (3 * cfg.num_actions + 5) : (3 * cfg.num_actions + 5) + 3] = omega
-        obs[0, (3 * cfg.num_actions + 5) + 3 : (3 * cfg.num_actions + 5) + 2 * 3] = (
-            eu_ang
-        )
+        obs[0, 2 * cfg.num_actions + 5 : 3 * cfg.num_actions + 5] = action
+        obs[0, 3 * cfg.num_actions + 5 : 3 * cfg.num_actions + 5 + 3] = omega
+        obs[0, 3 * cfg.num_actions + 5 + 3 : 3 * cfg.num_actions + 5 + 6] = eu_ang
         obs = np.clip(obs, -cfg.clip_observations, cfg.clip_observations)
 
         hist_obs.append(obs)
@@ -159,8 +163,16 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         full_action = np.zeros(len(robot.joints), dtype=np.float32)
         full_action[: cfg.num_actions] = scaled_action  # Leg actions
 
-        robot.set_joint_positions(full_action)
-        robot.set_servo_positions()
+        # Convert 'full_action' from radians to degrees
+        full_action_deg = np.degrees(full_action)
+
+        # Prepare positions dictionary
+        desired_positions_dict = {
+            name: position for name, position in zip(joint_names, full_action_deg)
+        }
+
+        # Set desired positions
+        robot.set_servo_positions(desired_positions_dict)
 
         loop_end_time = time.time()
         loop_duration = loop_end_time - loop_start_time
@@ -172,18 +184,15 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
             data_queue.put(("frequency", (current_time, actual_frequency)))
 
             # Send positions data
-            current_positions = robot.get_current_positions()
-            desired_positions = [
-                joint.desired_position + math.radians(joint.offset_deg)
-                for joint in robot.joints
-            ]  # in radians
             data_queue.put(
-                ("positions", (current_time, current_positions, desired_positions))
+                (
+                    "positions",
+                    (current_time, current_positions_np, list(desired_positions_dict.values())),
+                )
             )
 
             # Send velocities data
-            current_velocities = robot.get_current_velocities()
-            data_queue.put(("velocities", (current_time, current_velocities)))
+            data_queue.put(("velocities", (current_time, current_velocities_np)))
         except Exception as e:
             print(f"Exception in sending data: {e}")
 
@@ -198,7 +207,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    robot = Robot()
+    # Initialize robot with updated RobotConfig
+    config = RobotConfig()
+    robot = Robot(config)
     robot.initialize()
 
     policy = ort.InferenceSession(args.model_path)
