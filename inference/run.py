@@ -187,7 +187,7 @@ def state_forward_recovery(robot : Robot) -> bool:
 
     time.sleep(2)
 
-    # Tilting torso
+    # Tilting torso 1
     robot.set_servo_positions_by_name({
         "left_shoulder_pitch": math.radians(120.0),
         "right_shoulder_pitch": math.radians(-120.0),
@@ -210,7 +210,7 @@ def state_forward_recovery(robot : Robot) -> bool:
 
     time.sleep(2)
 
-        # Tilting torso
+        # Tilting torso 2
     robot.set_servo_positions_by_name({
         "left_shoulder_pitch": math.radians(120.0),
         "right_shoulder_pitch": math.radians(-120.0),
@@ -233,7 +233,7 @@ def state_forward_recovery(robot : Robot) -> bool:
 
     time.sleep(2)
 
-        # Tilting torso
+        # Tilting torso 3
     robot.set_servo_positions_by_name({
         "left_shoulder_pitch": math.radians(120.0),
         "right_shoulder_pitch": math.radians(-120.0),
@@ -256,7 +256,7 @@ def state_forward_recovery(robot : Robot) -> bool:
 
     time.sleep(2)
 
-        # Tilting torso
+        # Standing Straight
     robot.set_servo_positions_by_name({
         "left_shoulder_pitch": math.radians(0.0),
         "right_shoulder_pitch": math.radians(-0.0),
@@ -276,71 +276,12 @@ def state_forward_recovery(robot : Robot) -> bool:
         "left_ankle_pitch": math.radians(0.0),
         "right_ankle_pitch": math.radians(-0.0),
     })
-    return True
 
-    # # Tilting torso
-    # robot.set_servo_positions_by_name({
-
-    #     "left_shoulder_pitch": math.radians(120.0),
-    #     "right_shoulder_pitch": math.radians(-120.0),
-
-    #     "left_shoulder_yaw": math.radians(-40.0),
-    #     "right_shoulder_yaw": math.radians(40.0),
-
-    #     "left_elbow_yaw": math.radians(20.0),
-    #     "right_elbow_yaw": math.radians(-20.0),
-
-    #     "left_hip_pitch": math.radians(25.0),
-    #     "right_hip_pitch": math.radians(-25.0),
-
-    #     "left_knee_pitch": math.radians(60.0),
-    #     "right_knee_pitch": math.radians(-60.0),
-
-    #     "left_ankle_pitch": math.radians(50.0),
-    #     "right_ankle_pitch": math.radians(-50.0),
-    # })
-
-    # time.sleep(4)
-
-    return True
-
-
-    # Setting different torque values for knee and ankle servos
-    hip_joints = [joint for joint in robot.joints if "hip" in joint.name]
-    # knee_joints = [joint for joint in robot.joints if "knee" in joint.name]
-    # ankle_joints = [joint for joint in robot.joints if "ankle" in joint.name]
-    robot.hal.servo.set_torque([(joint.servo_id, 15.0) for joint in hip_joints])
-    # robot.hal.servo.set_torque([(joint.servo_id, 20.0) for joint in knee_joints])
-    # robot.hal.servo.set_torque([(joint.servo_id, 20.0) for joint in ankle_joints])
-
-     # Fully straight
-    robot.set_servo_positions_by_name({
-        
-        "left_ankle_pitch": math.radians(-5.0),
-        "right_ankle_pitch": math.radians(5.0),
-
-        "left_knee_pitch": math.radians(0.0),
-        "right_knee_pitch": math.radians(-0.0),
-
-        "left_shoulder_pitch": math.radians(0.0),
-        "right_shoulder_pitch": math.radians(-0.0),
-
-        "left_shoulder_yaw": math.radians(-0.0),
-        "right_shoulder_yaw": math.radians(0.0),
-
-        "left_elbow_yaw": math.radians(0.0),
-        "right_elbow_yaw": math.radians(-0.0),
-
-        "left_hip_pitch": math.radians(0.0),
-        "right_hip_pitch": math.radians(-0.0),
-
-    })
-
-    leg_joints = [joint for joint in robot.joints if "knee" in joint.name or "ankle" in joint.name]
-    robot.hal.servo.set_torque([(joint.servo_id, 20.0) for joint in leg_joints])
-
+    # Set torque to 20 for all servos
+    for joint in robot.joints:
+        robot.hal.servo.set_torque([(joint.servo_id, 20.0)])
+    
     time.sleep(1)
-
 
     return True
 
