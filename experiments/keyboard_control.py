@@ -23,8 +23,7 @@ csv_writer.writerow(
 def main():
     global joint_positions  # Indicate that we're using the global variable
 
-    config = RobotConfig()
-    robot = Robot(config)
+    robot = Robot()
     robot.initialize()
 
     servo_id_to_joint = {joint.servo_id: joint for joint in robot.joints}

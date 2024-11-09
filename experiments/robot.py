@@ -58,9 +58,9 @@ class RobotConfig:
 class Robot:
     """Controls the robot's hardware and joint movements."""
 
-    def __init__(self, config: RobotConfig):
+    def __init__(self):
         self.hal = HAL()
-        self.config = config
+        self.config = RobotConfig()
         self.joints: List[Joint] = [
             Joint(**joint_config) for joint_config in self.config.joint_configs
         ]

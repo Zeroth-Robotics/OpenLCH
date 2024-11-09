@@ -209,9 +209,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Initialize robot with updated RobotConfig
-    config = RobotConfig()
-    robot = Robot(config)
+    robot = Robot()
     robot.initialize()
 
     policy = ort.InferenceSession(args.model_path)

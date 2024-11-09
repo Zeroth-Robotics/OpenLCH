@@ -28,7 +28,8 @@ def state_stand(robot: Robot) -> bool:
 def state_walk(robot: Robot) -> bool:
     print("Walking")
 
-    model_path = "../sim/sim/example/walking/walking_micro.onnx"
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(current_dir, "..", "sim", "examples", "walking_micro.onnx")
     if not os.path.isfile(model_path):
         print(f"Model file not found at {model_path}")
         return False
@@ -365,8 +366,7 @@ def state_wave(robot: Robot) -> bool:
 
 
 def main():
-    config = RobotConfig()  # Create config instance
-    robot = Robot(config)   # Pass config to Robot
+    robot = Robot()
     try:
         robot.initialize()
         state_stand(robot)
