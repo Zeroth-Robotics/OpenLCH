@@ -48,11 +48,13 @@ class Robot:
         print("\n[INFO] Scanning servos...")
         print(self.hal.servo.scan())
 
+        self.hal.servo.enable_movement()
+
         print("\n[INFO] Setting torque enable to true...")
         self.hal.servo.set_torque_enable([(joint.servo_id, True) for joint in self.joints])
 
         print("\n[INFO] Setting torque to 30.0...")
-        self.hal.servo.set_torque([(joint.servo_id, 30.0) for joint in self.joints])
+        self.hal.servo.set_torque([(joint.servo_id, 20.0) for joint in self.joints])
 
         print("\n[INFO] Setting initial desired positions to 0.0...")
         for joint in self.joints:

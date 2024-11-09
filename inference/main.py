@@ -176,12 +176,12 @@ if __name__ == "__main__":
     robot = Robot()
     robot.initialize()
 
-    policy = ort.InferenceSession(args.model_path)
-    cfg = Sim2simCfg()
+    # policy = ort.InferenceSession(args.model_path)
+    # cfg = Sim2simCfg()
 
-    data_queue = run_dashboard()
+    # data_queue = run_dashboard()
 
-    inference(policy, robot, cfg, data_queue)
+    # inference(policy, robot, cfg, data_queue)
 
 
 
