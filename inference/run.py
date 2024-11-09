@@ -24,15 +24,14 @@ def state_walk(robot : Robot) -> bool:
 def state_forward_recovery(robot : Robot) -> bool:
     print("Forward recovery")
 
+    robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    robot.set_servo_positions()
+
     """
     python run.py
 
     In the pop up window, press 1 key
     """
-
-
-
-
     # Getting feet on the ground
     robot.set_servo_positions_by_name({
         
@@ -291,6 +290,170 @@ def state_backward_recovery(robot : Robot) -> bool:
 
     return True
 
+def state_drop_forward(robot : Robot) -> bool:
+    print("Drop forward")
+    robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    return True
+
+def state_pushups(robot : Robot) -> bool:
+    print("Pushups")
+    robot.set_joint_positions([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+
+    robot.set_servo_positions_by_name({
+        "left_shoulder_pitch": math.radians(90.0),
+        "right_shoulder_pitch": math.radians(-90.0),
+
+        "left_shoulder_yaw": math.radians(90.0),
+        "right_shoulder_yaw": math.radians(-90.0),
+
+        "left_elbow_yaw": math.radians(0.0),
+        "right_elbow_yaw": math.radians(0.0),
+
+        "left_hip_pitch": math.radians(10.0),
+        "right_hip_pitch": math.radians(-10.0),
+
+        "left_hip_roll": math.radians(0.0),
+        "right_hip_roll": math.radians(0.0),
+
+        "left_hip_yaw": math.radians(-5.0),
+        "right_hip_yaw": math.radians(5.0),
+
+        "left_knee_pitch": math.radians(5.0),
+        "right_knee_pitch": math.radians(-5.0),
+
+        "left_ankle_pitch": math.radians(-100.0),
+        "right_ankle_pitch": math.radians(100.0),
+    })
+
+    # Set torque for shoulder yaw and elbow yaw to 50
+    robot.hal.servo.set_torque([
+        (15, 50.0),  # left_shoulder_yaw
+        (12, 50.0),  # right_shoulder_yaw
+        (16, 50.0),  # left_elbow_yaw
+        (11, 50.0)   # right_elbow_yaw
+    ])
+
+    time.sleep(2)
+
+    robot.set_servo_positions_by_name({
+        "left_shoulder_pitch": math.radians(90.0),
+        "right_shoulder_pitch": math.radians(-90.0),
+
+        "left_shoulder_yaw": math.radians(-20.0),
+        "right_shoulder_yaw": math.radians(20.0),
+
+        "left_elbow_yaw": math.radians(0.0),
+        "right_elbow_yaw": math.radians(0.0),
+
+        "left_hip_pitch": math.radians(10.0),
+        "right_hip_pitch": math.radians(-10.0),
+
+        "left_hip_roll": math.radians(0.0),
+        "right_hip_roll": math.radians(0.0),
+
+        "left_hip_yaw": math.radians(-5.0),
+        "right_hip_yaw": math.radians(5.0),
+
+        "left_knee_pitch": math.radians(5.0),
+        "right_knee_pitch": math.radians(-5.0),
+
+        "left_ankle_pitch": math.radians(-60.0),
+        "right_ankle_pitch": math.radians(60.0),
+    })
+
+    time.sleep(2)
+
+    robot.set_servo_positions_by_name({
+        "left_shoulder_pitch": math.radians(90.0),
+        "right_shoulder_pitch": math.radians(-90.0),
+
+        "left_shoulder_yaw": math.radians(90.0),
+        "right_shoulder_yaw": math.radians(-90.0),
+
+        "left_elbow_yaw": math.radians(90.0),
+        "right_elbow_yaw": math.radians(-90.0),
+
+        "left_hip_pitch": math.radians(10.0),
+        "right_hip_pitch": math.radians(-10.0),
+
+        "left_hip_roll": math.radians(0.0),
+        "right_hip_roll": math.radians(0.0),
+
+        "left_hip_yaw": math.radians(-5.0),
+        "right_hip_yaw": math.radians(5.0),
+
+        "left_knee_pitch": math.radians(5.0),
+        "right_knee_pitch": math.radians(-5.0),
+
+        "left_ankle_pitch": math.radians(-100.0),
+        "right_ankle_pitch": math.radians(100.0),
+    })
+
+    time.sleep(2)
+
+    robot.set_servo_positions_by_name({
+        "left_shoulder_pitch": math.radians(90.0),
+        "right_shoulder_pitch": math.radians(-90.0),
+
+        "left_shoulder_yaw": math.radians(-20.0),
+        "right_shoulder_yaw": math.radians(20.0),
+
+        "left_elbow_yaw": math.radians(0.0),
+        "right_elbow_yaw": math.radians(0.0),
+
+        "left_hip_pitch": math.radians(10.0),
+        "right_hip_pitch": math.radians(-10.0),
+
+        "left_hip_roll": math.radians(0.0),
+        "right_hip_roll": math.radians(0.0),
+
+        "left_hip_yaw": math.radians(-5.0),
+        "right_hip_yaw": math.radians(5.0),
+
+        "left_knee_pitch": math.radians(5.0),
+        "right_knee_pitch": math.radians(-5.0),
+
+        "left_ankle_pitch": math.radians(-60.0),
+        "right_ankle_pitch": math.radians(60.0),
+    })
+
+    time.sleep(2)
+
+    robot.set_servo_positions_by_name({
+        "left_shoulder_pitch": math.radians(90.0),
+        "right_shoulder_pitch": math.radians(-90.0),
+
+        "left_shoulder_yaw": math.radians(90.0),
+        "right_shoulder_yaw": math.radians(-90.0),
+
+        "left_elbow_yaw": math.radians(90.0),
+        "right_elbow_yaw": math.radians(-90.0),
+
+        "left_hip_pitch": math.radians(10.0),
+        "right_hip_pitch": math.radians(-10.0),
+
+        "left_hip_roll": math.radians(0.0),
+        "right_hip_roll": math.radians(0.0),
+
+        "left_hip_yaw": math.radians(-5.0),
+        "right_hip_yaw": math.radians(5.0),
+
+        "left_knee_pitch": math.radians(5.0),
+        "right_knee_pitch": math.radians(-5.0),
+
+        "left_ankle_pitch": math.radians(-100.0),
+        "right_ankle_pitch": math.radians(100.0),
+    })
+
+    # Set torque to 20 for all servos
+    for joint in robot.joints:
+        robot.hal.servo.set_torque([(joint.servo_id, 20.0)])
+    
+
+    return True
+
 def state_wave(robot : Robot) -> bool:
     print("Waving")
     
@@ -350,7 +513,7 @@ def main():
                             elif event.key == pygame.K_q:
                                 state_wave(robot)
                             elif event.key == pygame.K_1:
-                                state_forward_recovery(robot)
+                                state_pushups(robot)
                             elif event.key == pygame.K_2:
                                 state_backward_recovery(robot)
                             elif event.key == pygame.K_ESCAPE:
