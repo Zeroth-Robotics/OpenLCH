@@ -111,17 +111,21 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         actual_frequency = 1.0 / cycle_time if cycle_time > 0 else 0
         last_time = current_time
 
-        # Get current positions and velocities
-        feedback_positions = robot.get_feedback_positions()  # Dict[str, float]
-        feedback_velocities = robot.get_feedback_velocities()  # Dict[str, float]
+        # Get current positions and velocities in degrees
+        feedback_positions = robot.get_feedback_positions()  # Dict[str, float] in degrees
+        feedback_velocities = robot.get_feedback_velocities()  # Dict[str, float] in degrees/s
 
-        # Get positions and velocities in order
-        current_positions_np = np.array([feedback_positions[name] for name in joint_names], dtype=np.float32)
-        current_velocities_np = np.array([feedback_velocities[name] for name in joint_names], dtype=np.float32)
+        # Convert positions and velocities to radians
+        current_positions_np = np.radians(
+            np.array([feedback_positions[name] for name in joint_names], dtype=np.float32)
+        )
+        current_velocities_np = np.radians(
+            np.array([feedback_velocities[name] for name in joint_names], dtype=np.float32)
+        )
 
         # Use only leg joints for policy input
-        positions_leg = current_positions_np[:cfg.num_actions]
-        velocities_leg = current_velocities_np[:cfg.num_actions]
+        positions_leg = current_positions_np[: cfg.num_actions]
+        velocities_leg = current_velocities_np[: cfg.num_actions]
 
         # Mock IMU data
         omega = np.zeros(3, dtype=np.float32)
@@ -135,9 +139,7 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         obs[0, 3] = cmd.vy * cfg.lin_vel
         obs[0, 4] = cmd.dyaw * cfg.ang_vel
         obs[0, 5 : cfg.num_actions + 5] = positions_leg * cfg.dof_pos
-        obs[0, cfg.num_actions + 5 : 2 * cfg.num_actions + 5] = (
-            velocities_leg * cfg.dof_vel
-        )
+        obs[0, cfg.num_actions + 5 : 2 * cfg.num_actions + 5] = velocities_leg * cfg.dof_vel
         obs[0, 2 * cfg.num_actions + 5 : 3 * cfg.num_actions + 5] = action
         obs[0, 3 * cfg.num_actions + 5 : 3 * cfg.num_actions + 5 + 3] = omega
         obs[0, 3 * cfg.num_actions + 5 + 3 : 3 * cfg.num_actions + 5 + 6] = eu_ang
@@ -155,7 +157,7 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
 
         # Run policy inference
         ort_inputs = {policy.get_inputs()[0].name: policy_input}
-        action[:] = policy.run(None, ort_inputs)[0][0]
+        action[:] = policy.run(None, ort_inputs)[0][0]  # action in radians
 
         action = np.clip(action, -cfg.clip_actions, cfg.clip_actions)
         scaled_action = action * cfg.action_scale
@@ -172,7 +174,7 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         }
 
         # Set desired positions
-        robot.set_servo_positions(desired_positions_dict)
+        robot.set_desired_positions(desired_positions_dict)
 
         loop_end_time = time.time()
         loop_duration = loop_end_time - loop_start_time
@@ -187,12 +189,12 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
             data_queue.put(
                 (
                     "positions",
-                    (current_time, current_positions_np, list(desired_positions_dict.values())),
+                    (current_time, np.degrees(current_positions_np), list(desired_positions_dict.values())),
                 )
             )
 
             # Send velocities data
-            data_queue.put(("velocities", (current_time, current_velocities_np)))
+            data_queue.put(("velocities", (current_time, np.degrees(current_velocities_np))))
         except Exception as e:
             print(f"Exception in sending data: {e}")
 
