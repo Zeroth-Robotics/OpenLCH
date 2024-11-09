@@ -1,4 +1,4 @@
-from robot import Robot
+from robot import Robot, RobotConfig
 import pygame
 import time
 import math
@@ -11,11 +11,17 @@ import os
 
 def state_stand(robot: Robot) -> bool:
     print("Standing")
-    robot.set_joint_positions(
-        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    )
-    robot.set_desired_positions()
-
+    positions = {
+        "left_hip_pitch": 0.0, "right_hip_pitch": 0.0,
+        "left_hip_yaw": 0.0, "right_hip_yaw": 0.0,
+        "left_hip_roll": 0.0, "right_hip_roll": 0.0,
+        "left_knee_pitch": 0.0, "right_knee_pitch": 0.0,
+        "left_ankle_pitch": 0.0, "right_ankle_pitch": 0.0,
+        "left_shoulder_pitch": 0.0, "right_shoulder_pitch": 0.0,
+        "left_shoulder_yaw": 0.0, "right_shoulder_yaw": 0.0,
+        "left_elbow_yaw": 0.0, "right_elbow_yaw": 0.0
+    }
+    robot.set_desired_positions(positions)
     return True
 
 
@@ -40,18 +46,290 @@ def state_walk(robot: Robot) -> bool:
 
 def state_forward_recovery(robot: Robot) -> bool:
     print("Forward recovery")
+    
+    # Initialize all joints to 0
+    initial_positions = {joint.name: 0.0 for joint in robot.joints}
+    robot.set_desired_positions(initial_positions)
+
+    # Getting feet on the ground
+    robot.set_desired_positions({
+        "left_hip_pitch": 30.0,
+        "right_hip_pitch": -30.0,
+        "left_knee_pitch": 50.0,
+        "right_knee_pitch": -50.0,
+        "left_ankle_pitch": -30.0,
+        "right_ankle_pitch": 30.0,
+    })
+
+    # 90 degree position
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 30.0,
+        "right_shoulder_pitch": -30.0,
+        "left_shoulder_yaw": -20.0,
+        "right_shoulder_yaw": 20.0,
+        "left_elbow_yaw": -60.0,
+        "right_elbow_yaw": 60.0,
+        "left_hip_pitch": 30.0,
+        "right_hip_pitch": -30.0,
+        "left_knee_pitch": 70.0,
+        "right_knee_pitch": -70.0,
+        "left_ankle_pitch": -30.0,
+        "right_ankle_pitch": 30.0,
+    })
+
+    # Prep Position
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 30.0,
+        "right_shoulder_pitch": -30.0,
+        "left_shoulder_yaw": 20.0,
+        "right_shoulder_yaw": -20.0,
+        "left_elbow_yaw": -20.0,
+        "right_elbow_yaw": 20.0,
+        "left_hip_pitch": 30.0,
+        "right_hip_pitch": -30.0,
+        "left_knee_pitch": 70.0,
+        "right_knee_pitch": -70.0,
+        "left_ankle_pitch": 0.0,
+        "right_ankle_pitch": 0.0,
+    })
+
+    time.sleep(1)
+
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 120.0,
+        "right_shoulder_pitch": -120.0,
+        "left_hip_pitch": 80.0,
+        "right_hip_pitch": -80.0,
+    })
+
+    robot.set_desired_positions({
+        "left_knee_pitch": 90.0,
+        "right_knee_pitch": -90.0,
+        "left_ankle_pitch": 40.0,
+        "right_ankle_pitch": -40.0,
+    })
+
+    robot.set_desired_positions({
+        "left_elbow_yaw": 0.0,
+        "right_elbow_yaw": 0.0,
+        "left_knee_pitch": 90.0,
+        "right_knee_pitch": -90.0,
+        "left_ankle_pitch": 40.0,
+        "right_ankle_pitch": -40.0,
+    })
+
+    time.sleep(2)
+
+    # Box Position
+    robot.set_desired_positions({
+        "left_shoulder_yaw": -40.0,
+        "right_shoulder_yaw": 40.0,
+        "left_ankle_pitch": 90.0,
+        "right_ankle_pitch": -90.0,
+    })
+
+    time.sleep(2)
+
+    # Tilting torso 1
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 120.0,
+        "right_shoulder_pitch": -120.0,
+        "left_shoulder_yaw": -40.0,
+        "right_shoulder_yaw": 40.0,
+        "left_elbow_yaw": 0.0,
+        "right_elbow_yaw": -0.0,
+        "left_hip_pitch": 50.0,
+        "right_hip_pitch": -50.0,
+        "left_knee_pitch": 60.0,
+        "right_knee_pitch": -60.0,
+        "left_ankle_pitch": 60.0,
+        "right_ankle_pitch": -60.0,
+    })
+
+    time.sleep(2)
+
+        # Tilting torso 2
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 120.0,
+        "right_shoulder_pitch": -120.0,
+        "left_shoulder_yaw": -40.0,
+        "right_shoulder_yaw": 40.0,
+        "left_elbow_yaw": 0.0,
+        "right_elbow_yaw": -0.0,
+        "left_hip_pitch": 22.0,
+        "right_hip_pitch": -22.0,
+        "left_knee_pitch": 50.0,
+        "right_knee_pitch": -50.0,
+        "left_ankle_pitch": 50.0,
+        "right_ankle_pitch": -50.0,
+    })
+
+    time.sleep(2)
+
+        # Tilting torso 3
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 120.0,
+        "right_shoulder_pitch": -120.0,
+        "left_shoulder_yaw": -40.0,
+        "right_shoulder_yaw": 40.0,
+        "left_elbow_yaw": 0.0,
+        "right_elbow_yaw": -0.0,
+        "left_hip_pitch": 10.0,
+        "right_hip_pitch": -10.0,
+        "left_knee_pitch": 30.0,
+        "right_knee_pitch": -30.0,
+        "left_ankle_pitch": 30.0,
+        "right_ankle_pitch": -30.0,
+    })
+
+    time.sleep(2)
+
+        # Standing Straight
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 0.0,
+        "right_shoulder_pitch": -0.0,
+        "left_shoulder_yaw": -0.0,
+        "right_shoulder_yaw": 0.0,
+        "left_elbow_yaw": 0.0,
+        "right_elbow_yaw": -0.0,
+        "left_hip_pitch": 5.0,
+        "right_hip_pitch": -5.0,
+        "left_knee_pitch": 0.0,
+        "right_knee_pitch": -0.0,
+        "left_ankle_pitch": 0.0,
+        "right_ankle_pitch": -0.0,
+    })
+
+    # Set torque to 20 for all servos
+    for joint in robot.joints:
+        robot.hal.servo.set_torque([(joint.servo_id, 20.0)])
+    
+    time.sleep(1)
 
     return True
 
-
-def state_backward_recovery(robot: Robot) -> bool:
+def state_backward_recovery(robot : Robot) -> bool:
     print("Backward recovery")
-    robot.set_joint_positions(
-        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    )
+    robot.set_desired_positions({joint.name: 0.0 for joint in robot.joints})
 
     return True
 
+def state_drop_forward(robot : Robot) -> bool:
+    print("Drop forward")
+    robot.set_desired_positions({joint.name: 0.0 for joint in robot.joints})
+
+    return True
+
+def state_pushups(robot: Robot) -> bool:
+    print("Pushups - Press 'x' to stop")
+    robot.set_desired_positions({joint.name: 0.0 for joint in robot.joints})
+    
+    # Start Position 1
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 90.0,
+        "right_shoulder_pitch": -90.0,
+        "left_shoulder_yaw": 90.0,
+        "right_shoulder_yaw": -90.0,
+        "left_elbow_yaw": 0.0,
+        "right_elbow_yaw": 0.0,
+        "left_hip_pitch": 10.0,
+        "right_hip_pitch": -10.0,
+        "left_hip_roll": 0.0,
+        "right_hip_roll": 0.0,
+        "left_hip_yaw": -5.0,
+        "right_hip_yaw": 5.0,
+        "left_knee_pitch": 5.0,
+        "right_knee_pitch": -5.0,
+        "left_ankle_pitch": -100.0,
+        "right_ankle_pitch": 100.0,
+    })
+
+    time.sleep(1)
+
+    # Start Position 2
+    robot.set_desired_positions({
+        "left_shoulder_pitch": 90.0,
+        "right_shoulder_pitch": -90.0,
+        "left_shoulder_yaw": 90.0,
+        "right_shoulder_yaw": -90.0,
+        "left_elbow_yaw": 90.0,
+        "right_elbow_yaw": -90.0,
+        "left_hip_pitch": 10.0,
+        "right_hip_pitch": -10.0,
+        "left_hip_roll": 0.0,
+        "right_hip_roll": 0.0,
+        "left_hip_yaw": -5.0,
+        "right_hip_yaw": 5.0,
+        "left_knee_pitch": 5.0,
+        "right_knee_pitch": -5.0,
+        "left_ankle_pitch": -80.0,
+        "right_ankle_pitch": 80.0,
+    })
+
+    # Set torque for shoulder yaw and elbow yaw to 50
+    robot.hal.servo.set_torque([
+        (15, 50.0),  # left_shoulder_yaw
+        (12, 50.0),  # right_shoulder_yaw
+        (16, 50.0),  # left_elbow_yaw
+        (11, 50.0)   # right_elbow_yaw
+    ])
+
+    time.sleep(1)
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_x:
+                running = False
+                return True
+        
+        # Push up 1
+        robot.set_desired_positions({
+            "left_shoulder_pitch": 90.0,
+            "right_shoulder_pitch": -90.0,
+            "left_shoulder_yaw": -40.0,
+            "right_shoulder_yaw": 40.0,
+            "left_elbow_yaw": 0.0,
+            "right_elbow_yaw": 0.0,
+            "left_hip_pitch": 10.0,
+            "right_hip_pitch": -10.0,
+            "left_hip_roll": 0.0,
+            "right_hip_roll": 0.0,
+            "left_hip_yaw": -5.0,
+            "right_hip_yaw": 5.0,
+            "left_knee_pitch": 5.0,
+            "right_knee_pitch": -5.0,
+            "left_ankle_pitch": -70.0,
+            "right_ankle_pitch": 70.0,
+        })
+        time.sleep(1)
+
+        # Push Down 1
+        robot.set_desired_positions({
+            "left_shoulder_pitch": 90.0,
+            "right_shoulder_pitch": -90.0,
+            "left_shoulder_yaw": 90.0,
+            "right_shoulder_yaw": -90.0,
+            "left_elbow_yaw": 90.0,
+            "right_elbow_yaw": -90.0,
+            "left_hip_pitch": 10.0,
+            "right_hip_pitch": -10.0,
+            "left_hip_roll": 0.0,
+            "right_hip_roll": 0.0,
+            "left_hip_yaw": -5.0,
+            "right_hip_yaw": 5.0,
+            "left_knee_pitch": 5.0,
+            "right_knee_pitch": -5.0,
+            "left_ankle_pitch": -80.0,
+            "right_ankle_pitch": 80.0,
+        })
+        time.sleep(1)
+
+    # Set torque to 20 for all servos before exiting
+    for joint in robot.joints:
+        robot.hal.servo.set_torque([(joint.servo_id, 20.0)])
+    
+    return True
 
 def state_wave(robot: Robot) -> bool:
     print("Waving")
@@ -61,33 +339,34 @@ def state_wave(robot: Robot) -> bool:
         "left_shoulder_pitch": 0.0,
         "left_elbow_yaw": 0.0,
     }
-    robot.set_servo_positions_by_name(initial_positions)
+    robot.set_desired_positions(initial_positions)
     time.sleep(0.5)
 
     wave_up_positions = {
-        "left_shoulder_pitch": math.radians(45.0),
-        "left_elbow_yaw": math.radians(-100.0),
+        "left_shoulder_pitch": 45.0,
+        "left_elbow_yaw": -100.0,
     }
-    robot.set_servo_positions_by_name(wave_up_positions)
+    robot.set_desired_positions(wave_up_positions)
     time.sleep(0.5)
 
     for _ in range(3):
-        wave_out = {"left_shoulder_yaw": math.radians(15.0)}
-        robot.set_servo_positions_by_name(wave_out)
+        wave_out = {"left_shoulder_yaw": 15.0}
+        robot.set_desired_positions(wave_out)
         time.sleep(0.3)
 
-        wave_in = {"left_shoulder_yaw": math.radians(-15.0)}
-        robot.set_servo_positions_by_name(wave_in)
+        wave_in = {"left_shoulder_yaw": -15.0}
+        robot.set_desired_positions(wave_in)
         time.sleep(0.3)
 
-    robot.set_servo_positions_by_name(initial_positions)
+    robot.set_desired_positions(initial_positions)
     time.sleep(0.5)
 
     return True
 
 
 def main():
-    robot = Robot()
+    config = RobotConfig()  # Create config instance
+    robot = Robot(config)   # Pass config to Robot
     try:
         robot.initialize()
         state_stand(robot)
@@ -115,7 +394,7 @@ def main():
                             elif event.key == pygame.K_q:
                                 state_wave(robot)
                             elif event.key == pygame.K_1:
-                                state_forward_recovery(robot)
+                                state_pushups(robot)
                             elif event.key == pygame.K_2:
                                 state_backward_recovery(robot)
                             elif event.key == pygame.K_ESCAPE:
