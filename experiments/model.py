@@ -1,6 +1,6 @@
 """Inference script for running the model on the robot
 Run:
-    python inference/main.py --model_path sim/examples/walking_micro.onnx
+    python experiments/model.py --model_path sim/examples/walking_micro.onnx
 """
 
 import argparse
@@ -67,7 +67,7 @@ class Sim2simCfg:
 
 
 class cmd:
-    vx = 0.2
+    vx = 0.4
     vy = 0.0
     dyaw = 0.0
 

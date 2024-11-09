@@ -28,6 +28,10 @@ def state_stand(robot: Robot) -> bool:
 def state_walk(robot: Robot, stop_event: threading.Event) -> bool:
     print("Walking")
 
+    # # Set torque to 30 for all servos
+    # for joint in robot.joints:
+    #     robot.hal.servo.set_torque([(joint.servo_id, 40.0)])
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(current_dir, "..", "sim", "examples", "walking_micro.onnx")
     if not os.path.isfile(model_path):
