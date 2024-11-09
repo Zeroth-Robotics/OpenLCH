@@ -394,7 +394,7 @@ def main():
                             elif event.key == pygame.K_q:
                                 state_wave(robot)
                             elif event.key == pygame.K_1:
-                                state_pushups(robot)
+                                state_forward_recovery(robot)
                             elif event.key == pygame.K_2:
                                 state_backward_recovery(robot)
                             elif event.key == pygame.K_ESCAPE:
