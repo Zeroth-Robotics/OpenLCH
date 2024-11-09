@@ -1,10 +1,9 @@
 import pygame
-import math
-from robot import Robot
 import time
 import datetime
 import csv
 import os
+from robot import Robot, RobotConfig
 
 joint_positions = {}
 
@@ -18,13 +17,14 @@ csv_file = open(log_filename, "w", newline="")
 csv_writer = csv.writer(csv_file)
 csv_writer.writerow(
     ["Timestamp", "Joint Name", "Servo ID", "Angle (degrees)"]
-)  # Write header
+)
 
 
 def main():
     global joint_positions  # Indicate that we're using the global variable
 
-    robot = Robot()
+    config = RobotConfig()
+    robot = Robot(config)
     robot.initialize()
 
     servo_id_to_joint = {joint.servo_id: joint for joint in robot.joints}
@@ -49,9 +49,8 @@ def main():
     screen = pygame.display.set_mode((400, 300))
     pygame.display.set_caption("Servo Control")
 
-    robot.get_servo_states()
-    for joint in robot.joints:
-        joint_positions[joint.name] = joint.current_position
+    # Get initial feedback positions
+    joint_positions = robot.get_feedback_positions()
 
     joint = prompt_for_joint()
     if not joint:
@@ -59,10 +58,8 @@ def main():
 
     print(f"Controlling joint '{joint.name}' with servo ID {joint.servo_id}")
 
-    current_position = joint_positions.get(joint.name, joint.current_position)
-    print(
-        f"Joint '{joint.name}' current angle is {math.degrees(current_position):.2f} degrees"
-    )
+    current_position = joint_positions.get(joint.name, 0.0)
+    print(f"Joint '{joint.name}' current angle is {current_position:.2f} degrees")
 
     running = True
     while running:
@@ -83,52 +80,48 @@ def main():
                     if new_joint:
                         joint = new_joint
                         # Retrieve the position for the new joint
-                        current_position = joint_positions.get(
-                            joint.name, joint.current_position
-                        )
+                        current_position = joint_positions.get(joint.name, 0.0)
                         print(
                             f"Switched to controlling joint '{joint.name}' with servo ID {joint.servo_id}"
                         )
                         print(
-                            f"Joint '{joint.name}' current angle is {math.degrees(current_position):.2f} degrees"
+                            f"Joint '{joint.name}' current angle is {current_position:.2f} degrees"
                         )
 
                 elif event.key == pygame.K_UP:
                     # Increase joint angle by 10 degrees
-                    current_position += math.radians(10)
-                    robot.set_servo_positions_by_name({joint.name: current_position})
+                    current_position += 10.0
+                    robot.set_desired_positions({joint.name: current_position})
                     joint_positions[joint.name] = current_position
-                    angle_degrees = math.degrees(current_position)
                     print(
-                        f"Joint '{joint.name}' angle increased to {angle_degrees:.2f} degrees"
+                        f"Joint '{joint.name}' angle increased to {current_position:.2f} degrees"
                     )
-                    # Replace logging with CSV writing
+                    # Log to CSV
                     csv_writer.writerow(
                         [
                             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             joint.name,
                             joint.servo_id,
-                            f"{angle_degrees:.2f}",
+                            f"{current_position:.2f}",
                         ]
                     )
                     csv_file.flush()  # Ensure data is written immediately
 
                 elif event.key == pygame.K_DOWN:
                     # Decrease joint angle by 10 degrees
-                    current_position -= math.radians(10)
-                    robot.set_servo_positions_by_name({joint.name: current_position})
+                    current_position -= 10.0
+                    robot.set_desired_positions({joint.name: current_position})
                     joint_positions[joint.name] = current_position
-                    angle_degrees = math.degrees(current_position)
                     print(
-                        f"Joint '{joint.name}' angle decreased to {angle_degrees:.2f} degrees"
+                        f"Joint '{joint.name}' angle decreased to {current_position:.2f} degrees"
                     )
-                    # Replace logging with CSV writing
+                    # Log to CSV
                     csv_writer.writerow(
                         [
                             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             joint.name,
                             joint.servo_id,
-                            f"{angle_degrees:.2f}",
+                            f"{current_position:.2f}",
                         ]
                     )
                     csv_file.flush()  # Ensure data is written immediately
