@@ -53,7 +53,7 @@ class RobotConfig:
             {'name': "left_elbow_yaw", 'servo_id': 16, 'offset_deg': 0.0},
         ]
         self.torque_enable = True
-        self.torque_value = 30.0  # Torque value for the servos
+        self.torque_value = 20.0
 
 class Robot:
     """Controls the robot's hardware and joint movements."""

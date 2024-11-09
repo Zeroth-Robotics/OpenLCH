@@ -12,6 +12,7 @@ import onnxruntime as ort
 import multiprocessing as mp
 from robot import Robot, RobotConfig
 from plot import run_dashboard
+import threading
 
 
 class Sim2simCfg:
@@ -71,7 +72,7 @@ class cmd:
     dyaw = 0.0
 
 
-def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) -> None:
+def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue, stop_event: threading.Event) -> None:
     cfg = Sim2simCfg()
 
     print("[INFO]: Starting ONNX model inference...")
@@ -102,7 +103,7 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
     # Get joint names
     joint_names = [joint.name for joint in robot.joints]
 
-    while True:
+    while not stop_event.is_set():
         loop_start_time = time.time()
         t = time.time() - t_start  # Calculate elapsed time since start
 
@@ -198,7 +199,13 @@ def inference(policy: ort.InferenceSession, robot: Robot, data_queue: mp.Queue) 
         except Exception as e:
             print(f"Exception in sending data: {e}")
 
+        if stop_event.is_set():
+            break  
         time.sleep(sleep_time)
+
+    print("[INFO]: Inference stopped.")
+
+    robot.set_desired_positions({joint.name: 0.0 for joint in robot.joints})
 
 
 if __name__ == "__main__":
@@ -216,4 +223,6 @@ if __name__ == "__main__":
 
     data_queue = run_dashboard()
 
-    inference(policy, robot, data_queue)
+    stop_event = threading.Event()
+
+    inference(policy, robot, data_queue, stop_event)
