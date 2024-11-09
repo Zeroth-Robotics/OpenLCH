@@ -6,6 +6,7 @@ import threading
 import multiprocessing as mp
 import onnxruntime as ort
 from model import inference
+from plot import run_dashboard
 import os
 
 
@@ -49,6 +50,7 @@ def state_walk(robot: Robot, stop_event: threading.Event) -> bool:
     return True
 
 
+
 def state_forward_recovery(robot: Robot) -> bool:
     print("Forward recovery")
     
@@ -81,15 +83,12 @@ def state_forward_recovery(robot: Robot) -> bool:
         "left_ankle_pitch": -30.0,
         "right_ankle_pitch": 30.0,
     })
-
     # Prep Position
     robot.set_desired_positions({
         "left_shoulder_pitch": 30.0,
         "right_shoulder_pitch": -30.0,
         "left_shoulder_yaw": 20.0,
         "right_shoulder_yaw": -20.0,
-        "left_elbow_yaw": -20.0,
-        "right_elbow_yaw": 20.0,
         "left_hip_pitch": 30.0,
         "right_hip_pitch": -30.0,
         "left_knee_pitch": 70.0,
@@ -101,10 +100,16 @@ def state_forward_recovery(robot: Robot) -> bool:
     time.sleep(1)
 
     robot.set_desired_positions({
+        "left_shoulder_pitch": 40.0,
+        "right_shoulder_pitch": -40.0,
+    })
+    
+    robot.set_desired_positions({
         "left_shoulder_pitch": 120.0,
         "right_shoulder_pitch": -120.0,
         "left_hip_pitch": 80.0,
         "right_hip_pitch": -80.0,
+ 
     })
 
     robot.set_desired_positions({
@@ -212,6 +217,7 @@ def state_forward_recovery(robot: Robot) -> bool:
     time.sleep(1)
 
     return True
+
 
 def state_backward_recovery(robot : Robot) -> bool:
     print("Backward recovery")
@@ -385,7 +391,6 @@ def main():
 
         running = True
         stop_event = threading.Event()
-        current_thread = None
 
         while running:
             try:
@@ -394,26 +399,17 @@ def main():
                         running = False
                     elif event.type == pygame.KEYDOWN:
                         try:
-                            # Stop current action if any
-                            if current_thread is not None:
-                                stop_event.set()
-                                current_thread.join()
-                                stop_event.clear()
-                                current_thread = None
-
+                            # Handle "w" key press to start walking
                             if event.key == pygame.K_w:
-                                # Start walking inference in a new thread
+                                # Run walking inference directly without threading
                                 current_dir = os.path.dirname(os.path.abspath(__file__))
                                 model_path = os.path.join(current_dir, "..", "sim", "examples", "walking_micro.onnx")
                                 if not os.path.isfile(model_path):
                                     print(f"Model file not found at {model_path}")
-                                    continue  # Skip if model not found
+                                    continue
                                 policy = ort.InferenceSession(model_path)
-                                data_queue = mp.Queue()
-                                current_thread = threading.Thread(
-                                    target=inference, args=(policy, robot, data_queue, stop_event)
-                                )
-                                current_thread.start()
+                                data_queue = run_dashboard()
+                                inference(policy, robot, data_queue, stop_event)
                             elif event.key == pygame.K_SPACE:
                                 state_stand(robot)
                             elif event.key == pygame.K_q:
@@ -433,12 +429,8 @@ def main():
     except Exception as e:
         print(f"Error during robot operation: {e}")
     finally:
-        # Ensure any running threads are stopped
-        if current_thread is not None:
-            stop_event.set()
-            current_thread.join()
-            stop_event.clear()
-            current_thread = None
+        # Ensure the robot stops moving
+        stop_event.set()
         try:
             robot.disable_motors()
             print("Motors disabled")
