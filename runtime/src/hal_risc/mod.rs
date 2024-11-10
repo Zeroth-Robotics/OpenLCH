@@ -4,6 +4,9 @@ use std::error::Error;
 use i2cdev::linux::LinuxI2CDevice;
 use i2cdev::core::I2CDevice;
 use crate::hal::{ServoInfo, ServoData, ServoMultipleWriteCommand, ServoMode, ServoDirection, ServoRegister, MemoryLockState, TorqueMode, IMUData, MAX_SERVOS};
+use std::sync::{Arc, Mutex};
+use std::fmt;
+use crate::hal_risc::qmi8658::QMI8658;
 
 #[link(name = "sts3215")]
 extern "C" {
@@ -14,6 +17,8 @@ extern "C" {
     fn servo_move(id: c_uchar, position: c_short, time: c_ushort, speed: c_ushort) -> c_int;
     fn enable_servo_readout() -> c_int;
     fn disable_servo_readout() -> c_int;
+    fn enable_servo_movement() -> c_int;
+    fn disable_servo_movement() -> c_int;
     fn set_servo_mode(id: c_uchar, mode: c_uchar) -> c_int;
     fn set_servo_speed(id: c_uchar, speed: c_ushort, direction: c_int) -> c_int;
     fn servo_read_info(id: c_uchar, info: *mut ServoInfo) -> c_int;
@@ -74,6 +79,22 @@ impl Servo {
         let result = unsafe { disable_servo_readout() };
         if result != 0 {
             anyhow::bail!("Failed to disable servo readout");
+        }
+        Ok(())
+    }
+
+    pub fn enable_movement(&self) -> Result<()> {
+        let result = unsafe { enable_servo_movement() };
+        if result != 0 {
+            anyhow::bail!("Failed to enable servo movement");
+        }
+        Ok(())
+    }
+
+    pub fn disable_movement(&self) -> Result<()> {
+        let result = unsafe { disable_servo_movement() };
+        if result != 0 {
+            anyhow::bail!("Failed to disable servo movement");
         }
         Ok(())
     }
@@ -244,33 +265,42 @@ impl Drop for Servo {
     }
 }
 
-
 pub struct IMU {
-    i2c: LinuxI2CDevice,
+    qmi: Arc<Mutex<QMI8658>>,
 }
 
 impl IMU {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
-        let i2c = LinuxI2CDevice::new("/dev/i2c-1", 0x50)?;
-        Ok(IMU { i2c })
+    pub fn new() -> Result<Self> {
+        let qmi = QMI8658::new("/dev/i2c-1")
+            .map_err(|e| anyhow::anyhow!("Failed to initialize QMI8658: {}", e))?;
+            
+        Ok(IMU {
+            qmi: Arc::new(Mutex::new(qmi))
+        })
     }
 
-    pub fn read_data(&mut self) -> Result<IMUData, Box<dyn Error>> {
-        let mut buffer = [0u8; 24];
-        self.i2c.read(&mut buffer)?;
-
-        let mut values = [0f32; 6];
-        for i in 0..6 {
-            values[i] = f32::from_le_bytes(buffer[i*4..(i+1)*4].try_into().unwrap());
-        }
+    pub fn read_data(&self) -> Result<IMUData> {
+        let mut qmi = self.qmi.lock().unwrap();
+        let data = qmi.read_data()
+            .map_err(|e| anyhow::anyhow!("Failed to read QMI8658 data: {}", e))?;
 
         Ok(IMUData {
-            acc_x: values[0],
-            acc_y: values[1],
-            acc_z: values[2],
-            gyro_x: values[3],
-            gyro_y: values[4],
-            gyro_z: values[5],
+            acc_x: data.acc_x,
+            acc_y: data.acc_y,
+            acc_z: data.acc_z,
+            gyro_x: data.gyro_x,
+            gyro_y: data.gyro_y,
+            gyro_z: data.gyro_z,
         })
     }
 }
+
+impl fmt::Debug for IMU {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IMU")
+         .field("qmi", &"QMI8658")
+         .finish()
+    }
+}
+
+mod qmi8658;

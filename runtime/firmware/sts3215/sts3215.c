@@ -22,7 +22,9 @@ enum SYS_CMD_ID {
     SYS_CMD_SERVO_READ,
     SYS_CMD_SERVO_READOUT_ENABLE,
     SYS_CMD_SERVO_READOUT_DISABLE,
-    SYS_CMD_SERVO_WRITE_MULTIPLE
+    SYS_CMD_SERVO_WRITE_MULTIPLE,
+    SYS_CMD_SERVO_MOVEMENT_ENABLE,
+    SYS_CMD_SERVO_MOVEMENT_DISABLE
 };
 
 typedef struct {
@@ -177,6 +179,14 @@ int enable_servo_readout() {
 
 int disable_servo_readout() {
     return perform_mailbox_operation(SYS_CMD_SERVO_READOUT_DISABLE, 0);
+}
+
+int enable_servo_movement() {
+    return perform_mailbox_operation(SYS_CMD_SERVO_MOVEMENT_ENABLE, 0);
+}
+
+int disable_servo_movement() {
+    return perform_mailbox_operation(SYS_CMD_SERVO_MOVEMENT_DISABLE, 0);
 }
 
 int set_servo_mode(uint8_t id, uint8_t mode) {
