@@ -10,50 +10,88 @@ from plot import run_dashboard
 import os
 
 
+def state_zero_positions(robot: Robot) -> bool:
+    print("Zeroing positions")
+    robot.set_desired_positions({joint.name: 0.0 for joint in robot.joints})
+    return True
+
+
 def state_stand(robot: Robot) -> bool:
     print("Standing")
+    # Convert radians to degrees (rad * 180/π)
     positions = {
-        "left_hip_pitch": 0.0, "right_hip_pitch": 0.0,
-        "left_hip_yaw": 0.0, "right_hip_yaw": 0.0,
-        "left_hip_roll": 0.0, "right_hip_roll": 0.0,
-        "left_knee_pitch": 0.0, "right_knee_pitch": 0.0,
-        "left_ankle_pitch": 0.0, "right_ankle_pitch": 0.0,
-        "left_shoulder_pitch": 0.0, "right_shoulder_pitch": 0.0,
-        "left_shoulder_yaw": 0.0, "right_shoulder_yaw": 0.0,
-        "left_elbow_yaw": 0.0, "right_elbow_yaw": 0.0
+        "left_hip_pitch": 0.23 * 180/math.pi,  
+        "left_knee_pitch": -0.741 * 180/math.pi,
+        "left_ankle_pitch": -0.5 * 180/math.pi, 
+        "right_hip_pitch": -0.23 * 180/math.pi,  
+        "right_knee_pitch": 0.741 * 180/math.pi, 
+        "right_ankle_pitch": 0.5 * 180/math.pi,  
+        # Keep other joints at 0
+        "left_hip_yaw": 0.0,
+        "right_hip_yaw": 0.0,
+        "left_hip_roll": 0.0,
+        "right_hip_roll": 0.0,
+        "left_shoulder_pitch": 0.0,
+        "right_shoulder_pitch": 0.0,
+        "left_shoulder_yaw": 0.0,
+        "right_shoulder_yaw": 0.0,
+        "left_elbow_yaw": 0.0,
+        "right_elbow_yaw": 0.0
     }
     robot.set_desired_positions(positions)
     return True
 
 
+
 def state_walk(robot: Robot, stop_event: threading.Event) -> bool:
     print("Walking")
+    print("Restoring original offsets")
+    robot.joint_dict["left_hip_pitch"].offset_deg = 0.23 * 180/math.pi
+    robot.joint_dict["left_hip_yaw"].offset_deg = 45.0
+    robot.joint_dict["left_hip_roll"].offset_deg = 0.0
+    robot.joint_dict["left_knee_pitch"].offset_deg = -0.741 * 180/math.pi
+    robot.joint_dict["left_ankle_pitch"].offset_deg = -0.5 * 180/math.pi
+    robot.joint_dict["right_hip_pitch"].offset_deg = -0.23 * 180/math.pi
+    robot.joint_dict["right_hip_yaw"].offset_deg = -45.0
+    robot.joint_dict["right_hip_roll"].offset_deg = 0.0
+    robot.joint_dict["right_knee_pitch"].offset_deg = 0.741 * 180/math.pi
+    robot.joint_dict["right_ankle_pitch"].offset_deg = 0.5 * 180/math.pi
+    robot.joint_dict["right_elbow_yaw"].offset_deg = 0.0
+    robot.joint_dict["right_shoulder_yaw"].offset_deg = 0.0
+    robot.joint_dict["right_shoulder_pitch"].offset_deg = 0.0
+    robot.joint_dict["left_shoulder_pitch"].offset_deg = 0.0
+    robot.joint_dict["left_shoulder_yaw"].offset_deg = 0.0
+    robot.joint_dict["left_elbow_yaw"].offset_deg = 0.0
 
-    # # Set torque to 30 for all servos
-    # for joint in robot.joints:
-    #     robot.hal.servo.set_torque([(joint.servo_id, 40.0)])
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(current_dir, "..", "sim", "examples", "walking_micro.onnx")
     if not os.path.isfile(model_path):
         print(f"Model file not found at {model_path}")
         return False
+    
     policy = ort.InferenceSession(model_path)
-
-    data_queue = mp.Queue()
-
-    inference_thread = threading.Thread(
-        target=inference, args=(policy, robot, data_queue, stop_event)
-    )
-    inference_thread.start()
-
+    data_queue = run_dashboard()
+    inference(policy, robot, data_queue, stop_event)
+    
     return True
 
 
 
 def state_forward_recovery(robot: Robot) -> bool:
     print("Forward recovery")
+
+    print("Change robot offsets:")
+    for joint in robot.joints:
+        joint.offset_deg = 0.0
     
+    robot.joint_dict["right_hip_yaw"].offset_deg = -45.0
+    robot.joint_dict["left_hip_yaw"].offset_deg = 45.0
+
+    print("Print robot joints offsets are now:")
+    print(robot.joints)
+    time.sleep(3)
+    print("Set desired positions to 0")
     # Initialize all joints to 0
     initial_positions = {joint.name: 0.0 for joint in robot.joints}
     robot.set_desired_positions(initial_positions)
@@ -98,7 +136,7 @@ def state_forward_recovery(robot: Robot) -> bool:
     })
 
     time.sleep(1)
-
+    
     robot.set_desired_positions({
         "left_shoulder_pitch": 40.0,
         "right_shoulder_pitch": -40.0,
@@ -120,6 +158,8 @@ def state_forward_recovery(robot: Robot) -> bool:
     })
 
     robot.set_desired_positions({
+        "left_shoulder_yaw": 40.0,
+        "right_shoulder_yaw": -40.0,
         "left_elbow_yaw": 0.0,
         "right_elbow_yaw": 0.0,
         "left_knee_pitch": 90.0,
@@ -132,8 +172,8 @@ def state_forward_recovery(robot: Robot) -> bool:
 
     # Box Position
     robot.set_desired_positions({
-        "left_shoulder_yaw": -40.0,
-        "right_shoulder_yaw": 40.0,
+        "left_shoulder_yaw": 40.0,
+        "right_shoulder_yaw": -40.0,
         "left_ankle_pitch": 90.0,
         "right_ankle_pitch": -90.0,
     })
@@ -148,8 +188,8 @@ def state_forward_recovery(robot: Robot) -> bool:
         "right_shoulder_yaw": 40.0,
         "left_elbow_yaw": 0.0,
         "right_elbow_yaw": -0.0,
-        "left_hip_pitch": 50.0,
-        "right_hip_pitch": -50.0,
+        "left_hip_pitch": 60.0,
+        "right_hip_pitch":-60.0,
         "left_knee_pitch": 60.0,
         "right_knee_pitch": -60.0,
         "left_ankle_pitch": 60.0,
@@ -158,7 +198,7 @@ def state_forward_recovery(robot: Robot) -> bool:
 
     time.sleep(2)
 
-        # Tilting torso 2
+    # Tilting torso 2
     robot.set_desired_positions({
         "left_shoulder_pitch": 120.0,
         "right_shoulder_pitch": -120.0,
@@ -166,8 +206,8 @@ def state_forward_recovery(robot: Robot) -> bool:
         "right_shoulder_yaw": 40.0,
         "left_elbow_yaw": 0.0,
         "right_elbow_yaw": -0.0,
-        "left_hip_pitch": 22.0,
-        "right_hip_pitch": -22.0,
+        "left_hip_pitch": 35.0,
+        "right_hip_pitch": -35.0,
         "left_knee_pitch": 50.0,
         "right_knee_pitch": -50.0,
         "left_ankle_pitch": 50.0,
@@ -184,12 +224,12 @@ def state_forward_recovery(robot: Robot) -> bool:
         "right_shoulder_yaw": 40.0,
         "left_elbow_yaw": 0.0,
         "right_elbow_yaw": -0.0,
-        "left_hip_pitch": 10.0,
-        "right_hip_pitch": -10.0,
-        "left_knee_pitch": 30.0,
-        "right_knee_pitch": -30.0,
-        "left_ankle_pitch": 30.0,
-        "right_ankle_pitch": -30.0,
+        "left_hip_pitch": 5.0,
+        "right_hip_pitch": -5.0,
+        "left_knee_pitch": 15.0,
+        "right_knee_pitch": -15.0,
+        "left_ankle_pitch": 15.0,
+        "right_ankle_pitch": -15.0,
     })
 
     time.sleep(2)
@@ -379,14 +419,15 @@ def main():
     robot = Robot()
     try:
         robot.initialize()
-        state_stand(robot)
+        state_zero_positions(robot)
+        # state_stand(robot)
 
         pygame.init()
         screen = pygame.display.set_mode((400, 300))
         pygame.display.set_caption("Robot Control")
 
         print(
-            "Press 'w' to walk, 'space' to stand, 'q' to wave, '1' for forward recovery, '2' for backward recovery, 'escape' to quit"
+            "Press 'w' to walk, 'space' to stand, 'q' to wave, '1' for forward recovery, '2' for backward recovery, '4' for pushups, 'escape' to quit"
         )
 
         running = True
@@ -401,15 +442,7 @@ def main():
                         try:
                             # Handle "w" key press to start walking
                             if event.key == pygame.K_w:
-                                # Run walking inference directly without threading
-                                current_dir = os.path.dirname(os.path.abspath(__file__))
-                                model_path = os.path.join(current_dir, "..", "sim", "examples", "walking_micro.onnx")
-                                if not os.path.isfile(model_path):
-                                    print(f"Model file not found at {model_path}")
-                                    continue
-                                policy = ort.InferenceSession(model_path)
-                                data_queue = run_dashboard()
-                                inference(policy, robot, data_queue, stop_event)
+                                state_walk(robot, stop_event)
                             elif event.key == pygame.K_SPACE:
                                 state_stand(robot)
                             elif event.key == pygame.K_q:
@@ -418,6 +451,8 @@ def main():
                                 state_forward_recovery(robot)
                             elif event.key == pygame.K_2:
                                 state_backward_recovery(robot)
+                            elif event.key == pygame.K_4:
+                                state_pushups(robot)
                             elif event.key == pygame.K_ESCAPE:
                                 running = False
                         except Exception as e:
