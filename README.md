@@ -1,6 +1,8 @@
 <div align="center" style="text-align: center;">
 
-<h1> Zeroth Bot (WIP) </h1>
+<a href="https://www.youtube.com/watch?v=AKo7hgGgLLM">
+  <h1>Zeroth Bot</h1>  (WIP)
+</a>
 
 <p> The most hackable, affordable, and powerful 3D-printed open-source humanoid robot platform for sim-to-real and RL. Fully open-source from hardware design to model training, with Python SDK and NVIDIA Isaac simulation/training environment. BoM starts at $350. </p>
 
