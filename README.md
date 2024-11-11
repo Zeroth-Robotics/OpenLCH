@@ -23,7 +23,7 @@
 ---
 
 ### To start using Zeroth Bot
-- Please Getting Started documentation at [https://docs.zeroth.bot](https://docs.zeroth.bot).
+- Please see the Getting Started documentation at [https://docs.zeroth.bot](https://docs.zeroth.bot).
 
 
 ### To start developing Zeroth Bot
