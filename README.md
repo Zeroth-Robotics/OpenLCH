@@ -11,7 +11,7 @@
   <span> · </span>
   <a href="https://docs.zeroth.bot/roadmap">Roadmap</a>
   <span> · </span>
-  <a href="https://docs.zeroth.bot/contribute">Contribute</a>
+  <a href="https://discord.gg/G6KP76uha5">Contribute</a>
   <span> · </span>
   <a href="https://discord.gg/G6KP76uha5">Community</a>
 </h3>
@@ -31,8 +31,6 @@ Zeroth Bot is developed by the open-source community. We welcome both pull reque
 
 - Join the community [Discord](https://discord.gg/G6KP76uha5)
 - Documentation at [https://docs.zeroth.bot](https://docs.zeroth.bot)
-- Checkout the [contributing docs](https://docs.zeroth.bot/contribute)
-
 
 ### License
 This project is licensed under the MIT License.
