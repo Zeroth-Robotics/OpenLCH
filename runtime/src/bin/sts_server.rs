@@ -94,6 +94,8 @@ impl StsServoControl {
 
             let version = servo.read(servo_id, ServoRegister::ServoMainVersion, 2).unwrap();
             let mut current_multiplier = 1.0;
+
+            // sts3215
             if version[0] == 0x09 && version[1] == 0x03 {
                 current_multiplier = 6.5;
             }
