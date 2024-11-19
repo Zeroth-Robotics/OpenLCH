@@ -92,14 +92,6 @@ impl StsServoControl {
             let mut max_forward = 0;
             let mut max_backward = 0;
 
-            let version = servo.read(servo_id, ServoRegister::ServoMainVersion, 2).unwrap();
-            let mut current_multiplier = 1.0;
-
-            // sts3215
-            if version[0] == 0x09 && version[1] == 0x03 {
-                current_multiplier = 6.5;
-            }
-
             for pass in 0..2 {
                 let direction = if pass == 0 { ServoDirection::Clockwise } else { ServoDirection::Counterclockwise };
                 servo.set_speed(servo_id, calibration_speed, direction).unwrap();
@@ -120,7 +112,7 @@ impl StsServoControl {
                         retry_count += 1;
                     }
                     let position = info.current_location;
-                    let current = info.current_current as f32 * 6.5 / 100.0 * current_multiplier;
+                    let current = info.current_current as f32;
                     
                     if current > current_threshold {
                         threshold_exceeded_count += 1;

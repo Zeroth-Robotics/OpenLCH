@@ -3,10 +3,14 @@ use std::os::raw::{c_int, c_short, c_uchar, c_ushort, c_uint};
 use std::error::Error;
 use i2cdev::linux::LinuxI2CDevice;
 use i2cdev::core::I2CDevice;
-use crate::hal::{ServoInfo, ServoData, ServoMultipleWriteCommand, ServoMode, ServoDirection, ServoRegister, MemoryLockState, TorqueMode, IMUData, MAX_SERVOS};
+use crate::hal::{ServoInfo, ServoData, ServoMultipleWriteCommand, ServoMode, ServoDirection, ServoRegister, MemoryLockState, TorqueMode, IMUData, MAX_SERVOS, Km};
 use std::sync::{Arc, Mutex};
 use std::fmt;
 use crate::hal_risc::qmi8658::QMI8658;
+use std::sync::atomic::{AtomicU8, Ordering};
+
+static SERVO_VERSIONS: [AtomicU8; MAX_SERVOS] = [const { AtomicU8::new(0) }; MAX_SERVOS];
+static SERVO_MINOR_VERSIONS: [AtomicU8; MAX_SERVOS] = [const { AtomicU8::new(0) }; MAX_SERVOS];
 
 #[link(name = "sts3215")]
 extern "C" {
@@ -50,6 +54,14 @@ impl Servo {
         Ok(())
     }
 
+    pub fn get_servo_version(&self, id: u8) -> u8 {
+        SERVO_VERSIONS[(id as usize) - 1].load(Ordering::Relaxed)
+    }
+
+    pub fn get_servo_minor_version(&self, id: u8) -> u8 {
+        SERVO_MINOR_VERSIONS[(id as usize) - 1].load(Ordering::Relaxed)
+    }
+
     pub fn read(&self, id: u8, register: ServoRegister, length: u8) -> Result<Vec<u8>> {
         let mut data = vec![0u8; length as usize];
         let result = unsafe { servo_read(id, register as u8, length, data.as_mut_ptr()) };
@@ -72,6 +84,8 @@ impl Servo {
         if result != 0 {
             anyhow::bail!("Failed to enable servo readout");
         }
+
+        self.configure_servos()?;
         Ok(())
     }
 
@@ -80,6 +94,8 @@ impl Servo {
         if result != 0 {
             anyhow::bail!("Failed to disable servo readout");
         }
+
+        self.configure_servos()?;
         Ok(())
     }
 
@@ -87,6 +103,23 @@ impl Servo {
         let result = unsafe { enable_servo_movement() };
         if result != 0 {
             anyhow::bail!("Failed to enable servo movement");
+        }
+
+        self.configure_servos()?;
+        Ok(())
+    }
+
+    pub fn configure_servos(&self) -> Result<()> {
+        for id in 0..MAX_SERVOS as u8 {
+            let version = self.read(id + 1, ServoRegister::ServoMainVersion, 2)?;
+            SERVO_VERSIONS[id as usize].store(version[0], Ordering::Relaxed);
+            SERVO_MINOR_VERSIONS[id as usize].store(version[1], Ordering::Relaxed);
+
+            if version[0] == 10 {
+                // single loop position control for HLS series
+                self.write((id + 1) as u8, ServoRegister::Km, &[Km::SingleLoop as u8])?;
+                self.write((id + 1) as u8, ServoRegister::OperationMode, &[ServoMode::SingleLoopPosition as u8])?;
+            }
         }
         Ok(())
     }
@@ -96,18 +129,39 @@ impl Servo {
         if result != 0 {
             anyhow::bail!("Failed to disable servo movement");
         }
+
+        self.configure_servos()?;
         Ok(())
     }
 
     pub fn set_mode(&self, id: u8, mode: ServoMode) -> Result<()> {
+        let mode = if self.get_servo_version(id) == 10 {
+            // single loop position control for HLS series
+            if mode == ServoMode::Position {
+                ServoMode::SingleLoopPosition
+            } else {
+                mode
+            }
+        } else {
+            mode
+        };
         let result = unsafe { set_servo_mode(id, mode as u8) };
         if result != 0 {
             anyhow::bail!("Failed to set servo mode");
         }
+
+        if self.get_servo_version(id) == 10 {
+            self.write(id + 1, ServoRegister::Km, &[Km::SingleLoop as u8])?;
+        }
+
         Ok(())
     }
 
     pub fn set_speed(&self, id: u8, speed: u16, direction: ServoDirection) -> Result<()> {
+        let mut speed = speed;
+        if self.get_servo_version(id) == 10 {
+            speed = speed / 50;
+        }
         let direction = if direction == ServoDirection::Clockwise { 1 } else { -1 };
         let result = unsafe { set_servo_speed(id, speed, direction as i32) };
         if result != 0 {
@@ -141,6 +195,15 @@ impl Servo {
         if result != 0 {
             anyhow::bail!("Failed to read servo info");
         }
+
+        if self.get_servo_version(id) == 10 {
+            info.current_current = ((info.current_current & 0x7FFF) as f32 * 6.5) as u16;
+        } else if self.get_servo_version(id) == 9 && self.get_servo_minor_version(id) == 3 {
+            info.current_current = ((info.current_current & 0x7FFF) as f32 * 6.5 / 100.0 * 6.5) as u16;
+        } else {
+            info.current_current = ((info.current_current & 0x7FFF) as f32 * 6.5 / 100.0) as u16;
+        }
+
         Ok(info)
     }
 

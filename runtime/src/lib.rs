@@ -77,6 +77,10 @@ pub mod hal {
         RunningTime = 0x2C,
         RunningSpeed = 0x2E,
         TorqueLimit = 0x30,
+        Kp = 0x31,
+        Ki = 0x32,
+        Kd = 0x33,
+        Km = 0x34,
         LockMark = 0x37,
         CurrentLocation = 0x38,
         CurrentSpeed = 0x3A,
@@ -114,12 +118,20 @@ pub mod hal {
     }
 
     #[repr(u8)]
-    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
     pub enum ServoMode {
         Position = 0,
         ConstantSpeed = 1,
         PWMOpenLoop = 2,
         StepServo = 3,
+        SingleLoopPosition = 4,
+    }
+
+    #[repr(u8)]
+    #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+    pub enum Km {
+        DualLoop = 0,
+        SingleLoop = 1,
     }
 
     #[repr(i32)]
