@@ -81,11 +81,18 @@ impl StsServoControl {
         task::spawn(async move {
             let servo = servo.lock().await;
 
+            let is_hls = servo.get_servo_version(servo_id) == 10;
+
             servo.disable_movement().unwrap();
 
 
             servo.disable_readout().unwrap();
-            servo.set_mode(servo_id, ServoMode::ConstantSpeed).unwrap();
+
+            if is_hls {
+                servo.set_mode(servo_id, ServoMode::PWMOpenLoop).unwrap();
+            } else {
+                servo.set_mode(servo_id, ServoMode::ConstantSpeed).unwrap();
+            }
 
             servo.write_servo_memory(servo_id, runtime::hal::ServoRegister::TorqueLimit, 150).unwrap();
 
@@ -94,13 +101,24 @@ impl StsServoControl {
 
             for pass in 0..2 {
                 let direction = if pass == 0 { ServoDirection::Clockwise } else { ServoDirection::Counterclockwise };
-                servo.set_speed(servo_id, calibration_speed, direction).unwrap();
+
+                if is_hls {
+                    servo.set_current(servo_id, (current_threshold / 10.) as u16, direction).unwrap();
+                } else {
+                    servo.set_speed(servo_id, calibration_speed, direction).unwrap();
+                }
+
 
                 let mut threshold_exceeded_count = 0;
 
                 loop {
                     if !calibration_running.load(Ordering::SeqCst) {
                         servo.set_speed(servo_id, 0, ServoDirection::Clockwise).unwrap();
+                        if is_hls {
+                            servo.set_current(servo_id, 0, ServoDirection::Clockwise).unwrap();
+                            servo.set_mode(servo_id, ServoMode::Position).unwrap();
+                            servo.write(servo_id, ServoRegister::TorqueSwitch, &[0]).unwrap();
+                        }
                         return;
                     }
 
@@ -114,7 +132,10 @@ impl StsServoControl {
                     let position = info.current_location;
                     let current = info.current_current as f32;
                     
-                    if current > current_threshold {
+                    println!("Current location: {}, current: {}", position, current);
+
+
+                    if !is_hls && current > current_threshold {
                         threshold_exceeded_count += 1;
                         
                         if threshold_exceeded_count >= 3 {
@@ -138,6 +159,19 @@ impl StsServoControl {
                                 max_backward = info.current_location;
                             }
 
+                            break;
+                        }
+                    } else if is_hls && info.mobile_sign == 0 {
+                        threshold_exceeded_count += 1;
+
+                        if threshold_exceeded_count >= 10 {
+                            if direction == ServoDirection::Clockwise {
+                                max_forward = info.current_location;
+                            } else {
+                                max_backward = info.current_location;
+                            }
+
+                            servo.set_current(servo_id, 0, direction).unwrap();
                             break;
                         }
                     } else {
@@ -815,8 +849,13 @@ network={{
         // Convert speed to raw value (assuming speed is in degrees/second)
         let speed = (position.speed.abs() * 4096.0 / 360.0) as u16;
 
-        servo.move_servo(position.id as u8, raw_position as i16, 0, speed)
-            .map_err(|e| Status::internal(format!("Failed to set position: {}", e)))?;
+        if servo.get_servo_version(position.id as u8) == 10 {
+            servo.move_servo(position.id as u8, raw_position as i16, 1000, speed)
+                .map_err(|e| Status::internal(format!("Failed to set position: {}", e)))?;
+        } else {
+            servo.move_servo(position.id as u8, raw_position as i16, 0, speed)
+                .map_err(|e| Status::internal(format!("Failed to set position: {}", e)))?;
+        }
 
         Ok(Response::new(Empty {}))
     }

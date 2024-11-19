@@ -170,6 +170,11 @@ impl Servo {
         Ok(())
     }
 
+    pub fn set_current(&self, id: u8, current: u16, direction: ServoDirection) -> Result<()> {
+        let torque = if direction == ServoDirection::Clockwise { current } else { current | 0x8000 };
+        self.move_servo(id, 0, torque as u16, 2047)
+    }
+
     pub fn read_info(&self, id: u8) -> Result<ServoInfo> {
         let mut info = ServoInfo {
             torque_switch: 0,
@@ -198,6 +203,7 @@ impl Servo {
 
         if self.get_servo_version(id) == 10 {
             info.current_current = ((info.current_current & 0x7FFF) as f32 * 6.5) as u16;
+            info.current_location = (info.current_location as u16 & 0xFFF) as i16;
         } else if self.get_servo_version(id) == 9 && self.get_servo_minor_version(id) == 3 {
             info.current_current = ((info.current_current & 0x7FFF) as f32 * 6.5 / 100.0 * 6.5) as u16;
         } else {
